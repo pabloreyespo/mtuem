@@ -138,7 +138,6 @@ apollo_probabilities=function(apollo_beta, apollo_inputs, functionality="estimat
 suppressWarnings({
   model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
   apollo_modelOutput(model)
-  apollo_saveOutput(model)
 })
 #> Preparing user-defined functions.
 #> 
@@ -213,7 +212,7 @@ suppressWarnings({
 #> 
 #> Model name                                  : enut-mtuem-1eq
 #> Model description                           : No model description provided in apollo_control
-#> Model run at                                : 2025-06-18 22:57:03.401438
+#> Model run at                                : 2025-06-18 22:59:33.076758
 #> Estimation method                           : bgw
 #> Model diagnosis                             : Relative function convergence
 #> Optimisation diagnosis                      : Maximum found
@@ -239,10 +238,10 @@ suppressWarnings({
 #> BIC                                         :  -Inf 
 #> 
 #> Estimated parameters                        : 2
-#> Time taken (hh:mm:ss)                       :  00:00:0.54 
-#>      pre-estimation                         :  00:00:0.24 
-#>      estimation                             :  00:00:0.24 
-#>      post-estimation                        :  00:00:0.05 
+#> Time taken (hh:mm:ss)                       :  00:00:0.82 
+#>      pre-estimation                         :  00:00:0.43 
+#>      estimation                             :  00:00:0.31 
+#>      post-estimation                        :  00:00:0.08 
 #> Iterations                                  :  11  
 #> 
 #> Unconstrained optimisation.
@@ -252,10 +251,6 @@ suppressWarnings({
 #> Theta     1.00000          NA          NA          NA            NA
 #> Phi       0.67534     0.02197      30.745     0.02726        24.774
 #> thw      -0.08793     0.03576      -2.459     0.04894        -1.796
-#> 
-#> Model output saved to C:/Users/pablo/OneDrive/mtuem/enut-mtuem-1eq_output.txt 
-#> Estimates saved to C:/Users/pablo/OneDrive/mtuem/enut-mtuem-1eq_estimates.csv 
-#> Model object saved to C:/Users/pablo/OneDrive/mtuem/enut-mtuem-1eq.rds
 
 # Compute values of time
 pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
