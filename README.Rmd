@@ -117,7 +117,6 @@ apollo_probabilities=function(apollo_beta, apollo_inputs, functionality="estimat
 suppressWarnings({
   model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
   apollo_modelOutput(model)
-  apollo_saveOutput(model)
 })
 
 # Compute values of time
