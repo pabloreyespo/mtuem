@@ -20,3 +20,5 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+URL: https://github.com/pabloreyespo/mtuem
+BugReports: https://github.com/pabloreyespo/mtuem/issues
