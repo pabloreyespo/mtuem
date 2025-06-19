@@ -16,16 +16,24 @@ knitr::opts_chunk$set(
 # mtuem
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
-The goal of mtuem is to ...
+The goal of mtuem is to facilitate the estimation of Microeconomic Time-Use-Expenditure models in apollo (see: <https://www.apollochoicemodelling.com/>)
 
 ## Installation
 
-You can install the development version of mtuem like so:
+You can install the development version of mtuem like so: 
+1. Install devtools
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+install.packages("devtools")
+```
+
+2.  Install the repo via devtools
+
+``` r
+devtools::install_github("https://github.com/pabloreyespo/mtuem")
 ```
 
 ## Example
@@ -34,21 +42,100 @@ This is a basic example which shows you how to solve a common problem:
 
 ```{r example}
 library(mtuem)
-## basic example code
+
+### Initialise code
+apollo_initialise()
+
+### Set core controls
+apollo_control = list(
+  modelName       = "enut-mtuem-1eq",
+  indivID         = "id_persona"
+)
+
+
+# ################################################################# #
+#### LOAD DATA AND APPLY ANY TRANSFORMATIONS                     ####
+# ################################################################# #
+
+database = mtuem::enut.ii
+database['Tc'] = rowSums(database[,c("Tc", "Tc_sleep", "Tc_meals")])
+is_not_retist = database["Ec"] > 0
+can_afford_expenses =  (database["Ec"] / (database["w"]*(168 -  database["Tc"]))) < 1
+database = database[is_not_retist & can_afford_expenses,]
+
+apollo_beta = c(Theta   = 1,
+                Phi     = 1,
+                thw = 0)
+
+apollo_fixed = c("Theta")
+
+apollo_inputs = apollo_validateInputs(
+  database = database,
+  apollo_beta = apollo_beta,
+  apollo_fixed = apollo_fixed,
+  apollo_control = apollo_control 
+)
+
+#tricking apollo
+#mtuem_likelihood = mtuem::mtuem_likelihood
+
+apollo_probabilities=function(apollo_beta, apollo_inputs, functionality="estimate"){
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  ### Create list of probabilities P
+  P = list()
+
+  ### Define individual alternatives
+  work_times = c("Tw")
+
+  # must use this names
+  work_elasticities = list(
+    Theta = Theta,
+    Phi   = Phi,
+    thw = thw
+  )
+
+  ### Define settings for Jara-Diaz model
+  mtuem_settings = list(
+    work_times = work_times,
+    work_elasticities = work_elasticities,
+    Tc = Tc,
+    Ec = Ec,
+    w = w,
+    tau = 168
+  )
+
+  ### Compute probabilities using Jara-Diaz model
+  P[["model"]] = mtuem_likelihood(mtuem_settings, functionality)
+
+  ### Prepare and return outputs of function
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+suppressWarnings({
+  model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+  apollo_modelOutput(model)
+  apollo_saveOutput(model)
+})
+
+# Compute values of time
+pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
+Tw = pred$Tw
+w  = database$w
+Tc = database$Tc
+Ec = database$Ec
+cteVoL  <- mean((w*Tw - Ec) / (168-Tw-Tc))
+cteVTAW <- mean((w*Tw - Ec) / (Tw))
+delta <- apollo_deltaMethod(model, list(
+  expression=c(
+    VoL      = paste0(cteVoL,  "*Theta/Phi"),
+    VTAW     = paste0(cteVTAW, "*thw/Phi"))
+))
+
+z = 1.96
+delta[,"CI-95%"] <- delta[,"Value"] - 1.96*delta[,"s.e."]
+delta[,"CI+95%"] <- delta[,"Value"] + 1.96*delta[,"s.e."]
+delta
 ```
-
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
-
-```{r cars}
-summary(cars)
-```
-
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this.
-
-You can also embed plots, for example:
-
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.

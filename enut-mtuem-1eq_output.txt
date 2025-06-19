@@ -1,0 +1,151 @@
+Model run by pablo using Apollo 0.3.5 on R 4.4.3 for Windows.
+Please acknowledge the use of Apollo by citing Hess & Palma (2019)
+  DOI 10.1016/j.jocm.2019.100170
+  www.ApolloChoiceModelling.com
+
+Model name                                  : enut-mtuem-1eq
+Model description                           : No model description provided in apollo_control
+Model run at                                : 2025-06-18 22:57:03.401438
+Estimation method                           : bgw
+Model diagnosis                             : Relative function convergence
+Optimisation diagnosis                      : Maximum found
+     hessian properties                     : Negative definite
+     maximum eigenvalue                     : -575.920528
+     reciprocal of condition number         : 0.0144156
+Number of individuals                       : 5037
+Number of rows in database                  : 5037
+Number of modelled outcomes                 : 0
+
+Number of cores used                        :  1 
+Model without mixing
+
+LL(start)                                   : 0
+LL at equal shares, LL(0)                   : NA
+LL at observed shares, LL(C)                : NA
+LL(final)                                   : -18197.82
+Rho-squared vs equal shares                  :  Not applicable 
+Adj.Rho-squared vs equal shares              :  Not applicable 
+Rho-squared vs observed shares               :  Not applicable 
+Adj.Rho-squared vs observed shares           :  Not applicable 
+AIC                                         :  36399.63 
+BIC                                         :  -Inf 
+
+Estimated parameters                        : 2
+Time taken (hh:mm:ss)                       :  00:00:0.54 
+     pre-estimation                         :  00:00:0.24 
+     estimation                             :  00:00:0.24 
+     post-estimation                        :  00:00:0.05 
+Iterations                                  :  11  
+
+Unconstrained optimisation.
+
+Estimates:
+         Estimate        s.e.   t.rat.(0)    Rob.s.e. Rob.t.rat.(0)
+Theta     1.00000          NA          NA          NA            NA
+Phi       0.67534     0.02197      30.745     0.02726        24.774
+thw      -0.08793     0.03576      -2.459     0.04894        -1.796
+
+
+Classical covariance matrix:
+            Phi         thw
+Phi  4.8248e-04 -7.5735e-04
+thw -7.5735e-04    0.001279
+
+Robust covariance matrix:
+            Phi         thw
+Phi  7.4307e-04   -0.001302
+thw   -0.001302    0.002396
+
+Classical correlation matrix:
+            Phi         thw
+Phi      1.0000     -0.9641
+thw     -0.9641      1.0000
+
+Robust correlation matrix:
+            Phi         thw
+Phi      1.0000     -0.9758
+thw     -0.9758      1.0000
+
+ 20 most extreme outliers in terms of lowest average per choice prediction:
+        row Avg prob per choice
+ 00951-1-01        2.100443e-11
+ 12432-1-01        3.987514e-08
+ 07051-1-02        1.299794e-07
+ 02584-1-04        4.584337e-07
+ 10533-1-06        5.150879e-07
+ 06407-1-01        7.606474e-07
+ 01519-1-01        2.687323e-06
+ 08220-1-01        3.779290e-06
+ 02796-1-01        6.255026e-06
+ 14847-1-01        8.213230e-06
+ 10106-1-01        9.896105e-06
+ 02761-1-03        1.110552e-05
+ 12509-1-01        1.360473e-05
+ 06219-1-01        1.587686e-05
+ 09573-1-01        1.598018e-05
+ 06396-1-01        1.607075e-05
+ 03572-2-02        1.840252e-05
+ 16122-1-02        1.967025e-05
+ 02174-1-01        2.394780e-05
+ 09747-1-02        2.487506e-05
+
+Changes in parameter estimates from starting values:
+          Initial    Estimate  Difference
+Theta       1.000     1.00000     0.00000
+Phi         1.000     0.67534    -0.32466
+thw         0.000    -0.08793    -0.08793
+
+Settings and functions used in model definition:
+
+apollo_control
+--------------
+                       Value                                            
+modelName              "enut-mtuem-1eq"                                 
+indivID                "id_persona"                                     
+debug                  "FALSE"                                          
+modelDescr             "No model description provided in apollo_control"
+nCores                 "1"                                              
+workInLogs             "FALSE"                                          
+seed                   "13"                                             
+mixing                 "FALSE"                                          
+HB                     "FALSE"                                          
+noValidation           "FALSE"                                          
+noDiagnostics          "FALSE"                                          
+calculateLLC           "TRUE"                                           
+analyticHessian        "FALSE"                                          
+memorySaver            "FALSE"                                          
+outputDirectory        "C:/Users/pablo/OneDrive/mtuem/"                 
+panelData              "FALSE"                                          
+analyticGrad           "TRUE"                                           
+analyticGrad_manualSet "FALSE"                                          
+overridePanel          "FALSE"                                          
+preventOverridePanel   "FALSE"                                          
+noModification         "FALSE"                                          
+
+Hessian routines attempted
+--------------------------
+numerical second derivative of LL (using numDeriv)
+
+Scaling used in computing Hessian
+---------------------------------
+         Value
+Phi 0.67533579
+thw 0.08792698
+
+
+apollo_probabilities
+----------------------
+function (apollo_beta, apollo_inputs, functionality = "estimate") 
+{
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+    P = list()
+    work_times = c("Tw")
+    work_elasticities = list(Theta = Theta, Phi = Phi, thw = thw)
+    mtuem_settings = list(work_times = work_times, work_elasticities = work_elasticities, 
+        Tc = Tc, Ec = Ec, w = w, tau = 168)
+    P[["model"]] = mtuem_likelihood(mtuem_settings, functionality)
+    P = apollo_prepareProb(P, apollo_inputs, functionality)
+    return(P)
+}
+<environment: 0x000001f287c5e8c0>
