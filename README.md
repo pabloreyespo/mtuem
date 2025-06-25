@@ -213,7 +213,7 @@ suppressWarnings({
 #> 
 #> Model name                                  : enut-mtuem-1eq
 #> Model description                           : No model description provided in apollo_control
-#> Model run at                                : 2025-06-25 13:34:12.834823
+#> Model run at                                : 2025-06-25 14:27:38.91171
 #> Estimation method                           : bgw
 #> Model diagnosis                             : Relative function convergence
 #> Optimisation diagnosis                      : Maximum found
@@ -239,7 +239,7 @@ suppressWarnings({
 #> BIC                                         :  -Inf 
 #> 
 #> Estimated parameters                        : 2
-#> Time taken (hh:mm:ss)                       :  00:00:0.57 
+#> Time taken (hh:mm:ss)                       :  00:00:0.56 
 #>      pre-estimation                         :  00:00:0.23 
 #>      estimation                             :  00:00:0.27 
 #>      post-estimation                        :  00:00:0.06 
