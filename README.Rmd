@@ -60,8 +60,9 @@ apollo_control = list(
 database = mtuem::enut.ii
 database['Tc'] = rowSums(database[,c("Tc", "Tc_sleep", "Tc_meals")])
 is_not_retist = database["Ec"] > 0
+is_worker = database["is_worker"] == 1
 can_afford_expenses =  (database["Ec"] / (database["w"]*(168 -  database["Tc"]))) < 1
-database = database[is_not_retist & can_afford_expenses,]
+database = database[is_not_retist & can_afford_expenses & is_worker,]
 
 apollo_beta = c(Theta   = 1,
                 Phi     = 1,

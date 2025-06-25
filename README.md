@@ -79,8 +79,9 @@ apollo_control = list(
 database = mtuem::enut.ii
 database['Tc'] = rowSums(database[,c("Tc", "Tc_sleep", "Tc_meals")])
 is_not_retist = database["Ec"] > 0
+is_worker = database["is_worker"] == 1
 can_afford_expenses =  (database["Ec"] / (database["w"]*(168 -  database["Tc"]))) < 1
-database = database[is_not_retist & can_afford_expenses,]
+database = database[is_not_retist & can_afford_expenses & is_worker,]
 
 apollo_beta = c(Theta   = 1,
                 Phi     = 1,
@@ -163,41 +164,41 @@ suppressWarnings({
 #> 
 #> 
 #> Iterates will be written to: 
-#>  C:/Users/pablo/OneDrive/mtuem/enut-mtuem-1eq_iterations.csv
+#>  C:/Users/pablo/OneDrive/UdeC/Investigación/apollo_timeuse/mtuem/enut-mtuem-1eq_iterations.csv
 #>     it    nf     F            RELDF    PRELDF    RELDX    MODEL stppar
-#>      0     1 1.956485669e+04
-#>      1     4 1.896555286e+04 3.063e-02 2.535e-02 3.27e-02   G   1.32e+00
-#>      2     5 1.825564290e+04 3.743e-02 2.748e-02 1.94e-01   G   2.16e-02
-#>      3     6 1.821465491e+04 2.245e-03 4.373e-03 7.40e-02   S   0.00e+00
-#>      4     8 1.820361475e+04 6.061e-04 1.520e-03 3.16e-02   S   1.58e-01
-#>      5     9 1.819871195e+04 2.693e-04 2.570e-04 2.50e-02   S   0.00e+00
-#>      6    10 1.819822035e+04 2.701e-05 1.642e-05 8.48e-03   S   0.00e+00
-#>      7    11 1.819785709e+04 1.996e-05 2.030e-05 1.23e-02   G   0.00e+00
-#>      8    12 1.819782760e+04 1.621e-06 1.143e-06 1.11e-03   G   0.00e+00
-#>      9    13 1.819781989e+04 4.234e-07 2.757e-07 1.13e-03   G   0.00e+00
-#>     10    14 1.819781669e+04 1.760e-07 1.758e-07 1.27e-03   S   0.00e+00
-#>     11    15 1.819781669e+04 1.773e-11 1.678e-11 7.70e-06   S   0.00e+00
+#>      0     1 1.964498496e+04
+#>      1     4 1.905531350e+04 3.002e-02 2.495e-02 3.27e-02   G   1.37e+00
+#>      2     5 1.834376482e+04 3.734e-02 2.751e-02 1.95e-01   G   2.26e-02
+#>      3     6 1.830390289e+04 2.173e-03 3.926e-03 6.50e-02   S   0.00e+00
+#>      4     7 1.829727878e+04 3.619e-04 9.650e-04 3.92e-02   S   0.00e+00
+#>      5     8 1.829121979e+04 3.311e-04 3.198e-04 3.81e-02   S   0.00e+00
+#>      6     9 1.829073812e+04 2.633e-05 1.735e-05 9.61e-03   S   0.00e+00
+#>      7    10 1.829055553e+04 9.983e-06 1.072e-05 8.83e-03   G   0.00e+00
+#>      8    11 1.829054638e+04 4.998e-07 3.824e-07 3.87e-04   G   0.00e+00
+#>      9    12 1.829054434e+04 1.117e-07 7.359e-08 6.26e-04   G   0.00e+00
+#>     10    13 1.829054353e+04 4.434e-08 4.418e-08 6.57e-04   S   0.00e+00
+#>     11    14 1.829054353e+04 9.281e-12 8.879e-12 4.62e-06   S   0.00e+00
 #> 
 #> ***** Relative function convergence *****
 #> 
 #> Estimated parameters with approximate standard errors from BHHH matrix:
 #>          Estimate     BHHH se BHH t-ratio (0)
 #> Theta     1.00000          NA              NA
-#> Phi       0.67534     0.01952          34.599
-#> thw      -0.08793     0.02815          -3.124
+#> Phi       0.66546     0.01962          33.909
+#> thw      -0.07547     0.02840          -2.658
 #> 
-#> Final LL: -18197.8167
+#> Final LL: -18290.5435
 #> 
 #> Calculating log-likelihood at equal shares (LL(0)) for applicable
 #>   models...
 #> Calculating log-likelihood at observed shares from estimation data
 #>   (LL(c)) for applicable models...
 #> Calculating LL of each model component...
-#> VoL: 4.741416 
-#> VTAW: -0.3744373 
+#> VoL: 4.653763 
+#> VTAW: -0.314996 
 #> Computing covariance matrix using numerical methods (numDeriv).
 #>  0%....25%....50%...100%
-#> Negative definite Hessian with maximum eigenvalue: -575.920528
+#> Negative definite Hessian with maximum eigenvalue: -563.860558
 #> Computing score matrix...
 #> 
 #> Your model was estimated using the BGW algorithm. Please acknowledge
@@ -212,15 +213,15 @@ suppressWarnings({
 #> 
 #> Model name                                  : enut-mtuem-1eq
 #> Model description                           : No model description provided in apollo_control
-#> Model run at                                : 2025-06-18 22:59:33.076758
+#> Model run at                                : 2025-06-25 13:34:12.834823
 #> Estimation method                           : bgw
 #> Model diagnosis                             : Relative function convergence
 #> Optimisation diagnosis                      : Maximum found
 #>      hessian properties                     : Negative definite
-#>      maximum eigenvalue                     : -575.920528
-#>      reciprocal of condition number         : 0.0144156
-#> Number of individuals                       : 5037
-#> Number of rows in database                  : 5037
+#>      maximum eigenvalue                     : -563.860558
+#>      reciprocal of condition number         : 0.0144147
+#> Number of individuals                       : 5043
+#> Number of rows in database                  : 5043
 #> Number of modelled outcomes                 : 0
 #> 
 #> Number of cores used                        :  1 
@@ -229,19 +230,19 @@ suppressWarnings({
 #> LL(start)                                   : 0
 #> LL at equal shares, LL(0)                   : NA
 #> LL at observed shares, LL(C)                : NA
-#> LL(final)                                   : -18197.82
+#> LL(final)                                   : -18290.54
 #> Rho-squared vs equal shares                  :  Not applicable 
 #> Adj.Rho-squared vs equal shares              :  Not applicable 
 #> Rho-squared vs observed shares               :  Not applicable 
 #> Adj.Rho-squared vs observed shares           :  Not applicable 
-#> AIC                                         :  36399.63 
+#> AIC                                         :  36585.09 
 #> BIC                                         :  -Inf 
 #> 
 #> Estimated parameters                        : 2
-#> Time taken (hh:mm:ss)                       :  00:00:0.82 
-#>      pre-estimation                         :  00:00:0.43 
-#>      estimation                             :  00:00:0.31 
-#>      post-estimation                        :  00:00:0.08 
+#> Time taken (hh:mm:ss)                       :  00:00:0.57 
+#>      pre-estimation                         :  00:00:0.23 
+#>      estimation                             :  00:00:0.27 
+#>      post-estimation                        :  00:00:0.06 
 #> Iterations                                  :  11  
 #> 
 #> Unconstrained optimisation.
@@ -249,16 +250,16 @@ suppressWarnings({
 #> Estimates:
 #>          Estimate        s.e.   t.rat.(0)    Rob.s.e. Rob.t.rat.(0)
 #> Theta     1.00000          NA          NA          NA            NA
-#> Phi       0.67534     0.02197      30.745     0.02726        24.774
-#> thw      -0.08793     0.03576      -2.459     0.04894        -1.796
+#> Phi       0.66546     0.02216      30.026     0.02752        24.180
+#> thw      -0.07547     0.03616      -2.087     0.04937        -1.529
 
 # Compute values of time
 pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
 #> Running predictions from model using parameter estimates...
 #> Prediction at user provided parameters
-#>                 Tw         T         X      VoL     VTAW
-#> Aggregate 211574.5 174125.93 570818.34 23882.51 -1886.04
-#> Average       42.0     34.57    113.33     4.74    -0.37
+#>                  Tw        T        X      VoL     VTAW
+#> Aggregate 210940.40 173970.3 551679.3 23468.93 -1588.53
+#> Average       41.83     34.5    109.4     4.65    -0.31
 #> 
 #> The output from apollo_prediction is a matrix containing the
 #>   predictions at the estimated values.
@@ -276,13 +277,13 @@ delta <- apollo_deltaMethod(model, list(
 #> The expression VoL includes parameters that were fixed in estimation:
 #>   Theta
 #> These have been replaced by their fixed values, giving:
-#>   3.2020476626436*1/Phi
+#>   3.09688960243761*1/Phi
 #> 
 #> Running Delta method computation for user-defined function using robust standard errors
 #> 
 #>  Expression   Value   s.e. t-ratio (0)
-#>         VoL  4.7414 0.1914       24.77
-#>        VTAW -0.3744 0.1937       -1.93
+#>         VoL  4.6538 0.1925       24.18
+#>        VTAW -0.3150 0.1934       -1.63
 #> INFORMATION: The results of the Delta method calculations are returned invisibly as
 #>   an output from this function. Calling the function via
 #>   result=apollo_deltaMethod(...) will save this output in an object
@@ -293,6 +294,6 @@ delta[,"CI-95%"] <- delta[,"Value"] - 1.96*delta[,"s.e."]
 delta[,"CI+95%"] <- delta[,"Value"] + 1.96*delta[,"s.e."]
 delta
 #>   Expression   Value   s.e. t-ratio (0)    CI-95%   CI+95%
-#> 1        VoL  4.7414 0.1914       24.77  4.366256 5.116544
-#> 2       VTAW -0.3744 0.1937       -1.93 -0.754052 0.005252
+#> 1        VoL  4.6538 0.1925       24.18  4.276500 5.031100
+#> 2       VTAW -0.3150 0.1934       -1.63 -0.694064 0.064064
 ```
