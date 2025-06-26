@@ -79,8 +79,8 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
 
   get_tw <- function(work_elasticities, tau, Tc, Ec, w) {
     ec   <- Ec / (w * (tau-Tc))
-    betaalphaec <- wotk_elasticities$beta + wotk_elasticities$alpha*ec
-    sqrt_term <-  sqrt(betaalphaec^2 - ec*(2*wotk_elasticities$alpha+2*wotk_elasticities$beta-1))
+    betaalphaec <- work_elasticities$beta + work_elasticities$alpha*ec
+    sqrt_term <-  sqrt(betaalphaec^2 - ec*(2*work_elasticities$alpha+2*work_elasticities$beta-1))
     tw_opt <- (tau - Tc) * (betaalphaec + sqrt_term)
     tw_opt <- matrix(tw_opt, ncol = 1)
     return(tw_opt)
