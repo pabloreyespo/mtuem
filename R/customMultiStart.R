@@ -112,7 +112,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
             apollo_probabilities, 
             apollo_inputs,
             lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0),
-            estimate_settings = list(scaling = F))
+            estimate_settings = list(scaleAfterConvergence = F))
 
           apollo_beta <- model$estimate
         }
