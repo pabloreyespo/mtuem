@@ -95,7 +95,6 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
 
   
   for (i in indexes) {
-    
     if (verbose) {
       ##### VERBOSE START ####
       cat("Candidate",i,"...\n")
@@ -115,11 +114,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
           apollo_beta <- model$estimate
         }
         cat("Starting solver...\n")
-        invisible(utils::capture.output({
-          models[[i]] <- apollo::apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
-                                                 estimate_settings= estimation_settings)
-        }))
-        
+        models[[i]] <- apollo::apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
+                                               estimate_settings= estimation_settings)
         cat("LL:", -round(models[[i]]$maximum, 2),"...\n")
         flag <- T
         cat("Done...\n")
