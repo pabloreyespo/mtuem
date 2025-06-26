@@ -13,7 +13,7 @@ mtuem_ab_likelihood(mtuem_settings, functionality = "estimate")
 \item \strong{\code{free_times}} Character vector. Optional. Names of the freely allocated times. (Remember to left one out for identification)
 \item \strong{\code{free_goods}} Character vector. Optional. Names of the freely consumed goods.(Remember to left one out for identification)
 \item \strong{\code{goods_cost}} Named list. Optional. Cost associated to the consumption of each good. If not especified assumed as 1. Then Expeneses equal consumption of the good.
-\item \strong{\code{work_elasticities}} Named list. Value of the elasticity parameters associated to work equation. Mandatory names are alpha, and beta.
+\item \strong{\code{work_elasticities}} Named list. Value of the elasticity parameters associated to work equation. Mandatory names are alpha and beta.
 \item \strong{\code{times_elasticities}} List. Optional. Value of the elasticity parameters associated to freely allocated times. Must be in the same order of \code{free_times}.
 \item \strong{\code{goods_elasticities}} List. Optional. Value of the elasticity parameters associated to freely allocated goods Must be in the same order of \code{free_goods}.
 \item \strong{\code{sig}} List. Optional. Value of the sigma parameters (standard deviations) of the error covariance matrix. One element for equation. If not specified inferred by the observed errors.
