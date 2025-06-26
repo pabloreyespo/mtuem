@@ -62,7 +62,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   for (i in tmp) estimation_settings[[i]] <- default_estimation_settings[[i]]
   rm(tmp)
   
-  estimation_settings[["scaling"]] <- FALSE
+  estimation_settings[["scaleAfterConvergence"]] <- FALSE
 
   apolloBetaMax = customMultistart_settings[["apolloBetaMax"]]
   apolloBetaMin = customMultistart_settings[["apolloBetaMin"]]
@@ -112,7 +112,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
             apollo_probabilities, 
             apollo_inputs,
             lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0),
-            estimation_settins = list(scaling = F))
+            estimate_settings = list(scaling = F))
 
           apollo_beta <- model$estimate
         }
@@ -138,7 +138,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
               apollo_fixed, 
               apollo_probabilities, 
               apollo_inputs,
-              lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0))
+              lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0),
+              estimate_settings = list(scaling = F))
           }))
           apollo_beta <- model$estimate
           cat("LL:", -round(model$maximum, 2),"...")
