@@ -212,7 +212,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     if(is.matrix(ll)) ll <- rowSums(ll)
     L <- exp(ll)
-    # if (any(work_elasticities$Phi<0)) {L <- L*0.0001}
+    if (any(work_elasticities$Phi<0)) {L <- L*0.0001}
     return(L)
   }
 
