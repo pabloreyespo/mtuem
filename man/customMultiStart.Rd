@@ -13,7 +13,8 @@ customMultiStart(
   estimation_settings = NA,
   first_em = F,
   em_iter_max = 5,
-  non_saddle = T
+  non_saddle = T,
+  verbose = F
 )
 }
 \arguments{
@@ -44,6 +45,8 @@ customMultiStart(
 \item{em_iter_max}{Numeric vector. Number of iterations of EM algorithm to be run. Only valid if \code{first_em} is set to TRUE. Default: 5.}
 
 \item{non_saddle}{Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE}
+
+\item{verbose}{Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.}
 }
 \value{
 a named list containing the best model, the best log-likelihood and all estimated models.

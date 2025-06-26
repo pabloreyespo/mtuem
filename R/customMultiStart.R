@@ -21,7 +21,7 @@
 #' @param first_em Boolean. If TRUE a few iterations of Expectation-Maximization algorithm will be run. Only use for latent class models. Default: FALSE
 #' @param em_iter_max Numeric vector. Number of iterations of EM algorithm to be run. Only valid if \code{first_em} is set to TRUE. Default: 5.
 #' @param non_saddle Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE
-#'
+#' @param verbose Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.
 #'
 #' @return a named list containing the best model, the best log-likelihood and all estimated models.
 #'        \itemize{
@@ -36,7 +36,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
                                     estimation_settings = NA,
                                     first_em = F,
                                     em_iter_max = 5,
-                                    non_saddle = T) {
+                                    non_saddle = T,
+                                    verbose = F) {
 
   default_customMultistart_settings  = list(
       apolloBetaMax = apollo_beta + 1,
@@ -91,31 +92,71 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   models <- list()
   best_model <- NA
   best_ll <- -Inf
+
+  
   for (i in indexes) {
-    cat("Candidate",i,"...")
-    apollo_beta <- beta_matrix[i,]
-    flag <- F
-    suppressWarnings({ try({
-      if (first_em) {
-        cat("Starting EM...")
-        invisible(utils::capture.output({
-          model <- apollo::apollo_lcEM(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
-                         lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0))
+    
+    if (verbose) {
+      ##### VERBOSE START ####
+      cat("Candidate",i,"...\n")
+      apollo_beta <- beta_matrix[i,]
+      flag <- F
+      suppressWarnings({ try({
+        if (first_em) {
+          cat("Starting EM...\n")
+
+          model <- apollo::apollo_lcEM(
+            apollo_beta, 
+            apollo_fixed, 
+            apollo_probabilities, 
+            apollo_inputs,
+            lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0))
+
           apollo_beta <- model$estimate
+        }
+        cat("Starting solver...\n")
+        invisible(utils::capture.output({
+          models[[i]] <- apollo::apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
+                                                 estimate_settings= estimation_settings)
         }))
-        cat("LL:", -round(model$maximum, 2),"...")
-      }
-      cat("Starting solver...")
-      invisible(utils::capture.output({
-        models[[i]] <- apollo::apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
-                                       estimate_settings= estimation_settings)
-      }))
-
-      cat("LL:", -round(models[[i]]$maximum, 2),"...")
-      flag <- T
-      cat("Done...")
-    }, silent = TRUE)})
-
+        
+        cat("LL:", -round(models[[i]]$maximum, 2),"...\n")
+        flag <- T
+        cat("Done...\n")
+      }, silent = TRUE)})
+      ##### VERBOSE END ####
+    } else {
+      ### NOT VERBOSE START###
+      cat("Candidate",i,"...")
+      apollo_beta <- beta_matrix[i,]
+      flag <- F
+      suppressWarnings({ try({
+        if (first_em) {
+          cat("Starting EM...")
+          invisible(utils::capture.output({
+            model <- apollo::apollo_lcEM(
+              apollo_beta, 
+              apollo_fixed, 
+              apollo_probabilities, 
+              apollo_inputs,
+              lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0))
+          }))
+          apollo_beta <- model$estimate
+          cat("LL:", -round(model$maximum, 2),"...")
+        }
+        cat("Starting solver...")
+        invisible(utils::capture.output({
+          models[[i]] <- apollo::apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
+                                                 estimate_settings= estimation_settings)
+        }))
+        
+        cat("LL:", -round(models[[i]]$maximum, 2),"...")
+        flag <- T
+        cat("Done...")
+      }, silent = TRUE)})
+      ### NOT VERBOSE END###
+    }
+  
     if (flag) {
       code = models[[i]]$code
       is_bgw = estimation_settings$estimationRoutine=="bgw"
