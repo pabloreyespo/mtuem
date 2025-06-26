@@ -35,7 +35,7 @@
 #' @return array of likelihood for each individual
 #' @export
 #'
-mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
+mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
   # Rename input if necessary
   apollo_inputs <- tryCatch(get('apollo_inputs', envir=parent.frame(), inherits=FALSE),
                             error=function(e) list(silent=FALSE))
@@ -218,7 +218,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   #### OUTPUT #### ---> En base a los datos que entrego me hace un reporte, puedo hacerlo pero aun no es necesario
   # ------------ #
   if(functionality %in% c("output", "report")){
-    ans <- mtuem_likelihood(mtuem_settings, functionality="estimate")
+    ans <- mtuem_ab_likelihood(mtuem_settings, functionality="estimate")
     if (functionality == "output") {
       # Compute values of time and print
       tw_opt <- get_tw(work_elasticities, tau, Tc, Ec, w)
@@ -241,7 +241,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     opt <- tw_opt
 
     if (flag_times) {
-      ti_opt <- get_ti(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
+      ti_opt <- get_ti(times_elasticities, work_elasticities$beta, tw_opt, tau, Tc)
       colnames(ti_opt) <- free_times
       ti_other = matrix(tau - Tc - rowSums(ti_opt) - tw_opt, ncol=1)
       colnames(ti_other) <- c("Tfi")
@@ -254,7 +254,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     if (flag_goods) {
       # TODO xj asume que precio del bien omitido es = 1
-      xj_opt <- get_xi(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
+      xj_opt <- get_xi(goods_elasticities, goods_cost, work_elasticities$alpha, tw_opt, Ec, w)
       colnames(xj_opt) <- free_goods
       xj_other = matrix(w*tw_opt - Ec - rowSums(xj_opt), ncol=1)
       colnames(xj_other) <- c("Xfj")
@@ -274,7 +274,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
   if(functionality=="gradient"){
     ec = Ec / (w * (tau-Tc))
-    if ("Tw" %in% names(mtuem_settings)) {
+    if (F) {
         # TODO algún dia arreglar los gradientes, aunque la verdad puede que no sea tan necesario
         x <- (PH + TH + thw)
         thetaphiec = PH + thw + (TH + thw)*ec
