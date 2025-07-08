@@ -115,13 +115,6 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
     err <- obs - opt
 
-    if (functionality == "get_covar") {
-      return(list(
-        covar = stats::cov(err, use = "pairwise.complete.obs"),
-        corr =  stats::cor(err, use = "pairwise.complete.obs"),
-        sigma = sqrt(diag(stats::cov(err, use = "pairwise.complete.obs")))))
-    }
-
     if (!estimate_sig) {
       sig <- stats::cov(err, use = "pairwise.complete.obs")
       sig <- sqrt(diag(sig))
@@ -177,12 +170,12 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   #### PREDICTION ####
   # ---------------- #
   if(functionality=="prediction"){
-    tw_opt <- get_tw(work_elasticities, tau, Tc, Ec, w)
+    tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
     colnames(tw_opt) <- work_times
     opt <- tw_opt
 
     if (flag_times) {
-      ti_opt <- get_ti(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
+      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
       colnames(ti_opt) <- free_times
       ti_other = matrix(tau - Tc - rowSums(ti_opt) - tw_opt, ncol=1)
       colnames(ti_other) <- c("Tfi")
@@ -195,7 +188,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     if (flag_goods) {
       # TODO xj asume que precio del bien omitido es = 1
-      xj_opt <- get_xi(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
+      xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
       colnames(xj_opt) <- free_goods
       xj_other = matrix(w*tw_opt - Ec - rowSums(xj_opt), ncol=1)
       colnames(xj_other) <- c("Xfj")
