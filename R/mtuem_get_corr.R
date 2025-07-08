@@ -7,7 +7,7 @@
 #' @return array of likelihood for each individual
 #' @export
 mtuem_get_corr <- function(model, apollo_probabilities, apollo_inputs, vars) {
-  pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
+  pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs, prediction_settings = list(silent = T))
   database <- apollo_inputs$database
 
   return(list(
