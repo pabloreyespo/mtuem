@@ -83,7 +83,7 @@ get_values_of_time_albe <- function(tw, work_elasticities, Tc, Ec, w) {
 #' @export
 get_cond_err <- function(mu, rho) {
   neq <- ncol(mu)
-  conditional_mu        <-  matrix(0, nrow = N, ncol = neq)
+  conditional_mu        <-  matrix(0, nrow = nrow(mu), ncol = neq)
   colnames(conditional_mu) <- colnames(mu)
   conditional_sd        <-  rep(1, neq)
 
