@@ -14,7 +14,9 @@ customMultiStart(
   first_em = F,
   em_iter_max = 5,
   non_saddle = T,
-  verbose = F
+  verbose = F,
+  normalization = NA,
+  nClass = 1
 )
 }
 \arguments{
@@ -47,6 +49,10 @@ customMultiStart(
 \item{non_saddle}{Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE}
 
 \item{verbose}{Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.}
+
+\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contains the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{good_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".}
+
+\item{nClass}{Named list. Default 1. Number of classes.}
 }
 \value{
 a named list containing the best model, the best log-likelihood and all estimated models.

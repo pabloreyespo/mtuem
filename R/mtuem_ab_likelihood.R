@@ -77,62 +77,6 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
     rm(tmp)
   }
 
-  get_tw <- function(work_elasticities, tau, Tc, Ec, w) {
-    ec   <- Ec / (w * (tau-Tc))
-    betaalphaec <- work_elasticities$beta + work_elasticities$alpha*ec
-    sqrt_term <-  sqrt(betaalphaec^2 - ec*(2*work_elasticities$alpha+2*work_elasticities$beta-1))
-    tw_opt <- (tau - Tc) * (betaalphaec + sqrt_term)
-    tw_opt <- matrix(tw_opt, ncol = 1)
-    return(tw_opt)
-  }
-
-  get_ti <- function(times_elasticities, beta, Tw, tau, Tc) {
-    ti_opt <- sapply(unlist(times_elasticities), function(x) (x / (1-2*beta)) * (tau - Tw - Tc))
-    return(ti_opt)
-  }
-
-  get_xi <- function(goods_elasticities, goods_cost, alpha, Tw, Ec, w) {
-    xj_opt <- sapply(unlist(goods_elasticities) / unlist(goods_cost), function(x) (x / (1-alpha)) * (w*Tw - Ec))
-    return(xj_opt)
-  }
-
-  get_cond_err <- function(mu, rho) {
-    neq <- ncol(mu)
-    conditional_mu        <-  matrix(0, nrow = N, ncol = neq)
-    colnames(conditional_mu) <- colnames(mu)
-    conditional_sd        <-  rep(1, neq)
-
-    for (j in 2:neq) {
-      if (j == 2) {
-        conditional_mu[,2] <- rho[2,1] * mu[,1]
-        conditional_sd[2]  <- 1 - rho[2,1]^2
-      } else if (j ==3) {
-        conditional_mu[,3] <- ((rho[2,3]-rho[1,3]*rho[1,2])* mu[,2] + (rho[1,3]-rho[2,3]*rho[1,2])*mu[,1]) / conditional_sd[2]
-        conditional_sd[3]  <- 1- (rho[2,3]^2 -2*rho[2,1]*rho[2,3]*rho[1,3] +rho[1,3]^2) / conditional_sd[2]
-      } else {
-        i <- j-1
-        conditional_mu[,j] <- rho[j,i:1] %*% solve(rho[i:1,i:1]) %*% t(mu[,i:1]) #(3|2,1)
-        conditional_sd[j]  <- rho[j,j] - rho[j,i:1] %*% solve(rho[i:1,i:1]) %*% rho[i:1,j]
-      }
-    }
-
-    conditional_mu = sweep(mu - conditional_mu, MARGIN = 2, sqrt(conditional_sd), "/")
-    return(list(cond_mu = conditional_mu, cond_sd = conditional_sd))
-  }
-
-  get_values_of_time <- function(tw, work_elasticities, Tc, Ec, w) {
-      cteVoLi  <- (w*tw - Ec) / (168-tw-Tc)
-      coefVoL <-  (1-2*work_elasticities$beta) / (1-2*work_elasticities$alpha)
-
-      #cteVTAWi <- (w*tw - Ec) / (tw)
-      #coefVTAW <- (2*work_elasticities$beta + 2*work_elasticities$alpha - 1)/ (1-2*work_elasticities$alpha)
-
-      VoL  <- cteVoLi * coefVoL
-      VTAW <- VoL - w
-
-      return(cbind(VoL, VTAW))
-    }
-
   if(functionality=="preprocess"){
     preproc_settings <- list(componentName = "..", gradient = FALSE) # TODO verificar que esto haga sentido
     if(!is.null(mtuem_settings$componentName)){
@@ -162,24 +106,21 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
   #### ESTIMATE, CONDITIONALS AND RAW #### ----> Calculan la verosimilitud (La que tengo en likelihoods)
   # ------------------------------------ #
   if(functionality %in% c("estimate", "conditionals", "raw")){
-    tw_opt <- get_tw(work_elasticities, tau, Tc, Ec, w)
-    colnames(tw_opt) <- work_times
-    opt <- tw_opt
-
-    if (flag_times) {
-      ti_opt <- get_ti(times_elasticities, work_elasticities$beta, tw_opt, tau, Tc)
-      colnames(ti_opt) <- free_times
-      opt <- cbind(opt, ti_opt)
-    }
-
-    if (flag_goods) {
-      xj_opt <- get_xi(goods_elasticities, goods_cost, work_elasticities$alpha, tw_opt, Ec, w)
-      colnames(xj_opt) <- free_goods
-      opt <- cbind(opt, xj_opt)
-    }
+    tw_opt <- get_tw_albe(work_elasticities, tau, Tc, Ec, w)
+    ti_opt <- get_ti_albe(times_elasticities, work_elasticities$beta, tw_opt, tau, Tc)
+    xj_opt <- get_xi_albe(goods_elasticities, goods_cost, work_elasticities$alpha, tw_opt, Ec, w)
+    opt <- cbind(tw_opt, ti_opt, xj_opt)
+    colnames(opt) <- c(work_times, times_elasticities, goods_elasticities)
 
     obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
     err <- obs - opt
+
+    if (functionality == "get_covar") {
+      return(list(
+        covar = stats::cov(err, use = "pairwise.complete.obs"),
+        corr =  stats::cor(err, use = "pairwise.complete.obs"),
+        sigma = sqrt(diag(stats::cov(err, use = "pairwise.complete.obs")))))
+    }
 
     if (!estimate_sig) {
       sig <- stats::cov(err, use = "pairwise.complete.obs")
@@ -222,7 +163,7 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
     if (functionality == "output") {
       # Compute values of time and print
       tw_opt <- get_tw(work_elasticities, tau, Tc, Ec, w)
-      vot <- get_values_of_time(tw_opt, work_elasticities, Tc, Ec, w)
+      vot <- get_values_of_time_albe(tw_opt, work_elasticities, Tc, Ec, w)
       colnames(vot) <- c("VoL", "VTAW")
       vot <- colMeans(vot)
       cat("VoL:", vot[1], "\n")
@@ -265,7 +206,7 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
       opt <- cbind(opt, xj)
     }
 
-    vot <- get_values_of_time(tw_opt, work_elasticities, Tc, Ec, w)
+    vot <- get_values_of_time_albe(tw_opt, work_elasticities, Tc, Ec, w)
     colnames(vot) <- c("VoL", "VTAW")
     opt <- cbind(opt, vot)
 

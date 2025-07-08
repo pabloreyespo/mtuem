@@ -22,6 +22,8 @@
 #' @param em_iter_max Numeric vector. Number of iterations of EM algorithm to be run. Only valid if \code{first_em} is set to TRUE. Default: 5.
 #' @param non_saddle Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE
 #' @param verbose Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.
+#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contains the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{good_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".
+#' @param nClass Named list. Default 1. Number of classes.
 #'
 #' @return a named list containing the best model, the best log-likelihood and all estimated models.
 #'        \itemize{
@@ -32,22 +34,40 @@
 #'
 #' @export
 customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
-                                    customMultistart_settings = NA,
-                                    estimation_settings = NA,
-                                    first_em = F,
-                                    em_iter_max = 5,
-                                    non_saddle = T,
-                                    verbose = F) {
+                              customMultistart_settings = NA,
+                              estimation_settings = NA,
+                              first_em = F,
+                              em_iter_max = 5,
+                              non_saddle = T,
+                              verbose = F,
+                              normalization = NA,
+                             nClass = 1) {
 
   default_customMultistart_settings  = list(
       apolloBetaMax = apollo_beta + 1,
       apolloBetaMin = apollo_beta - -1,
       nCandidates = 100
   )
+
+  default_normalization = list(
+    normalization = "none",
+    work_elasticities = c(),
+    times_elasticities = c(),
+    goods_elasticities = c(),
+    sig = c(),
+    rho = c()
+  )
+
   if (length(customMultistart_settings) == 1 && is.na(customMultistart_settings)) customMultistart_settings <- default_customMultistart_settings
   tmp <- names(default_customMultistart_settings)[!(names(default_customMultistart_settings) %in% names(customMultistart_settings))]
   for (i in tmp) customMultistart_settings[[i]] <- default_customMultistart_settings[[i]]
   rm(tmp)
+
+  if (any(!is.na(normalization))) {
+    tmp <- names(default_normalization)[!(names(default_normalization) %in% names(normalization))]
+    for (i in tmp) normalization[[i]] <- default_normalization[[i]]
+    rm(tmp)
+  }
 
   default_estimation_settings = list(
     writeIter = FALSE,
@@ -76,7 +96,119 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   apollo_variables <- names(apollo_beta_original)[!names(apollo_beta_original) %in% apollo_fixed]
   rand <- stats::runif(nCandidates * length(apollo_variables), apolloBetaMin, apolloBetaMax)
   rand <- matrix(rand, nrow = nCandidates, ncol = length(apollo_variables))
-  beta_matrix[,apollo_variables] <- beta_matrix[,apollo_variables] +rand
+  beta_matrix[,apollo_variables] <- beta_matrix[,apollo_variables] + rand
+
+  normalize <- function(beta_matrix, normalization, work_elasticities, times_elasticities, goods_elasticities, sig, rho) {
+    if (normalization== "alpha_beta") {
+      tmp <- apollo_variables[(apollo_variables %in% work_elasticities)]
+      mask <- beta_matrix[, tmp] >= 0.5
+      beta_matrix[, tmp][mask] <- 0.49
+      rm(tmp)
+
+      tmp <- apollo_variables[apollo_variables %in% c(times_elasticities, goods_elasticities, sig)]
+      mask <- beta_matrix[, tmp] <= 0
+      beta_matrix[, tmp][mask] <- 0.001
+      rm(tmp)
+
+      # TODO esto no funciona con clases aún
+
+      al <- work_elasticities[startsWith("alpha", work_elasticities)]
+      be <- work_elasticities[startsWith("beta", work_elasticities)]
+
+
+      cap_times_elasticities <- 1-2*beta_matrix[,be]
+      cap_goods_elasticities <- 1-2*beta_matrix[,al]
+
+     } else {
+      tmp <- apollo_variables[
+        (apollo_variables %in% c(work_elasticities, times_elasticities, goods_elasticities, sig)) & apollo_variables != "thw"
+      ]
+      mask <- beta_matrix[, tmp] <= 0
+      beta_matrix[, tmp][mask] <- 0.001
+      rm(tmp)
+
+      th <- work_elasticities[startsWith(work_elasticities, "Theta" )]
+      ph <- work_elasticities[startsWith(work_elasticities, "Phi" )]
+      if (th %in% apollo_variables) {
+        cap_times_elasticities <- beta_matrix[,th]
+      } else {
+        cap_times_elasticities <- 1
+      }
+
+      if (ph %in% apollo_variables) {
+        cap_goods_elasticities <- beta_matrix[,ph]
+      } else {
+        cap_goods_elasticities <- 1
+      }
+    }
+
+    if (length(times_elasticities)>0) {
+        rsum <- rowSums(beta_matrix[,times_elasticities])
+        mask <- rsum > cap_times_elasticities
+        rand <- stats::runif(sum(mask),0,1)
+        beta_matrix[mask, times_elasticities] <- sweep(
+          beta_matrix[mask, times_elasticities],
+          1,
+          cap_times_elasticities / (rsum[mask] + rand),
+          "*" )
+    }
+
+    if (length(goods_elasticities)>0) {
+      rsum <- rowSums(beta_matrix[,goods_elasticities])
+      mask <- rsum > cap_goods_elasticities
+      rand <- runif(sum(mask),0,1)
+      beta_matrix[mask, goods_elasticities] <- sweep(
+        beta_matrix[mask, goods_elasticities],
+        1,
+        cap_goods_elasticities[mask] / (rsum[mask] + rand),
+        "*" )
+    }
+
+    tmp <- apollo_variables[startsWith(apollo_variables,"ph" )]
+    beta_matrix[, tmp] <- 0
+    rm(tmp)
+
+    return(beta_matrix)
+  }
+
+  if (normalization$normalization %in% c("alpha_beta", "theta_phi")) {
+    norm = normalization$normalization
+    work_elasticities = normalization$work_elasticities
+    times_elasticities = normalization$times_elasticities
+    goods_elasticities = normalization$goods_elasticities
+    sig = normalization$sig
+    rho = normalization$rho
+
+    if (nClass <= 1) {
+      # TODO seguir desde aqui
+      beta_matrix <- normalize(
+        beta_matrix,
+        norm,
+        work_elasticities,
+        times_elasticities,
+        goods_elasticities,
+        sig,
+        rho
+      )
+    } else {
+      for (s in 1:nClass) {
+        if (!is.null(work_elasticities)) {work_elasticities <- paste0(work_elasticities,"_",s)}
+        if (!is.null(times_elasticities)) {times_elasticities <- paste0(times_elasticities,"_",s)}
+        if (!is.null(goods_elasticities)) {goods_elasticities <- paste0(goods_elasticities,"_",s)}
+        if (!is.null(sig)) {sig <- paste0(sig,"_",s)}
+        if (!is.null(rho)) {rho <- paste0(rho,"_",s)}
+        beta_matrix <- normalize(
+          beta_matrix,
+          norm,
+          work_elasticities,
+          times_elasticities,
+          goods_elasticities,
+          sig,
+          rho
+        )
+      }
+    }
+  }
 
   # initial testing
   works <- rep(TRUE, nCandidates)
@@ -159,8 +291,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   
     if (flag) {
       code = models[[i]]$code
-      is_bgw = estimation_settings$estimationRoutine=="bgw"
-      is_bfgs = estimation_settings$estimationRoutine=="bfgs"
+      is_bgw = estimationRoutine=="bgw"
+      is_bfgs = estimationRoutine=="bfgs"
       eigValue = models[[i]]$eigValue
       if (length(eigValue) == 0) { eigValue <- Inf }
       ll = models[[i]] $maximum
