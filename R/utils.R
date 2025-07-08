@@ -1,3 +1,4 @@
+#' Function for getting optimal time allocated to work, with Theta-Phi formulation
 #' @keywords internal
 #' @export
 get_tw_thph <- function(work_elasticities, tau, Tc, Ec, w) {
@@ -10,6 +11,7 @@ get_tw_thph <- function(work_elasticities, tau, Tc, Ec, w) {
   return(tw_opt)
 }
 
+#' Function for getting optimal time allocated to activities, with Theta-Phi formulation
 #' @keywords internal
 #' @export
 get_ti_thph <- function(times_elasticities, Theta, Tw, tau, Tc) {
@@ -17,6 +19,7 @@ get_ti_thph <- function(times_elasticities, Theta, Tw, tau, Tc) {
   return(ti_opt)
 }
 
+#' Function for getting optimal allocation of expenses to goods, with Theta-Phi formulation
 #' @keywords internal
 #' @export
 get_xi_thph <- function(goods_elasticities, goods_cost, Phi, Tw, Ec, w) {
@@ -24,6 +27,7 @@ get_xi_thph <- function(goods_elasticities, goods_cost, Phi, Tw, Ec, w) {
   return(xj_opt)
 }
 
+#' Function for getting values of time, with Theta-Phi formulation
 #' @keywords internal
 #' @export
 get_values_of_time_thph <- function(tw, work_elasticities, Tc, Ec, w) {
@@ -39,6 +43,7 @@ get_values_of_time_thph <- function(tw, work_elasticities, Tc, Ec, w) {
     return(cbind(VoL, VTAW))
   }
 
+#' Function for getting optimal time allocated to work, with alpha-beta formulation
 #' @keywords internal
 #' @export
 get_tw_albe <- function(work_elasticities, tau, Tc, Ec, w) {
@@ -50,6 +55,7 @@ get_tw_albe <- function(work_elasticities, tau, Tc, Ec, w) {
   return(tw_opt)
 }
 
+#' Function for getting optimal time allocated to activities, with alpha-beta formulation
 #' @keywords internal
 #' @export
 get_ti_albe <- function(times_elasticities, beta, Tw, tau, Tc) {
@@ -57,6 +63,7 @@ get_ti_albe <- function(times_elasticities, beta, Tw, tau, Tc) {
   return(ti_opt)
 }
 
+#' Function for getting optimal allocation of expenses, with alpha-beta formulation
 #' @keywords internal
 #' @export
 get_xi_albe <- function(goods_elasticities, goods_cost, alpha, Tw, Ec, w) {
@@ -64,6 +71,7 @@ get_xi_albe <- function(goods_elasticities, goods_cost, alpha, Tw, Ec, w) {
   return(xj_opt)
 }
 
+#' Function for getting values of time, with alpha-beta formulation
 #' @keywords internal
 #' @export
 get_values_of_time_albe <- function(tw, work_elasticities, Tc, Ec, w) {
@@ -79,6 +87,7 @@ get_values_of_time_albe <- function(tw, work_elasticities, Tc, Ec, w) {
     return(cbind(VoL, VTAW))
   }
 
+#' Function for getting conditional normal errors
 #' @keywords internal
 #' @export
 get_cond_err <- function(mu, rho) {
