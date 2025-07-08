@@ -109,8 +109,8 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
     ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
     xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
-    opt <- cbind(tw_opt, ti_opt, xj_opt)
-    colnames(opt) <- c(work_times, times_elasticities, goods_elasticities)
+    opt <- cbind(tw_opt, unlist(ti_opt), unlist(xj_opt))
+    colnames(opt) <- c(work_times, free_times, free_goods)
 
     obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
     err <- obs - opt

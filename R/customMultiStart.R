@@ -156,7 +156,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     if (length(goods_elasticities)>0) {
       rsum <- rowSums(beta_matrix[,goods_elasticities])
       mask <- rsum > cap_goods_elasticities
-      rand <- runif(sum(mask),0,1)
+      rand <- stats::runif(sum(mask),0,1)
       beta_matrix[mask, goods_elasticities] <- sweep(
         beta_matrix[mask, goods_elasticities],
         1,
