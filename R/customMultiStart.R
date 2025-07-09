@@ -86,6 +86,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
 
   apolloBetaMax = customMultistart_settings[["apolloBetaMax"]]
   apolloBetaMin = customMultistart_settings[["apolloBetaMin"]]
+  apolloBetaMax <- apolloBetaMax[!names(apolloBetaMax) %in% apollo_fixed]
+  apolloBetaMin <- apolloBetaMin[!names(apolloBetaMin) %in% apollo_fixed]
   nCandidates   = customMultistart_settings[["nCandidates"]]
   estimationRoutine = estimation_settings[["estimationRoutine"]]
 
@@ -94,9 +96,10 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   colnames(beta_matrix) <- names(apollo_beta_original)
 
   apollo_variables <- names(apollo_beta_original)[!names(apollo_beta_original) %in% apollo_fixed]
-  rand <- stats::runif(nCandidates * length(apollo_variables), apolloBetaMin, apolloBetaMax)
-  rand <- matrix(rand, nrow = nCandidates, ncol = length(apollo_variables))
-  beta_matrix[,apollo_variables] <- beta_matrix[,apollo_variables] + rand
+  for (av in apollo_variables) {
+    rand <- stats::runif(nCandidates, apolloBetaMin[av], apolloBetaMax[av])
+    beta_matrix[,av] <- beta_matrix[,av] + rand
+  }
 
   normalize <- function(beta_matrix, normalization, work_elasticities, times_elasticities, goods_elasticities, sig, rho) {
     if (normalization== "alpha_beta") {
@@ -120,8 +123,9 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
       cap_goods_elasticities <- 1-2*beta_matrix[,al]
 
      } else {
+      # TODO asegurarse de que funcione bien con los covariates
       tmp <- apollo_variables[
-        (apollo_variables %in% c(work_elasticities, times_elasticities, goods_elasticities, sig)) & apollo_variables != "thw"
+        (apollo_variables %in% c(work_elasticities, times_elasticities, goods_elasticities, sig)) & !startsWith("thw", apollo_variables)
       ]
       mask <- beta_matrix[, tmp] <= 0
       beta_matrix[, tmp][mask] <- 0.001
@@ -164,7 +168,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
         "*" )
     }
 
-    tmp <- apollo_variables[startsWith(apollo_variables,"ph" )]
+    tmp <- apollo_variables[rho]
     beta_matrix[, tmp] <- 0
     rm(tmp)
 
@@ -173,38 +177,38 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
 
   if (normalization$normalization %in% c("alpha_beta", "theta_phi")) {
     norm = normalization$normalization
-    work_elasticities = normalization$work_elasticities
-    times_elasticities = normalization$times_elasticities
-    goods_elasticities = normalization$goods_elasticities
-    sig = normalization$sig
-    rho = normalization$rho
+    work_elasticities_params = normalization$work_elasticities
+    times_elasticities_params = normalization$times_elasticities
+    goods_elasticities_params = normalization$goods_elasticities
+    sig_params = normalization$sig
+    rho_params = normalization$rho
 
     if (nClass <= 1) {
       # TODO seguir desde aqui
       beta_matrix <- normalize(
         beta_matrix,
         norm,
-        work_elasticities,
-        times_elasticities,
-        goods_elasticities,
-        sig,
-        rho
+        work_elasticities_params,
+        times_elasticities_params,
+        goods_elasticities_params,
+        sig_params,
+        rho_params
       )
     } else {
-      for (s in 1:nClass) {
-        if (!is.null(work_elasticities)) {work_elasticities <- paste0(work_elasticities,"_",s)}
-        if (!is.null(times_elasticities)) {times_elasticities <- paste0(times_elasticities,"_",s)}
-        if (!is.null(goods_elasticities)) {goods_elasticities <- paste0(goods_elasticities,"_",s)}
-        if (!is.null(sig)) {sig <- paste0(sig,"_",s)}
-        if (!is.null(rho)) {rho <- paste0(rho,"_",s)}
+      for (k in 1:nClass) {
+        if (!is.null(work_elasticities_params)) {work_elasticities_params_s <- paste0(work_elasticities_params,"_",k)} else {work_elasticities_params_s <- NULL}
+        if (!is.null(times_elasticities_params)) {times_elasticities_params_s <- paste0(times_elasticities_params,"_",k)} else {times_elasticities_params_s <- NULL}
+        if (!is.null(goods_elasticities_params)) {goods_elasticities_params_s <- paste0(goods_elasticities_params,"_",k)} else {goods_elasticities_params_s <- NULL}
+        if (!is.null(sig_params)) {sig_params_s <- paste0(sig_params,"_",k)} else {sig_params_s <- NULL}
+        if (!is.null(rho_params)) {rho_params_s <- paste0(rho_params,"_",k)} else {rho_params_s <- NULL}
         beta_matrix <- normalize(
           beta_matrix,
           norm,
-          work_elasticities,
-          times_elasticities,
-          goods_elasticities,
-          sig,
-          rho
+          work_elasticities_params_s,
+          times_elasticities_params_s,
+          goods_elasticities_params_s,
+          sig_params_s,
+          rho_params_s
         )
       }
     }
@@ -216,8 +220,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
 
   cat('Testing candidates...')
   for (i in indexes) {
-    suppressWarnings({ P <- apollo_probabilities(beta_matrix[i, ], apollo_inputs, functionality="raw") })
-    ll <-sum(log(unlist(P)))
+    suppressWarnings({ prob <- apollo_probabilities(beta_matrix[i, ], apollo_inputs, functionality="raw") })
+    ll <-sum(log(unlist(prob)))
     if(is.na(ll)) {works[i] <- F}
   }
   cat('Done...', sum(works), 'candidates available\n')
@@ -227,7 +231,6 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   best_model <- NA
   best_ll <- -Inf
 
-  
   for (i in indexes) {
     if (verbose) {
       ##### VERBOSE START ####
@@ -239,9 +242,9 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
           cat("Starting EM...\n")
 
           model <- apollo::apollo_lcEM(
-            apollo_beta, 
-            apollo_fixed, 
-            apollo_probabilities, 
+            apollo_beta,
+            apollo_fixed,
+            apollo_probabilities,
             apollo_inputs,
             lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0),
             estimate_settings = list(scaleAfterConvergence = F))
@@ -266,12 +269,12 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
           cat("Starting EM...")
           invisible(utils::capture.output({
             model <- apollo::apollo_lcEM(
-              apollo_beta, 
-              apollo_fixed, 
-              apollo_probabilities, 
+              apollo_beta,
+              apollo_fixed,
+              apollo_probabilities,
               apollo_inputs,
               lcEM_settings = list(EMmaxIterations = em_iter_max, postEM = 0),
-              estimate_settings = list(scaling = F))
+              estimate_settings = list(scaleAfterConvergence = F))
           }))
           apollo_beta <- model$estimate
           cat("LL:", -round(model$maximum, 2),"...")

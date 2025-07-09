@@ -152,7 +152,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   # ------------ #
   if(functionality %in% c("output", "report")){
     ans <- mtuem_likelihood(mtuem_settings, functionality="estimate")
-    if (functionality == "output") {
+    if (functionality == "report") {
       # Compute values of time and print
       tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
       vot <- get_values_of_time_thph(tw_opt, work_elasticities, Tc, Ec, w)

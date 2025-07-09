@@ -137,7 +137,7 @@ apollo_probabilities=function(apollo_beta, apollo_inputs, functionality="estimat
 }
 
 suppressWarnings({
-  model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+  model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs, estimate_settings = list(writeIter=F))
   apollo_modelOutput(model)
 })
 #> Preparing user-defined functions.
@@ -163,8 +163,6 @@ suppressWarnings({
 #> BGW is using FD derivatives for model Jacobian. (Caller did not provide derivatives.)
 #> 
 #> 
-#> Iterates will be written to: 
-#>  C:/Users/pablo/OneDrive/UdeC/Investigación/apollo_timeuse/mtuem/enut-mtuem-1eq_iterations.csv
 #>     it    nf     F            RELDF    PRELDF    RELDX    MODEL stppar
 #>      0     1 1.964498496e+04
 #>      1     4 1.905531350e+04 3.002e-02 2.495e-02 3.27e-02   G   1.37e+00
@@ -189,13 +187,13 @@ suppressWarnings({
 #> 
 #> Final LL: -18290.5435
 #> 
+#> VoL: 4.653763 
+#> VTAW: -0.314996 
 #> Calculating log-likelihood at equal shares (LL(0)) for applicable
 #>   models...
 #> Calculating log-likelihood at observed shares from estimation data
 #>   (LL(c)) for applicable models...
 #> Calculating LL of each model component...
-#> VoL: 4.653763 
-#> VTAW: -0.314996 
 #> Computing covariance matrix using numerical methods (numDeriv).
 #>  0%....25%....50%...100%
 #> Negative definite Hessian with maximum eigenvalue: -563.860558
@@ -213,7 +211,7 @@ suppressWarnings({
 #> 
 #> Model name                                  : enut-mtuem-1eq
 #> Model description                           : No model description provided in apollo_control
-#> Model run at                                : 2025-06-25 14:27:38.91171
+#> Model run at                                : 2025-07-09 01:16:08.808804
 #> Estimation method                           : bgw
 #> Model diagnosis                             : Relative function convergence
 #> Optimisation diagnosis                      : Maximum found
@@ -239,10 +237,10 @@ suppressWarnings({
 #> BIC                                         :  -Inf 
 #> 
 #> Estimated parameters                        : 2
-#> Time taken (hh:mm:ss)                       :  00:00:0.56 
-#>      pre-estimation                         :  00:00:0.23 
-#>      estimation                             :  00:00:0.27 
-#>      post-estimation                        :  00:00:0.06 
+#> Time taken (hh:mm:ss)                       :  00:00:0.92 
+#>      pre-estimation                         :  00:00:0.39 
+#>      estimation                             :  00:00:0.41 
+#>      post-estimation                        :  00:00:0.12 
 #> Iterations                                  :  11  
 #> 
 #> Unconstrained optimisation.
