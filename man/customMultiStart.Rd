@@ -10,7 +10,7 @@ customMultiStart(
   apollo_probabilities,
   apollo_inputs,
   customMultistart_settings = NA,
-  estimation_settings = NA,
+  estimate_settings = NA,
   first_em = F,
   em_iter_max = 5,
   non_saddle = T,
@@ -40,7 +40,7 @@ customMultiStart(
 \item \strong{\code{nCandidates}}: Numneric Scalar. Number of candidates to be sampled. Default: 100
 }}
 
-\item{estimation_settings}{List. Contains settings for \code{apollo_estimate}. If not specified, default will be used.}
+\item{estimate_settings}{List. Contains settings for \code{apollo_estimate}. If not specified, default will be used.}
 
 \item{first_em}{Boolean. If TRUE a few iterations of Expectation-Maximization algorithm will be run. Only use for latent class models. Default: FALSE}
 

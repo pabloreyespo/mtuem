@@ -1,6 +1,6 @@
 Package: mtuem
 Title: Package to estimate Microeconomic Time-use-Expenditure Models (MTUEM) in apollo package.
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: c(
     person(
       "Pablo", "Reyes-Polanco",
