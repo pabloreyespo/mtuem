@@ -109,7 +109,7 @@ get_cond_err <- function(mu, rho) {
       cond_num <- rcond(rho[i:1, i:1])
       if (cond_num < 1e-12) {
         # Use pseudoinverse for ill-conditioned matrices
-        inv_rho <- ginv(rho[i:1, i:1])
+        inv_rho <- MASS::ginv(rho[i:1, i:1])
       } else {
         # Use regular solve for well-conditioned matrices (faster)
         inv_rho <- solve(rho[i:1, i:1])
