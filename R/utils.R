@@ -105,7 +105,7 @@ get_cond_err <- function(mu, rho) {
       conditional_sd[3]  <- 1- (rho[2,3]^2 -2*rho[2,1]*rho[2,3]*rho[1,3] +rho[1,3]^2) / conditional_sd[2]
     } else {
       i <- j-1
-      inv_rho <- solve(rho[i:1, i:1])
+      inv_rho <- MASS::ginv(rho[i:1, i:1])
       conditional_mu[,j] <- rho[j,i:1] %*% inv_rho %*% t(mu[,i:1]) #(3|2,1)
       conditional_sd[j]  <- rho[j,j] - rho[j,i:1] %*% inv_rho %*% rho[i:1,j]
     }
