@@ -116,13 +116,13 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     if (functionality == "get_covar") {
       return(list(
-        covar = stats::cov(err, use = "pairwise.complete.obs"),
-        corr =  stats::cor(err, use = "pairwise.complete.obs"),
-        sigma = sqrt(diag(stats::cov(err, use = "pairwise.complete.obs")))))
+        covar = stats::cov(err, use = "complete.obs"),
+        corr =  stats::cor(err, use = "complete.obs"),
+        sigma = sqrt(diag(stats::cov(err, use = "complete.obs")))))
     }
 
     if (!estimate_sig) {
-      sig <- stats::cov(err, use = "pairwise.complete.obs")
+      sig <- stats::cov(err, use = "complete.obs")
       sig <- sqrt(diag(sig))
     }
 
@@ -135,7 +135,7 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
         if (estimate_sig) {
           rho <- diag(rep(1, length(sig)))
         } else {
-          rho <- stats::cor(err, use = "pairwise.complete.obs")
+          rho <- stats::cor(err, use = "complete.obs")
         }
       }
 

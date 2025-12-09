@@ -116,7 +116,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     err <- obs - opt
 
     if (!estimate_sig) {
-      sig <- stats::cov(err, use = "pairwise.complete.obs")
+      sig <- stats::cov(err, use = "complete.obs")
       sig <- sqrt(diag(sig))
     }
 
@@ -128,7 +128,6 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
         if (estimate_sig) {
           rho <- diag(rep(1, length(sig)))
         } else {
-          #rho <- stats::cor(err, use = "pairwise.complete.obs")
           rho <- stats::cor(err, use = "complete.obs")
         }
       }
