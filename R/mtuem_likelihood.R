@@ -133,6 +133,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
         }
       }
 
+      print(rho)
       mu = sweep(err, MARGIN = 2, sig, "/")
       cond <- get_cond_err(mu, rho)
       cond_mu  <- cond$cond_mu
