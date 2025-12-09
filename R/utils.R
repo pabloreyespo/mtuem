@@ -105,8 +105,18 @@ get_cond_err <- function(mu, rho) {
       conditional_sd[3]  <- 1- (rho[2,3]^2 -2*rho[2,1]*rho[2,3]*rho[1,3] +rho[1,3]^2) / conditional_sd[2]
     } else {
       i <- j-1
-      conditional_mu[,j] <- rho[j,i:1] %*% solve(rho[i:1,i:1]) %*% t(mu[,i:1]) #(3|2,1)
-      conditional_sd[j]  <- rho[j,j] - rho[j,i:1] %*% solve(rho[i:1,i:1]) %*% rho[i:1,j]
+      
+      cond_num <- rcond(rho[i:1, i:1])
+      if (cond_num < 1e-12) {
+        # Use pseudoinverse for ill-conditioned matrices
+        inv_rho <- ginv(rho[i:1, i:1])
+      } else {
+        # Use regular solve for well-conditioned matrices (faster)
+        inv_rho <- solve(rho[i:1, i:1])
+      }
+      rm(cond_num)
+      conditional_mu[,j] <- rho[j,i:1] %*% inv_rho %*% t(mu[,i:1]) #(3|2,1)
+      conditional_sd[j]  <- rho[j,j] - rho[j,i:1] %*% inv_rho %*% rho[i:1,j]
     }
   }
 
