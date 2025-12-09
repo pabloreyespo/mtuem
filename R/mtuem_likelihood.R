@@ -114,6 +114,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
     err <- obs - opt
+    err[is.na(err)] <- 0
 
     if (!estimate_sig) {
       sig <- stats::cov(err, use = "complete.obs")
