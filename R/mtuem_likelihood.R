@@ -144,7 +144,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     if(is.matrix(ll)) ll <- rowSums(ll)
     L <- exp(ll)
-    if (work_elasticities$Phi<=0|work_elasticities$Theta<=0) {L <- L*10^(-3)}
+    #if (work_elasticities$Phi<=0|work_elasticities$Theta<=0) {L <- L*10^(-3)}
     return(L)
   }
 
