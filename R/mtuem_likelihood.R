@@ -47,7 +47,8 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     times_elasticities = list(),
     goods_elasticities = list(),
     sig = list(),
-    rho = list()
+    rho = list(),
+    optimal_tw = T
   )
 
   tmp <- names(default)[!(names(default) %in% names(mtuem_settings))]
@@ -107,8 +108,14 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   # ------------------------------------ #
   if(functionality %in% c("estimate", "conditionals", "raw", "get_covar")){
     tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
-    ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
-    xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
+    if (optimal_tw) {
+      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, Tw, tau, Tc)
+      xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
+    } else {
+      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, work_times, tau, Tc)
+      xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, work_times, Ec, w)
+    }
+
     opt <- cbind(tw_opt, unlist(ti_opt), unlist(xj_opt))
     colnames(opt) <- c(work_times, free_times, free_goods)
 
