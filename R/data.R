@@ -1,4 +1,4 @@
-#' enut-i
+#' enut.i
 #'
 #' Processed dataset from the first National Time-Use Survey (ENUT I), applied by the
 #' Instituto Nacional de Estadísticas de Chile in 2015. Contains both the original 11
@@ -131,7 +131,7 @@
 #' \code{data/enut-i-ENG.dta} and \code{data/enut-i-ENG.csv}.
 #'
 #' The time-use categories are aggregations of the 25 detailed categories in
-#' \code{enut_i_raw}. See \code{agregar_actividades()} in
+#' \code{enut.i.raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
 #' Compared to ENUT II, this dataset includes \code{t_job_search} as a separate activity
@@ -144,18 +144,18 @@
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_i
-#' @usage data(enut_i)
+#' @name enut.i
+#' @usage data(enut.i)
 #' @format A data frame with 9,497 rows and 98 variables
 NULL
 
-#' enut-i-raw
+#' enut.i.raw
 #'
 #' Processed raw activity dataset from the first National Time-Use Survey
 #' (ENUT I), applied by the Instituto Nacional de Estadisticas de Chile in
 #' 2015. Contains the 25 detailed weekly time-use activity categories and
 #' household expenditures imputed from the VIII Encuesta de Presupuestos
-#' Familiares (EPF). This dataset is the detailed companion to \code{enut_i},
+#' Familiares (EPF). This dataset is the detailed companion to \code{enut.i},
 #' which aggregates the same records into model-ready time categories.
 #'
 #' All income and expenditure variables are expressed in weekly thousands of
@@ -282,12 +282,12 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_i_raw
-#' @usage data(enut_i_raw)
+#' @name enut.i.raw
+#' @usage data(enut.i.raw)
 #' @format A data frame with 9,497 rows and 108 variables
 NULL
 
-#' enut-ii
+#' enut.ii
 #'
 #' Processed dataset from the second National Time-Use Survey (ENUT II), applied by the
 #' Instituto Nacional de Estadísticas de Chile. Contains both the original 11 aggregated
@@ -472,7 +472,7 @@ NULL
 #' as \code{data/enut-ii-ENG.dta} and \code{data/enut-ii-ENG.csv}.
 #'
 #' The time-use categories are aggregations of the 25 detailed categories in
-#' \code{enut_ii_raw}. See \code{agregar_actividades()} in
+#' \code{enut.ii.raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
 #' @source <https://www.ine.gob.cl/enut>
@@ -480,12 +480,12 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_ii
-#' @usage data(enut_ii)
+#' @name enut.ii
+#' @usage data(enut.ii)
 #' @format A data frame with approximately 4,000-5,000 rows
 NULL
 
-#' enut-ii-raw
+#' enut.ii.raw
 #'
 #' Processed dataset from the second National Time-Use Survey (ENUT II), applied by the
 #' Instituto Nacional de Estadísticas de Chile. Contains 25 detailed time-use activity
@@ -689,7 +689,7 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_ii_raw
-#' @usage data(enut_ii_raw)
+#' @name enut.ii.raw
+#' @usage data(enut.ii.raw)
 #' @format A data frame with approximately 4,000-5,000 rows and 112 variables
 NULL
