@@ -1,7 +1,11 @@
 enut.i <- readRDS('data-raw/enut_i.rds')
+enut.i.raw <- readRDS('data-raw/enut_i_raw.rds')
 enut.ii <- readRDS('data-raw/enut_ii.rds')
+enut.ii.raw <- readRDS('data-raw/enut_ii_raw.rds')
 maed <- readRDS('data-raw/maed.rds')
 
 usethis::use_data(enut.i, overwrite = T)
+usethis::use_data(enut.i.raw, overwrite = T)
 usethis::use_data(enut.ii, overwrite= T)
+usethis::use_data(enut.ii.raw, overwrite= T)
 usethis::use_data(maed, overwrite = T)
