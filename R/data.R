@@ -113,8 +113,13 @@
 #'   \item{Ef_restaurants}{Imputed restaurants and food away from home expenditure (weekly thousands CLP)}
 #'   \item{Ef_communications}{Imputed communications expenditure (weekly thousands CLP)}
 #'   \item{Ef_clothing}{Imputed clothing expenditure (weekly thousands CLP)}
-#'   \item{Ec}{Imputed committed and remaining expenditures (weekly thousands CLP, includes
-#'     utilities, health, transport, education, household goods, and savings)}
+#'   \item{Ec_cuentas}{Imputed accounts expenditure (weekly thousands CLP)}
+#'   \item{Ec_hogar}{Imputed household expenditure (weekly thousands CLP)}
+#'   \item{Ec_salud}{Imputed health expenditure (weekly thousands CLP)}
+#'   \item{Ec_transporte}{Imputed transport expenditure (weekly thousands CLP)}
+#'   \item{Ec_educacion}{Imputed education expenditure (weekly thousands CLP)}
+#'   \item{savings}{Imputed savings (weekly thousands CLP). Its classification is not clear. Its omision in Ec would mean implicitly considering as part of a free activity. }
+#'  \item{total_expenses}{Total imputed expenditures (weekly thousands CLP). ing_personal - savings (weekly thousands CLP)}
 #' }
 #'
 #' @details
@@ -455,7 +460,13 @@ NULL
 #'   \item{Ef_restaurants}{Imputed restaurants and food away from home expenditure (weekly thousands CLP)}
 #'   \item{Ef_communications}{Imputed communications expenditure (weekly thousands CLP)}
 #'   \item{Ef_clothing}{Imputed clothing expenditure (weekly thousands CLP)}
-#'   \item{Ec}{Imputed committed and remaining expenditures (weekly thousands CLP, includes accounts, health, transport, education, household goods, and savings)}
+#'   \item{Ec_cuentas}{Imputed accounts expenditure (weekly thousands CLP)}
+#'   \item{Ec_hogar}{Imputed household expenditure (weekly thousands CLP)}
+#'   \item{Ec_salud}{Imputed health expenditure (weekly thousands CLP)}
+#'   \item{Ec_transporte}{Imputed transport expenditure (weekly thousands CLP)}
+#'   \item{Ec_educacion}{Imputed education expenditure (weekly thousands CLP)}
+#'   \item{savings}{Imputed savings (weekly thousands CLP). Its classification is not clear. Its omision in Ec would mean implicitly considering as part of a free activity. }
+#'   \item{total_expenses}{Total imputed expenditures (weekly thousands CLP). ing_personal - savings (weekly thousands CLP)}
 #' }
 #'
 #' @details
