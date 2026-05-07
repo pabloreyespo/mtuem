@@ -85,7 +85,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   rm(tmp)
   
   estimate_settings[["scaleAfterConvergence"]] <- FALSE
-  estimate_settings[["hessianRoutine"]] <- 'numDeriv'
+  #estimate_settings[["hessianRoutine"]] <- 'numDeriv'
 
   apolloBetaMax = customMultistart_settings[["apolloBetaMax"]]
   apolloBetaMin = customMultistart_settings[["apolloBetaMin"]]
