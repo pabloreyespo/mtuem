@@ -1,0 +1,31 @@
+#' maed
+#'
+#' Subset of the Mexican Activity and Expenditure Dataset (MAED) for MTUEM estimation.
+#' Contains time-use and expenditure variables for workers, formatted for direct use
+#' with the mtuem package.
+#'
+#' Time variables are expressed in weekly hours. Expenditure variables are expressed
+#' in weekly currency units.
+#'
+#' \describe{
+#'   \item{PeID}{Individual identifier}
+#'   \item{Tw}{Paid work time (hours per week)}
+#'   \item{Tc}{Committed time (hours per week)}
+#'   \item{Tf1}{First free time allocation (hours per week)}
+#'   \item{Tf2}{Second free time allocation (hours per week)}
+#'   \item{EcI}{Committed expenses (currency per week)}
+#'   \item{w}{Wage rate (currency per hour)}
+#'   \item{Ef1}{First free good expenditure (currency per week)}
+#'   \item{Ef2}{Second free good expenditure (currency per week)}
+#'   \item{female}{Binary indicator (1 = female, 0 = male)}
+#'   \item{older45}{Binary indicator (1 = age 45 or older, 0 = younger)}
+#'   \item{professional}{Binary indicator (1 = professional occupation, 0 = other)}
+#'   \item{self_employed}{Binary indicator (1 = self-employed, 0 = employee)}
+#' }
+#'
+#' @docType data
+#' @keywords datasets
+#' @name maed
+#' @usage data(maed)
+#' @format A data frame
+NULL

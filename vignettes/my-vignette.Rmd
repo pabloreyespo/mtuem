@@ -1,8 +1,8 @@
 ---
-title: "my-vignette"
+title: "Getting Started with mtuem"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{my-vignette}
+  %\VignetteIndexEntry{Getting Started with mtuem}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,6 +14,353 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r setup, include = FALSE}
 library(mtuem)
 ```
+
+## Introduction
+
+The **mtuem** package provides likelihood functions for estimating Microeconomic Time-Use-Expenditure Models (MTUEM) within the [Apollo](https://www.apollochoicemodelling.com/) choice modelling framework. The approach follows Jara-Diaz et al. (2008), which derives optimal time and expenditure allocations from the maximization of a Cobb-Douglas utility function subject to time and monetary budget constraints.
+
+### Key Concepts
+
+- **Committed time (Tc)**: Time that cannot be freely allocated (sleep, meals, etc.).
+- **Committed expenses (Ec)**: Expenses that must be paid regardless of choices.
+- **Work time (Tw)**: Time allocated to paid work, generating income at wage rate w.
+- **Free time**: Time that can be allocated to leisure activities.
+- **Free goods**: Goods that can be purchased with discretionary income.
+
+### Two Parameterizations
+
+The package offers two mathematically equivalent parameterizations:
+
+1. **Theta-Phi** (`mtuem_likelihood`): Uses parameters `Theta`, `Phi`, and `thw`. Requires fixing `Theta = 1` for identification.
+2. **Alpha-Beta** (`mtuem_ab_likelihood`): Uses parameters `alpha` and `beta`. No fixed parameters needed.
+
+Both produce identical predictions. Choose based on which parameterization your literature or research group prefers.
+
+## Data Requirements
+
+Your dataset must contain at minimum:
+
+| Variable | Description |
+|---|---|
+| `Tw` | Work time (hours per week) |
+| `Tc` | Committed time (hours per week) |
+| `Ec` | Committed expenses (currency per week) |
+| `w` | Wage rate (currency per hour) |
+| Individual ID | Unique identifier for each observation |
+
+For multi-equation models, add columns for each free time (e.g., `Tf1`, `Tf2`) and free good (e.g., `Ef1`, `Ef2`).
+
+## Step-by-Step Model Formulation
+
+Every MTUEM model in Apollo follows this structure:
+
+### Step 1: Initialise Apollo
+
+```r
+library(mtuem)
+library(apollo)
+
+apollo_initialise()
+apollo_control <- list(
+  modelName = "my-model",
+  modelDescr = "Description of my model",
+  indivID = "PeID"
+)
+```
+
+### Step 2: Load and Filter Data
+
+```r
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
+```
+
+### Step 3: Define Parameters
+
+```r
+apollo_beta <- c(Theta = 1, Phi = 1, thw = 0)
+apollo_fixed <- c("Theta")  # Theta fixed for identification
+```
+
+### Step 4: Validate Inputs
+
+```r
+apollo_inputs <- apollo_validateInputs()
+```
+
+### Step 5: Define the Probability Function
+
+This is where you configure the model structure:
+
+```r
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+
+  # Define work elasticities (required)
+  work_elasticities <- list(Theta = Theta, Phi = Phi, thw = thw)
+
+  # Define free time elasticities (optional)
+  times_elasticities <- list(theta_1 = theta_1)
+
+  # Define free goods elasticities (optional)
+  goods_elasticities <- list(phi_1 = phi_1)
+
+  # Define goods costs (optional, default = 1)
+  goods_cost <- list(Ef1 = 1)
+
+  # Configure the MTUEM
+  mtuem_settings <- list(
+    work_times = c("Tw"),
+    free_times = c("Tf1"),
+    free_goods = c("Ef1"),
+    goods_cost = goods_cost,
+    work_elasticities = work_elasticities,
+    times_elasticities = times_elasticities,
+    goods_elasticities = goods_elasticities,
+    Tc = Tc, Ec = EcI, w = w, tau = 168
+  )
+
+  P[["model"]] <- mtuem_likelihood(mtuem_settings, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+```
+
+### Step 6: Estimate
+
+```r
+model <- apollo_estimate(apollo_beta, apollo_fixed,
+                          apollo_probabilities, apollo_inputs)
+apollo_modelOutput(model)
+```
+
+## The "Leave One Out" Rule
+
+For model identification, you must leave out at least one free time and one free good category. The omitted categories are recovered as residuals:
+
+- **Omitted time** = tau - Tc - Tw - sum(free_times)
+- **Omitted good** = w * Tw - Ec - sum(free_goods)
+
+For example, if you have three free time activities (leisure, social, hobbies), include only two in `free_times`. The third is the residual.
+
+## Error Structure Specifications
+
+The likelihood assumes normally distributed errors around the optimal allocations. Choose one of three approaches:
+
+### 1. Inferred Covariance (Single Equation)
+
+Do not specify `sig` or `rho`. The error variance is inferred from residuals.
+
+```r
+mtuem_settings <- list(
+  work_times = c("Tw"),
+  work_elasticities = list(Theta = Theta, Phi = Phi, thw = thw),
+  Tc = Tc, Ec = EcI, w = w, tau = 168
+  # No sig, no rho
+)
+```
+
+### 2. Explicit Sigma, Inferred Correlations (Multi-Equation)
+
+Specify `sig` parameters (one per equation). Correlations are inferred from residuals.
+
+```r
+mtuem_settings <- list(
+  work_times = c("Tw"),
+  free_times = c("Tf1"),
+  free_goods = c("Ef1"),
+  work_elasticities = list(Theta = Theta, Phi = Phi, thw = thw),
+  times_elasticities = list(theta_1 = theta_1),
+  goods_elasticities = list(phi_1 = phi_1),
+  sig = list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3),
+  Tc = Tc, Ec = EcI, w = w, tau = 168
+  # No rho
+)
+```
+
+### 3. Full Covariance Estimation
+
+Specify both `sig` and `rho` parameters. For n equations, you need n sigma parameters and n*(n-1)/2 rho parameters.
+
+For 3 equations, the rho parameters are ordered horizontally across the upper triangle:
+
+```
+rho = [rho_12, rho_13, rho_23]
+```
+
+This corresponds to the correlation matrix:
+
+```
+| 1      rho_12  rho_13 |
+| rho_12  1      rho_23 |
+| rho_13  rho_23  1     |
+```
+
+```r
+mtuem_settings <- list(
+  work_times = c("Tw"),
+  free_times = c("Tf1"),
+  free_goods = c("Ef1"),
+  work_elasticities = list(Theta = Theta, Phi = Phi, thw = thw),
+  times_elasticities = list(theta_1 = theta_1),
+  goods_elasticities = list(phi_1 = phi_1),
+  sig = list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3),
+  rho = list(rho_12 = rho_12, rho_13 = rho_13, rho_23 = rho_23),
+  Tc = Tc, Ec = EcI, w = w, tau = 168
+)
+```
+
+## Retrieving the Covariance Matrix
+
+After estimation, use the `mtuem_get_corr` function:
+
+```r
+result <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs,
+                          vars = c("Tw", "Tf1", "Ef1"))
+result$covar  # Covariance matrix
+result$corr   # Correlation matrix
+```
+
+Alternatively, call the likelihood directly with the `get_covar` functionality:
+
+```r
+covar_result <- apollo_probabilities(apollo_beta, apollo_inputs,
+                                      functionality = "get_covar")
+```
+
+## Latent Class Models
+
+For latent class models, use the `customMultiStart` function which handles EM initialization and multi-start optimization.
+
+### Structure
+
+1. Define `apollo_lcPars` to map parameters to classes and compute class probabilities.
+2. Loop over classes in `apollo_probabilities`, computing the likelihood for each.
+3. Combine using `apollo_lc`.
+4. Estimate with `customMultiStart`.
+
+### Example: 1 Class, 1 Equation
+
+```r
+apollo_lcPars <- function(apollo_beta, apollo_inputs) {
+  lcpars <- list()
+  lcpars[["Phi"]] <- list(Phi_1)
+  lcpars[["thw"]] <- list(thw_1)
+
+  V <- list()
+  V[["class_1"]] <- asc_1
+
+  classAlloc_settings <- list(
+    classes = c(class_1 = 1),
+    utilities = V
+  )
+  lcpars[["pi_values"]] <- apollo_classAlloc(classAlloc_settings)
+  return(lcpars)
+}
+
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+
+  for (s in 1:length(pi_values)) {
+    work_elasticities <- list(
+      Theta = 1,
+      Phi = Phi[[s]],
+      thw = thw[[s]]
+    )
+
+    mtuem_settings <- list(
+      work_times = c("Tw"),
+      work_elasticities = work_elasticities,
+      Tc = Tc, Ec = EcI, w = w, tau = 168,
+      componentName = paste0("class_", s)
+    )
+    P[[paste0("class_", s)]] <- mtuem_likelihood(mtuem_settings, functionality)
+  }
+
+  lc_settings <- list(inClassProb = P, classProb = pi_values)
+  P[["model"]] <- apollo_lc(lc_settings, apollo_inputs, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+multi_starts <- customMultiStart(
+  apollo_beta, apollo_fixed,
+  apollo_probabilities, apollo_inputs,
+  first_em = TRUE,
+  em_iter_max = 3,
+  nClass = 1,
+  normalization = list(
+    normalization = "theta_phi",
+    work_elasticities = c("Theta", "Phi", "thw"),
+    times_elasticities = c(),
+    goods_elasticities = c(),
+    sig = c(),
+    rho = c()
+  )
+)
+```
+
+## Post-Estimation: Values of Time
+
+Compute the Value of Leisure Time (VoL) and Value of Time Assigned to Work (VTAW):
+
+```r
+pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
+
+Tw <- pred$Tw
+w  <- database$w
+Tc <- database$Tc
+Ec <- database$Ec
+
+cteVoL  <- mean((w * Tw - Ec) / (168 - Tw - Tc))
+cteVTAW <- mean((w * Tw - Ec) / Tw)
+
+delta <- apollo_deltaMethod(model, list(
+  expression = c(
+    VoL  = paste0(cteVoL,  "*Theta/Phi"),
+    VTAW = paste0(cteVTAW, "*thw/Phi")
+  )
+))
+delta
+```
+
+## Troubleshooting
+
+### Model does not converge
+
+- Check that `Theta` is fixed to 1 (Theta-Phi parameterization).
+- Ensure the "leave one out" rule is satisfied for free times and goods.
+- Try `customMultiStart` with more candidates.
+- For latent class models, always use `first_em = TRUE`.
+
+### Negative standard deviations
+
+- Add lower bounds to sigma parameters using Apollo's parameter bounds.
+- Use the `normalization` argument in `customMultiStart` to enforce positivity.
+
+### "Leave one out" confusion
+
+If you have K free time activities, include only K-1 in `free_times`. The model recovers the K-th as the residual from the time budget. The same applies to free goods.
+
+### Correlation matrix not positive definite
+
+- When specifying `rho` parameters, ensure they produce a valid correlation matrix.
+- Start rho parameters at 0.
+- Consider using the inferred correlation approach (specify `sig` but not `rho`).
+
+## References
+
+Jara-Diaz, S. R., Munizaga, M. A., Green, P. E., & Warburton, R. F. (2008). Estimating the value of travel time and of travel time flexibility in the case of workers. *Transportation Research Part B: Methodological*, 42(4), 395-409.
+
+Bunch, D. S., Hamilton, J. H., & Gu, Y. (1993). A Gauss-Newton algorithm for maximum likelihood estimation of nonlinear models with nonsmooth moment conditions. *ACM Transactions on Mathematical Software*, 19(2), 151-179.
+
+Hess, S., & Palma, D. (2019). Apollo: a flexible, powerful and customisable freeware package for choice model estimation and application. *Journal of Choice Modelling*, 32, 100170.

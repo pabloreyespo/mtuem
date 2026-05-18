@@ -126,7 +126,7 @@ Same scale as bs12. Missing: 88, 96, 99. N valid: 1378.}
 \item{bs16}{General sense of overload from caring for a PSDF person.
 Same scale as bs12. Missing: 88, 96, 99. N valid: 1378.}
 \item{bs17}{Time scarcity due to caring for a child (NNA):
-"Piensa que debido al tiempo que le dedica al cuidado de \link{NOMBRE NNA} no tiene suficiente tiempo para usted?"
+"Piensa que debido al tiempo que le dedica al cuidado de NNA no tiene suficiente tiempo para usted?"
 Same scale as bs12. Missing: 88, 96, 99. N valid: 7071.}
 \item{bs18}{Caregiver burden from reconciling NNA care with work responsibilities.
 Same scale as bs12. Missing: 88, 96, 99. N valid: 5162.}

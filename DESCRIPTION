@@ -1,5 +1,5 @@
 Package: mtuem
-Title: Package to estimate Microeconomic Time-use-Expenditure Models (MTUEM) in apollo package.
+Title: Estimate Microeconomic Time-Use-Expenditure Models in Apollo
 Version: 0.4.0
 Authors@R: c(
     person(
@@ -8,17 +8,19 @@ Authors@R: c(
       role = c("aut", "cre")
     )
   )
-Description: The package only implemements the likelihood in an apollo-friendly format, and a (simple) MultiStart strategy for its implementation. 
-License: use_mit_license()
+Description: The package only implements the likelihood in an apollo-friendly format, and a (simple) MultiStart strategy for its implementation. 
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-Depends: R (>= 4.3.0), apollo
+Depends: R (>= 4.3.0)
 Imports: apollo, stats, MASS
 LazyData: true
+LazyDataCompression: gzip
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    arrow
 VignetteBuilder: knitr
 URL: https://github.com/pabloreyespo/mtuem
 BugReports: https://github.com/pabloreyespo/mtuem/issues

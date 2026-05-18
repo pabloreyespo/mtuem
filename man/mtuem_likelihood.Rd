@@ -2,27 +2,28 @@
 % Please edit documentation in R/mtuem_likelihood.R
 \name{mtuem_likelihood}
 \alias{mtuem_likelihood}
-\title{Likelihood function for the parameter estimation of a Microeconomic Time-Use-Expenditure Model.}
+\title{Likelihood function for the parameter estimation of a Microeconomic Time-Use-Expenditure Model (Theta-Phi parameterization).}
 \usage{
 mtuem_likelihood(mtuem_settings, functionality = "estimate")
 }
 \arguments{
 \item{mtuem_settings}{List of arguments to the functions. It must contain the following. User input is required for all settings except those with a default or marked as optional.
 \itemize{
-\item \strong{\code{work_times}} Character. Name of the work time column
-\item \strong{\code{free_times}} Character vector. Optional. Names of the freely allocated times. (Remember to left one out for identification)
-\item \strong{\code{free_goods}} Character vector. Optional. Names of the freely consumed goods.(Remember to left one out for identification)
-\item \strong{\code{goods_cost}} Named list. Optional. Cost associated to the consumption of each good. If not especified assumed as 1. Then Expeneses equal consumption of the good.
-\item \strong{\code{work_elasticities}} Named list. Value of the elasticity parameters associated to work equation. Mandatory names are Theta, Phi and thw (theta work).
-\item \strong{\code{times_elasticities}} List. Optional. Value of the elasticity parameters associated to freely allocated times. Must be in the same order of \code{free_times}.
-\item \strong{\code{goods_elasticities}} List. Optional. Value of the elasticity parameters associated to freely allocated goods Must be in the same order of \code{free_goods}.
-\item \strong{\code{sig}} List. Optional. Value of the sigma parameters (standard deviations) of the error covariance matrix. One element for equation. If not specified inferred by the observed errors.
-\item \strong{\code{rho}} List. Optional. Value of the correlation parameters of the upper diagonal of the error covariance matrix. Must be ordered horizontally. Only used if \code{sigma} is specified. If rho is not correlations are assumed to be zero.
-\item \strong{\code{Tc}} Numeric vector. Budget for each observation.
+\item \strong{\code{work_times}} Character. Name of the work time column in the database.
+\item \strong{\code{free_times}} Character vector. Optional. Names of the freely allocated time columns. Leave at least one out for identification.
+\item \strong{\code{free_goods}} Character vector. Optional. Names of the freely consumed goods columns. Leave at least one out for identification.
+\item \strong{\code{goods_cost}} Named list. Optional. Cost associated with the consumption of each good. If not specified, assumed as 1 (expenses equal consumption of the good).
+\item \strong{\code{work_elasticities}} Named list. Value of the elasticity parameters associated with the work equation. Mandatory names are \code{Theta}, \code{Phi}, and \code{thw} (theta work).
+\item \strong{\code{times_elasticities}} List. Optional. Value of the elasticity parameters associated with freely allocated times. Must be in the same order as \code{free_times}.
+\item \strong{\code{goods_elasticities}} List. Optional. Value of the elasticity parameters associated with freely allocated goods. Must be in the same order as \code{free_goods}.
+\item \strong{\code{sig}} List. Optional. Value of the sigma parameters (standard deviations) of the error covariance matrix. One element per equation. If not specified, inferred from the observed errors.
+\item \strong{\code{rho}} List. Optional. Value of the correlation parameters of the upper diagonal of the error covariance matrix. Must be ordered horizontally. Only used if \code{sig} is specified. If \code{rho} is not specified, correlations are assumed to be zero.
+\item \strong{\code{optimal_tw}} Logical. Optional. If TRUE (default), uses the theoretical optimal work time for computing free time and goods allocations. If FALSE, uses the observed work time from the database.
+\item \strong{\code{Tc}} Numeric vector. Committed time for each observation.
 \item \strong{\code{Ec}} Numeric vector. Committed expenses for each observation.
 \item \strong{\code{w}} Numeric vector. Wage rate for each observation.
-\item \strong{\code{tau}} Numeric vector or scalar. Time Budget.
-\item \strong{\code{componentName}}: Character. Name given to model component. If not provided by the user, Apollo will set the name automatically according to the element in \code{P} to which the function output is directed.
+\item \strong{\code{tau}} Numeric vector or scalar. Time budget (typically 168 hours per week).
+\item \strong{\code{componentName}} Character. Name given to model component. If not provided by the user, Apollo will set the name automatically.
 }}
 
 \item{functionality}{Character. Setting instructing Apollo what processing to apply to the likelihood function. This is in general controlled by the functions that call \code{apollo_probabilities}, though the user can also call \code{apollo_probabilities} manually with a given functionality for testing/debugging. Possible values are:
@@ -35,12 +36,79 @@ mtuem_likelihood(mtuem_settings, functionality = "estimate")
 \item \strong{\code{"raw"}}: For debugging, produces probabilities of all alternatives and individual model components at the level of an observation, at the level of individual draws.
 \item \strong{\code{"report"}}: Prepares output summarising model and choiceset structure.
 \item \strong{\code{"validate"}}: Validates model specification, produces likelihood of the full model, at the level of individual decision-makers, after averaging across draws.
+\item \strong{\code{"get_covar"}}: Returns the covariance matrix, correlation matrix, and standard deviations computed from the residuals.
 }}
 }
 \value{
-array of likelihood for each individual
+For estimation functionalities, an array of likelihood for each individual. For \code{"get_covar"}, a list with components \code{covar}, \code{corr}, and \code{sigma}. For \code{"prediction"}, a matrix with predicted values and values of time.
 }
 \description{
-The implementation is based on Jara-Diaz et.al. (2008) consisting of the maximization of a Cobb-Douglass utility function dependent on Time-use (T) and Goods Consumption (X).
+The implementation is based on Jara-Diaz et al. (2008) consisting of the maximization of a Cobb-Douglas utility function dependent on Time-use (T) and Goods Consumption (X).
 The model is subject to time budget, monetary budget and technical time-use-expenditure constraints (committed time and expenditures).
+}
+\details{
+This function uses the Theta-Phi parameterization of the MTUEM. The work equation is specified
+through \code{work_elasticities} with mandatory names \code{Theta}, \code{Phi}, and \code{thw}.
+The optimal work time is computed as:
+
+\deqn{T_w^* = 0.5 * (tau - T_c) * (Phi + thw + (Theta + thw) * e_c + sqrt(D)) / (Theta + Phi + thw)}
+
+where \eqn{e_c = E_c / (w * (tau - T_c))} and \eqn{D} is the discriminant of the quadratic.
+
+Free time and free goods allocations are derived from the work equation using the corresponding
+elasticity parameters. For identification, at least one free time and one free good must be
+left out of the model (the "leave one out" constraint). The omitted categories are recovered
+as residuals from the time and monetary budgets.
+
+The error structure can be specified in three ways:
+\itemize{
+\item No \code{sig} and no \code{rho}: The covariance matrix is inferred from residuals.
+This is the simplest approach and is only valid for single-equation models.
+\item \code{sig} specified but no \code{rho}: Standard deviations are estimated as parameters,
+and correlations are inferred from residuals. Valid for multi-equation models.
+\item Both \code{sig} and \code{rho} specified: Full covariance estimation where both
+standard deviations and correlations are estimated as parameters.
+}
+
+When \code{functionality = "get_covar"}, the function returns a list with the covariance matrix,
+correlation matrix, and standard deviations computed from the residuals.
+}
+\examples{
+\dontrun{
+# Single equation model (work only) using the maed dataset
+library(apollo)
+library(mtuem)
+
+apollo_initialise()
+apollo_control <- list(modelName = "maed-1eq", indivID = "PeID")
+
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
+
+apollo_beta <- c(Theta = 1, Phi = 1, thw = 0)
+apollo_fixed <- c("Theta")
+
+apollo_inputs <- apollo_validateInputs()
+
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+  work_elasticities <- list(Theta = Theta, Phi = Phi, thw = thw)
+
+  mtuem_settings <- list(
+    work_times = c("Tw"),
+    work_elasticities = work_elasticities,
+    Tc = Tc, Ec = EcI, w = w, tau = 168
+  )
+
+  P[["model"]] <- mtuem_likelihood(mtuem_settings, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+model <- apollo_estimate(apollo_beta, apollo_fixed,
+                          apollo_probabilities, apollo_inputs)
+}
 }

@@ -11,19 +11,20 @@
 #'                            \item \strong{\code{functionality}}: Character. Can be either \strong{\code{"components"}}, \strong{\code{"conditionals"}}, \strong{\code{"estimate"}} (default), \strong{\code{"gradient"}}, \strong{\code{"output"}}, \strong{\code{"prediction"}}, \strong{\code{"preprocess"}}, \strong{\code{"raw"}}, \strong{\code{"report"}}, \strong{\code{"shares_LL"}}, \strong{\code{"validate"}} or \strong{\code{"zero_LL"}}.
 #'                          }
 #' @param apollo_inputs List grouping most common inputs. Created by function \link{apollo_validateInputs}.
-#' @param customMultistart_settings List of settings for multi start. Mimics \code{apollo_multiStart}. The following settuings may be set:
+#' @param customMultistart_settings List of settings for multi start. Mimics \code{apollo_multiStart}. The following settings may be set:
 #'                                \itemize{
 #'                                  \item \strong{\code{apolloBetaMax}}: Named numeric vector with the maximum value to be sampled for each apollo_beta. Default: apollo_beta + 1
 #'                                  \item \strong{\code{apolloBetaMin}}: Named numeric vector with the minimum value to be sampled for each apollo_beta. Default: apollo_beta - 1
-#'                                  \item \strong{\code{nCandidates}}: Numneric Scalar. Number of candidates to be sampled. Default: 100
+#'                                  \item \strong{\code{nCandidates}}: Numeric scalar. Number of candidates to be sampled. Default: 100
 #'                          }
 #' @param estimate_settings List. Contains settings for \code{apollo_estimate}. If not specified, default will be used.
+#' @param estimation_settings List. Deprecated alias for \code{estimate_settings}. Provided for backward compatibility.
 #' @param first_em Boolean. If TRUE a few iterations of Expectation-Maximization algorithm will be run. Only use for latent class models. Default: FALSE
 #' @param em_iter_max Numeric vector. Number of iterations of EM algorithm to be run. Only valid if \code{first_em} is set to TRUE. Default: 5.
 #' @param non_saddle Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE
 #' @param verbose Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.
-#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contains the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{good_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".
-#' @param nClass Named list. Default 1. Number of classes.
+#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".
+#' @param nClass Numeric. Number of latent classes. Default: 1.
 #'
 #' @return a named list containing the best model, the best log-likelihood and all estimated models.
 #'        \itemize{
@@ -36,6 +37,7 @@
 customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
                               customMultistart_settings = NA,
                               estimate_settings = NA,
+                              estimation_settings = NA,  # deprecated alias for estimate_settings
                               first_em = F,
                               em_iter_max = 5,
                               non_saddle = T,
@@ -80,10 +82,15 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
   )
 
   if (length(estimate_settings) == 1 && is.na(estimate_settings)) estimate_settings <- default_estimate_settings
+  # Backward compatibility: use estimation_settings if estimate_settings not provided
+  if (length(estimate_settings) == 1 && is.na(estimate_settings) &&
+      !(length(estimation_settings) == 1 && is.na(estimation_settings))) {
+    estimate_settings <- estimation_settings
+  }
   tmp <- names(default_estimate_settings)[!(names(default_estimate_settings) %in% names(estimate_settings))]
   for (i in tmp) estimate_settings[[i]] <- default_estimate_settings[[i]]
   rm(tmp)
-  
+
   estimate_settings[["scaleAfterConvergence"]] <- FALSE
   #estimate_settings[["hessianRoutine"]] <- 'numDeriv'
 

@@ -11,6 +11,7 @@ customMultiStart(
   apollo_inputs,
   customMultistart_settings = NA,
   estimate_settings = NA,
+  estimation_settings = NA,
   first_em = F,
   em_iter_max = 5,
   non_saddle = T,
@@ -33,14 +34,16 @@ customMultiStart(
 
 \item{apollo_inputs}{List grouping most common inputs. Created by function \link{apollo_validateInputs}.}
 
-\item{customMultistart_settings}{List of settings for multi start. Mimics \code{apollo_multiStart}. The following settuings may be set:
+\item{customMultistart_settings}{List of settings for multi start. Mimics \code{apollo_multiStart}. The following settings may be set:
 \itemize{
 \item \strong{\code{apolloBetaMax}}: Named numeric vector with the maximum value to be sampled for each apollo_beta. Default: apollo_beta + 1
 \item \strong{\code{apolloBetaMin}}: Named numeric vector with the minimum value to be sampled for each apollo_beta. Default: apollo_beta - 1
-\item \strong{\code{nCandidates}}: Numneric Scalar. Number of candidates to be sampled. Default: 100
+\item \strong{\code{nCandidates}}: Numeric scalar. Number of candidates to be sampled. Default: 100
 }}
 
 \item{estimate_settings}{List. Contains settings for \code{apollo_estimate}. If not specified, default will be used.}
+
+\item{estimation_settings}{List. Deprecated alias for \code{estimate_settings}. Provided for backward compatibility.}
 
 \item{first_em}{Boolean. If TRUE a few iterations of Expectation-Maximization algorithm will be run. Only use for latent class models. Default: FALSE}
 
@@ -50,9 +53,9 @@ customMultiStart(
 
 \item{verbose}{Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.}
 
-\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contains the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{good_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".}
+\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".}
 
-\item{nClass}{Named list. Default 1. Number of classes.}
+\item{nClass}{Numeric. Number of latent classes. Default: 1.}
 }
 \value{
 a named list containing the best model, the best log-likelihood and all estimated models.
