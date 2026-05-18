@@ -47,11 +47,11 @@ Your dataset must contain at minimum:
 |---|---|
 | `Tw` | Work time (hours per week) |
 | `Tc` | Committed time (hours per week) |
-| `Ec` | Committed expenses (currency per week) |
+| `EcI` | Committed expenses (currency per week) |
 | `w` | Wage rate (currency per hour) |
-| Individual ID | Unique identifier for each observation |
+| `PeID` | Individual identifier |
 
-For multi-equation models, add columns for each free time (e.g., `Tf1`, `Tf2`) and free good (e.g., `Ef1`, `Ef2`).
+For multi-equation models, add columns for each free time (e.g., `Tf1`, `Tf2`) and free good (e.g., `Ef1`, `Ef2`). The package includes the `maed` dataset with these variables.
 
 ## Step-by-Step Model Formulation
 
@@ -67,14 +67,15 @@ apollo_initialise()
 apollo_control <- list(
   modelName = "my-model",
   modelDescr = "Description of my model",
-  indivID = "PeID"
+  indivID = "PeID",
+  outputDirectory = "output"
 )
 ```
 
 ### Step 2: Load and Filter Data
 
 ```r
-database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- mtuem::maed
 database <- database[database$EcI > 0, ]
 ```
 
@@ -188,19 +189,7 @@ mtuem_settings <- list(
 
 Specify both `sig` and `rho` parameters. For n equations, you need n sigma parameters and n*(n-1)/2 rho parameters.
 
-For 3 equations, the rho parameters are ordered horizontally across the upper triangle:
-
-```
-rho = [rho_12, rho_13, rho_23]
-```
-
-This corresponds to the correlation matrix:
-
-```
-| 1      rho_12  rho_13 |
-| rho_12  1      rho_23 |
-| rho_13  rho_23  1     |
-```
+For 3 equations, the rho parameters are: `rho_12`, `rho_13`, `rho_23`.
 
 ```r
 mtuem_settings <- list(
@@ -227,13 +216,6 @@ result$covar  # Covariance matrix
 result$corr   # Correlation matrix
 ```
 
-Alternatively, call the likelihood directly with the `get_covar` functionality:
-
-```r
-covar_result <- apollo_probabilities(apollo_beta, apollo_inputs,
-                                      functionality = "get_covar")
-```
-
 ## Latent Class Models
 
 For latent class models, use the `customMultiStart` function which handles EM initialization and multi-start optimization.
@@ -245,19 +227,29 @@ For latent class models, use the `customMultiStart` function which handles EM in
 3. Combine using `apollo_lc`.
 4. Estimate with `customMultiStart`.
 
-### Example: 1 Class, 1 Equation
+### Example: 2 Classes, 3 Equations each
 
 ```r
 apollo_lcPars <- function(apollo_beta, apollo_inputs) {
   lcpars <- list()
-  lcpars[["Phi"]] <- list(Phi_1)
-  lcpars[["thw"]] <- list(thw_1)
+  lcpars[["Theta"]] <- list(Theta_1, Theta_2)
+  lcpars[["Phi"]] <- list(Phi_1, Phi_2)
+  lcpars[["thw"]] <- list(thw_1, thw_2)
+  lcpars[["th1"]] <- list(th1_1, th1_2)
+  lcpars[["th2"]] <- list(th2_1, th2_2)
+  lcpars[["sig1"]] <- list(sig1_1, sig1_2)
+  lcpars[["sig2"]] <- list(sig2_1, sig2_2)
+  lcpars[["sig3"]] <- list(sig3_1, sig3_2)
+  lcpars[["rho12"]] <- list(rho12_1, rho12_2)
+  lcpars[["rho13"]] <- list(rho13_1, rho13_2)
+  lcpars[["rho23"]] <- list(rho23_1, rho23_2)
 
   V <- list()
-  V[["class_1"]] <- asc_1
+  V[["class_1"]] <- asc_1 + (female * x_female_1) + (older45 * x_older45_1)
+  V[["class_2"]] <- asc_2 + (female * x_female_2) + (older45 * x_older45_2)
 
   classAlloc_settings <- list(
-    classes = c(class_1 = 1),
+    classes = c(class_1 = 1, class_2 = 2),
     utilities = V
   )
   lcpars[["pi_values"]] <- apollo_classAlloc(classAlloc_settings)
@@ -272,17 +264,39 @@ apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "es
 
   for (s in 1:length(pi_values)) {
     work_elasticities <- list(
-      Theta = 1,
+      Theta = Theta[[s]],
       Phi = Phi[[s]],
       thw = thw[[s]]
     )
 
+    times_elasticities <- list(
+      th1 = th1[[s]],
+      th2 = th2[[s]]
+    )
+
+    sig <- list(
+      sig1 = sig1[[s]],
+      sig2 = sig2[[s]],
+      sig3 = sig3[[s]]
+    )
+
+    rho <- list(
+      rho12 = rho12[[s]],
+      rho13 = rho13[[s]],
+      rho23 = rho23[[s]]
+    )
+
     mtuem_settings <- list(
       work_times = c("Tw"),
+      free_times = c("Tf1", "Tf2"),
       work_elasticities = work_elasticities,
+      times_elasticities = times_elasticities,
+      sig = sig,
+      rho = rho,
       Tc = Tc, Ec = EcI, w = w, tau = 168,
       componentName = paste0("class_", s)
     )
+
     P[[paste0("class_", s)]] <- mtuem_likelihood(mtuem_settings, functionality)
   }
 
@@ -295,17 +309,25 @@ apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "es
 multi_starts <- customMultiStart(
   apollo_beta, apollo_fixed,
   apollo_probabilities, apollo_inputs,
+  customMultistart_settings = list(
+    apolloBetaMax = apollo_beta + 1,
+    apolloBetaMin = apollo_beta - 1,
+    nCandidates = 20
+  ),
+  estimate_settings = est_set,
   first_em = TRUE,
   em_iter_max = 3,
-  nClass = 1,
+  verbose = FALSE,
+  non_saddle = TRUE,
   normalization = list(
     normalization = "theta_phi",
     work_elasticities = c("Theta", "Phi", "thw"),
-    times_elasticities = c(),
+    times_elasticities = c("th1", "th2"),
     goods_elasticities = c(),
-    sig = c(),
-    rho = c()
-  )
+    sig = c("sig1", "sig2", "sig3"),
+    rho = c("rho12", "rho13", "rho23")
+  ),
+  nClass = 2
 )
 ```
 
@@ -344,7 +366,7 @@ delta
 
 ### Negative standard deviations
 
-- Add lower bounds to sigma parameters using Apollo's parameter bounds.
+- Add lower bounds to sigma parameters using Apollo's constraints.
 - Use the `normalization` argument in `customMultiStart` to enforce positivity.
 
 ### "Leave one out" confusion
@@ -356,6 +378,10 @@ If you have K free time activities, include only K-1 in `free_times`. The model 
 - When specifying `rho` parameters, ensure they produce a valid correlation matrix.
 - Start rho parameters at 0.
 - Consider using the inferred correlation approach (specify `sig` but not `rho`).
+
+### customMultiStart fails with "$ operator is invalid for atomic vectors"
+
+This was a known bug in earlier versions. Make sure you are using the latest version of the package where the candidate testing uses `functionality = "estimate"` instead of `"raw"`.
 
 ## References
 
