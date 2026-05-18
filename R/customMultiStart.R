@@ -243,7 +243,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
 
   cat('Testing candidates...')
   for (i in indexes) {
-    suppressWarnings({ prob <- apollo_probabilities(beta_matrix[i, ], apollo_inputs, functionality="raw") })
+    suppressWarnings({ prob <- apollo_probabilities(beta_matrix[i, ], apollo_inputs, functionality="estimate") })
     ll <-sum(log(unlist(prob)))
     if(is.na(ll)) {works[i] <- F}
   }
