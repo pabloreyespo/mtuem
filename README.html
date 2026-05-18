@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style type="text/css">
+@font-face {
+font-family: octicons-link;
+src: url(data:font/woff;charset=utf-8;base64,d09GRgABAAAAAAZwABAAAAAACFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABEU0lHAAAGaAAAAAgAAAAIAAAAAUdTVUIAAAZcAAAACgAAAAoAAQAAT1MvMgAAAyQAAABJAAAAYFYEU3RjbWFwAAADcAAAAEUAAACAAJThvmN2dCAAAATkAAAABAAAAAQAAAAAZnBnbQAAA7gAAACyAAABCUM+8IhnYXNwAAAGTAAAABAAAAAQABoAI2dseWYAAAFsAAABPAAAAZwcEq9taGVhZAAAAsgAAAA0AAAANgh4a91oaGVhAAADCAAAABoAAAAkCA8DRGhtdHgAAAL8AAAADAAAAAwGAACfbG9jYQAAAsAAAAAIAAAACABiATBtYXhwAAACqAAAABgAAAAgAA8ASm5hbWUAAAToAAABQgAAAlXu73sOcG9zdAAABiwAAAAeAAAAME3QpOBwcmVwAAAEbAAAAHYAAAB/aFGpk3jaTY6xa8JAGMW/O62BDi0tJLYQincXEypYIiGJjSgHniQ6umTsUEyLm5BV6NDBP8Tpts6F0v+k/0an2i+itHDw3v2+9+DBKTzsJNnWJNTgHEy4BgG3EMI9DCEDOGEXzDADU5hBKMIgNPZqoD3SilVaXZCER3/I7AtxEJLtzzuZfI+VVkprxTlXShWKb3TBecG11rwoNlmmn1P2WYcJczl32etSpKnziC7lQyWe1smVPy/Lt7Kc+0vWY/gAgIIEqAN9we0pwKXreiMasxvabDQMM4riO+qxM2ogwDGOZTXxwxDiycQIcoYFBLj5K3EIaSctAq2kTYiw+ymhce7vwM9jSqO8JyVd5RH9gyTt2+J/yUmYlIR0s04n6+7Vm1ozezUeLEaUjhaDSuXHwVRgvLJn1tQ7xiuVv/ocTRF42mNgZGBgYGbwZOBiAAFGJBIMAAizAFoAAABiAGIAznjaY2BkYGAA4in8zwXi+W2+MjCzMIDApSwvXzC97Z4Ig8N/BxYGZgcgl52BCSQKAA3jCV8CAABfAAAAAAQAAEB42mNgZGBg4f3vACQZQABIMjKgAmYAKEgBXgAAeNpjYGY6wTiBgZWBg2kmUxoDA4MPhGZMYzBi1AHygVLYQUCaawqDA4PChxhmh/8ODDEsvAwHgMKMIDnGL0x7gJQCAwMAJd4MFwAAAHjaY2BgYGaA4DAGRgYQkAHyGMF8NgYrIM3JIAGVYYDT+AEjAwuDFpBmA9KMDEwMCh9i/v8H8sH0/4dQc1iAmAkALaUKLgAAAHjaTY9LDsIgEIbtgqHUPpDi3gPoBVyRTmTddOmqTXThEXqrob2gQ1FjwpDvfwCBdmdXC5AVKFu3e5MfNFJ29KTQT48Ob9/lqYwOGZxeUelN2U2R6+cArgtCJpauW7UQBqnFkUsjAY/kOU1cP+DAgvxwn1chZDwUbd6CFimGXwzwF6tPbFIcjEl+vvmM/byA48e6tWrKArm4ZJlCbdsrxksL1AwWn/yBSJKpYbq8AXaaTb8AAHja28jAwOC00ZrBeQNDQOWO//sdBBgYGRiYWYAEELEwMTE4uzo5Zzo5b2BxdnFOcALxNjA6b2ByTswC8jYwg0VlNuoCTWAMqNzMzsoK1rEhNqByEyerg5PMJlYuVueETKcd/89uBpnpvIEVomeHLoMsAAe1Id4AAAAAAAB42oWQT07CQBTGv0JBhagk7HQzKxca2sJCE1hDt4QF+9JOS0nbaaYDCQfwCJ7Au3AHj+LO13FMmm6cl7785vven0kBjHCBhfpYuNa5Ph1c0e2Xu3jEvWG7UdPDLZ4N92nOm+EBXuAbHmIMSRMs+4aUEd4Nd3CHD8NdvOLTsA2GL8M9PODbcL+hD7C1xoaHeLJSEao0FEW14ckxC+TU8TxvsY6X0eLPmRhry2WVioLpkrbp84LLQPGI7c6sOiUzpWIWS5GzlSgUzzLBSikOPFTOXqly7rqx0Z1Q5BAIoZBSFihQYQOOBEdkCOgXTOHA07HAGjGWiIjaPZNW13/+lm6S9FT7rLHFJ6fQbkATOG1j2OFMucKJJsxIVfQORl+9Jyda6Sl1dUYhSCm1dyClfoeDve4qMYdLEbfqHf3O/AdDumsjAAB42mNgYoAAZQYjBmyAGYQZmdhL8zLdDEydARfoAqIAAAABAAMABwAKABMAB///AA8AAQAAAAAAAAAAAAAAAAABAAAAAA==) format('woff');
+}
+body {
+-webkit-text-size-adjust: 100%;
+text-size-adjust: 100%;
+color: #333;
+font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+font-size: 16px;
+line-height: 1.6;
+word-wrap: break-word;
+}
+a {
+background-color: transparent;
+}
+a:active,
+a:hover {
+outline: 0;
+}
+strong {
+font-weight: bold;
+}
+h1 {
+font-size: 2em;
+margin: 0.67em 0;
+}
+img {
+border: 0;
+}
+hr {
+box-sizing: content-box;
+height: 0;
+}
+pre {
+overflow: auto;
+}
+code,
+kbd,
+pre {
+font-family: monospace, monospace;
+font-size: 1em;
+}
+input {
+color: inherit;
+font: inherit;
+margin: 0;
+}
+html input[disabled] {
+cursor: default;
+}
+input {
+line-height: normal;
+}
+input[type="checkbox"] {
+box-sizing: border-box;
+padding: 0;
+}
+table {
+border-collapse: collapse;
+border-spacing: 0;
+}
+td,
+th {
+padding: 0;
+}
+* {
+box-sizing: border-box;
+}
+input {
+font: 13px / 1.4 Helvetica, arial, nimbussansl, liberationsans, freesans, clean, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+a {
+color: #4078c0;
+text-decoration: none;
+}
+a:hover,
+a:active {
+text-decoration: underline;
+}
+hr {
+height: 0;
+margin: 15px 0;
+overflow: hidden;
+background: transparent;
+border: 0;
+border-bottom: 1px solid #ddd;
+}
+hr:before {
+display: table;
+content: "";
+}
+hr:after {
+display: table;
+clear: both;
+content: "";
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+margin-top: 15px;
+margin-bottom: 15px;
+line-height: 1.1;
+}
+h1 {
+font-size: 30px;
+}
+h2 {
+font-size: 21px;
+}
+h3 {
+font-size: 16px;
+}
+h4 {
+font-size: 14px;
+}
+h5 {
+font-size: 12px;
+}
+h6 {
+font-size: 11px;
+}
+blockquote {
+margin: 0;
+}
+ul,
+ol {
+padding: 0;
+margin-top: 0;
+margin-bottom: 0;
+}
+ol ol,
+ul ol {
+list-style-type: lower-roman;
+}
+ul ul ol,
+ul ol ol,
+ol ul ol,
+ol ol ol {
+list-style-type: lower-alpha;
+}
+dd {
+margin-left: 0;
+}
+code {
+font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+font-size: 12px;
+}
+pre {
+margin-top: 0;
+margin-bottom: 0;
+font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+.select::-ms-expand {
+opacity: 0;
+}
+.octicon {
+font: normal normal normal 16px/1 octicons-link;
+display: inline-block;
+text-decoration: none;
+text-rendering: auto;
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+-webkit-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+}
+.octicon-link:before {
+content: '\f05c';
+}
+.markdown-body:before {
+display: table;
+content: "";
+}
+.markdown-body:after {
+display: table;
+clear: both;
+content: "";
+}
+.markdown-body>*:first-child {
+margin-top: 0 !important;
+}
+.markdown-body>*:last-child {
+margin-bottom: 0 !important;
+}
+a:not([href]) {
+color: inherit;
+text-decoration: none;
+}
+.anchor {
+display: inline-block;
+padding-right: 2px;
+margin-left: -18px;
+}
+.anchor:focus {
+outline: none;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+margin-top: 1em;
+margin-bottom: 16px;
+font-weight: bold;
+line-height: 1.4;
+}
+h1 .octicon-link,
+h2 .octicon-link,
+h3 .octicon-link,
+h4 .octicon-link,
+h5 .octicon-link,
+h6 .octicon-link {
+color: #000;
+vertical-align: middle;
+visibility: hidden;
+}
+h1:hover .anchor,
+h2:hover .anchor,
+h3:hover .anchor,
+h4:hover .anchor,
+h5:hover .anchor,
+h6:hover .anchor {
+text-decoration: none;
+}
+h1:hover .anchor .octicon-link,
+h2:hover .anchor .octicon-link,
+h3:hover .anchor .octicon-link,
+h4:hover .anchor .octicon-link,
+h5:hover .anchor .octicon-link,
+h6:hover .anchor .octicon-link {
+visibility: visible;
+}
+h1 {
+padding-bottom: 0.3em;
+font-size: 2.25em;
+line-height: 1.2;
+border-bottom: 1px solid #eee;
+}
+h1 .anchor {
+line-height: 1;
+}
+h2 {
+padding-bottom: 0.3em;
+font-size: 1.75em;
+line-height: 1.225;
+border-bottom: 1px solid #eee;
+}
+h2 .anchor {
+line-height: 1;
+}
+h3 {
+font-size: 1.5em;
+line-height: 1.43;
+}
+h3 .anchor {
+line-height: 1.2;
+}
+h4 {
+font-size: 1.25em;
+}
+h4 .anchor {
+line-height: 1.2;
+}
+h5 {
+font-size: 1em;
+}
+h5 .anchor {
+line-height: 1.1;
+}
+h6 {
+font-size: 1em;
+color: #777;
+}
+h6 .anchor {
+line-height: 1.1;
+}
+p,
+blockquote,
+ul,
+ol,
+dl,
+table,
+pre {
+margin-top: 0;
+margin-bottom: 16px;
+}
+hr {
+height: 4px;
+padding: 0;
+margin: 16px 0;
+background-color: #e7e7e7;
+border: 0 none;
+}
+ul,
+ol {
+padding-left: 2em;
+}
+ul ul,
+ul ol,
+ol ol,
+ol ul {
+margin-top: 0;
+margin-bottom: 0;
+}
+li>p {
+margin-top: 16px;
+}
+dl {
+padding: 0;
+}
+dl dt {
+padding: 0;
+margin-top: 16px;
+font-size: 1em;
+font-style: italic;
+font-weight: bold;
+}
+dl dd {
+padding: 0 16px;
+margin-bottom: 16px;
+}
+blockquote {
+padding: 0 15px;
+color: #777;
+border-left: 4px solid #ddd;
+}
+blockquote>:first-child {
+margin-top: 0;
+}
+blockquote>:last-child {
+margin-bottom: 0;
+}
+table {
+display: block;
+width: 100%;
+overflow: auto;
+word-break: normal;
+word-break: keep-all;
+}
+table th {
+font-weight: bold;
+}
+table th,
+table td {
+padding: 6px 13px;
+border: 1px solid #ddd;
+}
+table tr {
+background-color: #fff;
+border-top: 1px solid #ccc;
+}
+table tr:nth-child(2n) {
+background-color: #f8f8f8;
+}
+img {
+max-width: 100%;
+box-sizing: content-box;
+background-color: #fff;
+}
+code {
+padding: 0;
+padding-top: 0.2em;
+padding-bottom: 0.2em;
+margin: 0;
+font-size: 85%;
+background-color: rgba(0,0,0,0.04);
+border-radius: 3px;
+}
+code:before,
+code:after {
+letter-spacing: -0.2em;
+content: "\00a0";
+}
+pre>code {
+padding: 0;
+margin: 0;
+font-size: 100%;
+word-break: normal;
+white-space: pre;
+background: transparent;
+border: 0;
+}
+.highlight {
+margin-bottom: 16px;
+}
+.highlight pre,
+pre {
+padding: 16px;
+overflow: auto;
+font-size: 85%;
+line-height: 1.45;
+background-color: #f7f7f7;
+border-radius: 3px;
+}
+.highlight pre {
+margin-bottom: 0;
+word-break: normal;
+}
+pre {
+word-wrap: normal;
+}
+pre code {
+display: inline;
+max-width: initial;
+padding: 0;
+margin: 0;
+overflow: initial;
+line-height: inherit;
+word-wrap: normal;
+background-color: transparent;
+border: 0;
+}
+pre code:before,
+pre code:after {
+content: normal;
+}
+kbd {
+display: inline-block;
+padding: 3px 5px;
+font-size: 11px;
+line-height: 10px;
+color: #555;
+vertical-align: middle;
+background-color: #fcfcfc;
+border: solid 1px #ccc;
+border-bottom-color: #bbb;
+border-radius: 3px;
+box-shadow: inset 0 -1px 0 #bbb;
+}
+.pl-c {
+color: #969896;
+}
+.pl-c1,
+.pl-s .pl-v {
+color: #0086b3;
+}
+.pl-e,
+.pl-en {
+color: #795da3;
+}
+.pl-s .pl-s1,
+.pl-smi {
+color: #333;
+}
+.pl-ent {
+color: #63a35c;
+}
+.pl-k {
+color: #a71d5d;
+}
+.pl-pds,
+.pl-s,
+.pl-s .pl-pse .pl-s1,
+.pl-sr,
+.pl-sr .pl-cce,
+.pl-sr .pl-sra,
+.pl-sr .pl-sre {
+color: #183691;
+}
+.pl-v {
+color: #ed6a43;
+}
+.pl-id {
+color: #b52a1d;
+}
+.pl-ii {
+background-color: #b52a1d;
+color: #f8f8f8;
+}
+.pl-sr .pl-cce {
+color: #63a35c;
+font-weight: bold;
+}
+.pl-ml {
+color: #693a17;
+}
+.pl-mh,
+.pl-mh .pl-en,
+.pl-ms {
+color: #1d3e81;
+font-weight: bold;
+}
+.pl-mq {
+color: #008080;
+}
+.pl-mi {
+color: #333;
+font-style: italic;
+}
+.pl-mb {
+color: #333;
+font-weight: bold;
+}
+.pl-md {
+background-color: #ffecec;
+color: #bd2c00;
+}
+.pl-mi1 {
+background-color: #eaffea;
+color: #55a532;
+}
+.pl-mdr {
+color: #795da3;
+font-weight: bold;
+}
+.pl-mo {
+color: #1d3e81;
+}
+kbd {
+display: inline-block;
+padding: 3px 5px;
+font: 11px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+line-height: 10px;
+color: #555;
+vertical-align: middle;
+background-color: #fcfcfc;
+border: solid 1px #ccc;
+border-bottom-color: #bbb;
+border-radius: 3px;
+box-shadow: inset 0 -1px 0 #bbb;
+}
+.task-list-item {
+list-style-type: none;
+}
+.task-list-item+.task-list-item {
+margin-top: 3px;
+}
+.task-list-item input {
+margin: 0 0.35em 0.25em -1.6em;
+vertical-align: middle;
+}
+:checked+.radio-label {
+z-index: 1;
+position: relative;
+border-color: #4078c0;
+}
+.sourceLine {
+display: inline-block;
+}
+code .kw { color: #000000; }
+code .dt { color: #ed6a43; }
+code .dv { color: #009999; }
+code .bn { color: #009999; }
+code .fl { color: #009999; }
+code .ch { color: #009999; }
+code .st { color: #183691; }
+code .co { color: #969896; }
+code .ot { color: #0086b3; }
+code .al { color: #a61717; }
+code .fu { color: #63a35c; }
+code .er { color: #a61717; background-color: #e3d2d2; }
+code .wa { color: #000000; }
+code .cn { color: #008080; }
+code .sc { color: #008080; }
+code .vs { color: #183691; }
+code .ss { color: #183691; }
+code .im { color: #000000; }
+code .va {color: #008080; }
+code .cf { color: #000000; }
+code .op { color: #000000; }
+code .bu { color: #000000; }
+code .ex { color: #000000; }
+code .pp { color: #999999; }
+code .at { color: #008080; }
+code .do { color: #969896; }
+code .an { color: #008080; }
+code .cv { color: #008080; }
+code .in { color: #008080; }
+</style>
+<style>
+body {
+box-sizing: border-box;
+min-width: 200px;
+max-width: 980px;
+margin: 0 auto;
+padding: 45px;
+padding-top: 0px;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+<h1 id="mtuem">mtuem</h1>
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+<p>The <strong>mtuem</strong> package implements the likelihood
+functions for estimating Microeconomic Time-Use-Expenditure Models
+(MTUEM) within the <a href="https://www.apollochoicemodelling.com/">Apollo</a> choice
+modelling framework. The models are based on Jara-Diaz et al. (2008),
+which maximizes a Cobb-Douglas utility function over time-use and goods
+consumption subject to time, monetary, and technical constraints.</p>
+<h2 id="installation">Installation</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;https://github.com/pabloreyespo/mtuem&quot;</span>)</span></code></pre></div>
+<h2 id="model-formulation-guide">Model Formulation Guide</h2>
+<h3 id="the-mtuem-framework">The MTUEM Framework</h3>
+<p>The MTUEM derives optimal allocations of time and expenditure from
+utility maximization. The model has two budget constraints:</p>
+<ul>
+<li><strong>Time budget</strong>: Total time equals the time budget
+(typically 168 hours per week), split into committed time (Tc), work
+time (Tw), and freely allocated time.</li>
+<li><strong>Monetary budget</strong>: Total expenditure equals labor
+income minus committed expenses (Ec), split into freely allocated
+goods.</li>
+</ul>
+<h3 id="two-parameterizations">Two Parameterizations</h3>
+<p>The package offers two equivalent parameterizations:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Theta-Phi (<code>mtuem_likelihood</code>)</th>
+<th>Alpha-Beta (<code>mtuem_ab_likelihood</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work elasticities</td>
+<td><code>Theta</code>, <code>Phi</code>, <code>thw</code></td>
+<td><code>alpha</code>, <code>beta</code></td>
+</tr>
+<tr>
+<td>Identification</td>
+<td>Fix <code>Theta = 1</code></td>
+<td>No fixed parameters needed</td>
+</tr>
+<tr>
+<td>Use when</td>
+<td>Direct interpretation of time value</td>
+<td>Alternative formulation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="equations-and-the-leave-one-out-rule">Equations and the “Leave
+One Out” Rule</h3>
+<ul>
+<li><strong>work_times</strong> (required): Column name(s) for work
+time, typically <code>c(&quot;Tw&quot;)</code>.</li>
+<li><strong>free_times</strong> (optional): Column names for freely
+allocated time activities. You must leave at least one out for
+identification. The omitted category is recovered as the residual from
+the time budget.</li>
+<li><strong>free_goods</strong> (optional): Column names for freely
+allocated goods. You must leave at least one out for identification. The
+omitted category is recovered as the residual from the monetary
+budget.</li>
+</ul>
+<h3 id="error-structure">Error Structure</h3>
+<p>The likelihood assumes normally distributed errors. Three
+specification options exist:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Inferred covariance</strong> (no <code>sig</code>, no
+<code>rho</code>): The error covariance is inferred from residuals.
+Simplest approach, valid only for single-equation models.</li>
+<li><strong>Explicit sigma, inferred correlations</strong>
+(<code>sig</code> specified, no <code>rho</code>): Standard deviations
+are estimated as parameters. Correlations are inferred from residuals.
+Valid for multi-equation models.</li>
+<li><strong>Full estimation</strong> (both <code>sig</code> and
+<code>rho</code> specified): Both standard deviations and correlations
+are estimated as parameters.</li>
+</ol>
+<h3 id="retrieving-the-covariance-matrix">Retrieving the Covariance
+Matrix</h3>
+<p>After estimation, use
+<code>mtuem_get_corr(model, apollo_probabilities, apollo_inputs, vars)</code>
+where <code>vars</code> is a character vector of the
+time-use-expenditure column names. Alternatively, call the likelihood
+with <code>functionality = &quot;get_covar&quot;</code>.</p>
+<hr />
+<h2 id="example-1-single-equation-work-only">Example 1: Single Equation
+(Work Only)</h2>
+<p>The simplest model estimates only the work equation. No free times or
+free goods are specified.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(mtuem)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">library</span>(apollo)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="do">### Initialise</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">apollo_initialise</span>()</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>apollo_control <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">modelName =</span> <span class="st">&quot;maed-1eq&quot;</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">modelDescr =</span> <span class="st">&quot;Single equation MTUEM (work only)&quot;</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">indivID =</span> <span class="st">&quot;PeID&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="do">### Load data</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>database <span class="ot">&lt;-</span> arrow<span class="sc">::</span><span class="fu">read_parquet</span>(<span class="st">&quot;data/maed.parquet.gzip&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>database <span class="ot">&lt;-</span> database[database<span class="sc">$</span>EcI <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="do">### Parameters: Theta fixed to 1 for identification</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>apollo_beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Theta =</span> <span class="dv">1</span>, <span class="at">Phi =</span> <span class="dv">1</span>, <span class="at">thw =</span> <span class="dv">0</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>apollo_fixed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Theta&quot;</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>apollo_inputs <span class="ot">&lt;-</span> <span class="fu">apollo_validateInputs</span>()</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>apollo_probabilities <span class="ot">&lt;-</span> <span class="cf">function</span>(apollo_beta, apollo_inputs, <span class="at">functionality =</span> <span class="st">&quot;estimate&quot;</span>) {</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>  <span class="fu">apollo_attach</span>(apollo_beta, apollo_inputs)</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">apollo_detach</span>(apollo_beta, apollo_inputs))</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>  work_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Theta =</span> Theta, <span class="at">Phi =</span> Phi, <span class="at">thw =</span> thw)</span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>  mtuem_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>    <span class="at">work_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>),</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>    <span class="at">work_elasticities =</span> work_elasticities,</span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>    <span class="at">Tc =</span> Tc, <span class="at">Ec =</span> EcI, <span class="at">w =</span> w, <span class="at">tau =</span> <span class="dv">168</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a>  )</span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a>  P[[<span class="st">&quot;model&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">mtuem_likelihood</span>(mtuem_settings, functionality)</span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">apollo_prepareProb</span>(P, apollo_inputs, functionality)</span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a>  <span class="fu">return</span>(P)</span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a>}</span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">apollo_estimate</span>(apollo_beta, apollo_fixed,</span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a>                          apollo_probabilities, apollo_inputs)</span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="fu">apollo_modelOutput</span>(model)</span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a><span class="do">### Predictions</span></span>
+<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">apollo_prediction</span>(model, apollo_probabilities, apollo_inputs)</span>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="fu">head</span>(pred)</span></code></pre></div>
+<hr />
+<h2 id="example-2-three-equations-with-different-error-structures">Example
+2: Three Equations with Different Error Structures</h2>
+<p>This example shows a model with 3 equations: work (Tw), one free time
+(Tf1), and one free good (Ef1). We demonstrate three error structure
+specifications.</p>
+<h3 id="id_2a-inferred-covariance-matrix">2a: Inferred Covariance
+Matrix</h3>
+<p>No <code>sig</code> or <code>rho</code> parameters. The covariance is
+inferred from residuals.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(mtuem)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">library</span>(apollo)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="fu">apollo_initialise</span>()</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>apollo_control <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">modelName =</span> <span class="st">&quot;maed-3eq-inferred&quot;</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">modelDescr =</span> <span class="st">&quot;Three equations with inferred covariance&quot;</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">indivID =</span> <span class="st">&quot;PeID&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>)</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>database <span class="ot">&lt;-</span> arrow<span class="sc">::</span><span class="fu">read_parquet</span>(<span class="st">&quot;data/maed.parquet.gzip&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>database <span class="ot">&lt;-</span> database[database<span class="sc">$</span>EcI <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="do">### Only structural parameters; no sig or rho</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>apollo_beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Theta =</span> <span class="dv">1</span>, <span class="at">Phi =</span> <span class="dv">1</span>, <span class="at">thw =</span> <span class="dv">0</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>                 <span class="at">theta_1 =</span> <span class="fl">0.5</span>, <span class="at">phi_1 =</span> <span class="fl">0.5</span>)</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>apollo_fixed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Theta&quot;</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>apollo_inputs <span class="ot">&lt;-</span> <span class="fu">apollo_validateInputs</span>()</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>apollo_probabilities <span class="ot">&lt;-</span> <span class="cf">function</span>(apollo_beta, apollo_inputs, <span class="at">functionality =</span> <span class="st">&quot;estimate&quot;</span>) {</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>  <span class="fu">apollo_attach</span>(apollo_beta, apollo_inputs)</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">apollo_detach</span>(apollo_beta, apollo_inputs))</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>  work_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Theta =</span> Theta, <span class="at">Phi =</span> Phi, <span class="at">thw =</span> thw)</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>  times_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">theta_1 =</span> theta_1)</span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>  goods_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">phi_1 =</span> phi_1)</span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a>  mtuem_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a>    <span class="at">work_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>),</span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a>    <span class="at">free_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tf1&quot;</span>),</span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a>    <span class="at">free_goods =</span> <span class="fu">c</span>(<span class="st">&quot;Ef1&quot;</span>),</span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a>    <span class="at">goods_cost =</span> <span class="fu">list</span>(<span class="at">Ef1 =</span> <span class="dv">1</span>),</span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a>    <span class="at">work_elasticities =</span> work_elasticities,</span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a>    <span class="at">times_elasticities =</span> times_elasticities,</span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a>    <span class="at">goods_elasticities =</span> goods_elasticities,</span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a>    <span class="at">Tc =</span> Tc, <span class="at">Ec =</span> EcI, <span class="at">w =</span> w, <span class="at">tau =</span> <span class="dv">168</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a>  )</span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a>  P[[<span class="st">&quot;model&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">mtuem_likelihood</span>(mtuem_settings, functionality)</span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">apollo_prepareProb</span>(P, apollo_inputs, functionality)</span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a>  <span class="fu">return</span>(P)</span>
+<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a>}</span>
+<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">apollo_estimate</span>(apollo_beta, apollo_fixed,</span>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a>                          apollo_probabilities, apollo_inputs)</span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a></span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="do">### Retrieve covariance matrix after estimation</span></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a>corr_result <span class="ot">&lt;-</span> <span class="fu">mtuem_get_corr</span>(model, apollo_probabilities, apollo_inputs,</span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a>                               <span class="at">vars =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>, <span class="st">&quot;Tf1&quot;</span>, <span class="st">&quot;Ef1&quot;</span>))</span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a>corr_result<span class="sc">$</span>covar   <span class="co"># Covariance matrix</span></span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a>corr_result<span class="sc">$</span>corr    <span class="co"># Correlation matrix</span></span></code></pre></div>
+<h3 id="id_2b-explicit-standard-deviations-inferred-correlations">2b:
+Explicit Standard Deviations, Inferred Correlations</h3>
+<p>Estimate <code>sig</code> parameters for each equation. Correlations
+are inferred from residuals.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(mtuem)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">library</span>(apollo)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">apollo_initialise</span>()</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>apollo_control <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">modelName =</span> <span class="st">&quot;maed-3eq-sig&quot;</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">modelDescr =</span> <span class="st">&quot;Three equations with explicit sigma, inferred correlations&quot;</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">indivID =</span> <span class="st">&quot;PeID&quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>database <span class="ot">&lt;-</span> arrow<span class="sc">::</span><span class="fu">read_parquet</span>(<span class="st">&quot;data/maed.parquet.gzip&quot;</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>database <span class="ot">&lt;-</span> database[database<span class="sc">$</span>EcI <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="do">### Structural parameters + one sigma per equation</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>apollo_beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Theta =</span> <span class="dv">1</span>, <span class="at">Phi =</span> <span class="dv">1</span>, <span class="at">thw =</span> <span class="dv">0</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>                 <span class="at">theta_1 =</span> <span class="fl">0.5</span>, <span class="at">phi_1 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>                 <span class="at">sig_1 =</span> <span class="dv">5</span>, <span class="at">sig_2 =</span> <span class="dv">3</span>, <span class="at">sig_3 =</span> <span class="dv">10</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>apollo_fixed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Theta&quot;</span>)</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>apollo_inputs <span class="ot">&lt;-</span> <span class="fu">apollo_validateInputs</span>()</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>apollo_probabilities <span class="ot">&lt;-</span> <span class="cf">function</span>(apollo_beta, apollo_inputs, <span class="at">functionality =</span> <span class="st">&quot;estimate&quot;</span>) {</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  <span class="fu">apollo_attach</span>(apollo_beta, apollo_inputs)</span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">apollo_detach</span>(apollo_beta, apollo_inputs))</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>  work_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Theta =</span> Theta, <span class="at">Phi =</span> Phi, <span class="at">thw =</span> thw)</span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>  times_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">theta_1 =</span> theta_1)</span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>  goods_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">phi_1 =</span> phi_1)</span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>  sig <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">sig_1 =</span> sig_1, <span class="at">sig_2 =</span> sig_2, <span class="at">sig_3 =</span> sig_3)</span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a></span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a>  mtuem_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a>    <span class="at">work_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>),</span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a>    <span class="at">free_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tf1&quot;</span>),</span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a>    <span class="at">free_goods =</span> <span class="fu">c</span>(<span class="st">&quot;Ef1&quot;</span>),</span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a>    <span class="at">goods_cost =</span> <span class="fu">list</span>(<span class="at">Ef1 =</span> <span class="dv">1</span>),</span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a>    <span class="at">work_elasticities =</span> work_elasticities,</span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a>    <span class="at">times_elasticities =</span> times_elasticities,</span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a>    <span class="at">goods_elasticities =</span> goods_elasticities,</span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>    <span class="at">sig =</span> sig,</span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a>    <span class="at">Tc =</span> Tc, <span class="at">Ec =</span> EcI, <span class="at">w =</span> w, <span class="at">tau =</span> <span class="dv">168</span></span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a>  )</span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a>  P[[<span class="st">&quot;model&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">mtuem_likelihood</span>(mtuem_settings, functionality)</span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">apollo_prepareProb</span>(P, apollo_inputs, functionality)</span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a>  <span class="fu">return</span>(P)</span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a>}</span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">apollo_estimate</span>(apollo_beta, apollo_fixed,</span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a>                          apollo_probabilities, apollo_inputs)</span></code></pre></div>
+<h3 id="id_2c-full-estimation-sigma-and-rho">2c: Full Estimation (Sigma
+and Rho)</h3>
+<p>Estimate both standard deviations and correlations. For 3 equations,
+the upper triangle of the correlation matrix has 3 elements: rho[1,2],
+rho[1,3], rho[2,3]. These must be ordered horizontally.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">library</span>(mtuem)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">library</span>(apollo)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="fu">apollo_initialise</span>()</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>apollo_control <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">modelName =</span> <span class="st">&quot;maed-3eq-full&quot;</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">modelDescr =</span> <span class="st">&quot;Three equations with full covariance estimation&quot;</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">indivID =</span> <span class="st">&quot;PeID&quot;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>database <span class="ot">&lt;-</span> arrow<span class="sc">::</span><span class="fu">read_parquet</span>(<span class="st">&quot;data/maed.parquet.gzip&quot;</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>database <span class="ot">&lt;-</span> database[database<span class="sc">$</span>EcI <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="do">### Structural + sigma + rho parameters</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="do">### rho ordering for 3 equations: rho_12, rho_13, rho_23 (horizontal upper triangle)</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>apollo_beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Theta =</span> <span class="dv">1</span>, <span class="at">Phi =</span> <span class="dv">1</span>, <span class="at">thw =</span> <span class="dv">0</span>,</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>                 <span class="at">theta_1 =</span> <span class="fl">0.5</span>, <span class="at">phi_1 =</span> <span class="fl">0.5</span>,</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>                 <span class="at">sig_1 =</span> <span class="dv">5</span>, <span class="at">sig_2 =</span> <span class="dv">3</span>, <span class="at">sig_3 =</span> <span class="dv">10</span>,</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>                 <span class="at">rho_12 =</span> <span class="dv">0</span>, <span class="at">rho_13 =</span> <span class="dv">0</span>, <span class="at">rho_23 =</span> <span class="dv">0</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>apollo_fixed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Theta&quot;</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>apollo_inputs <span class="ot">&lt;-</span> <span class="fu">apollo_validateInputs</span>()</span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>apollo_probabilities <span class="ot">&lt;-</span> <span class="cf">function</span>(apollo_beta, apollo_inputs, <span class="at">functionality =</span> <span class="st">&quot;estimate&quot;</span>) {</span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  <span class="fu">apollo_attach</span>(apollo_beta, apollo_inputs)</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">apollo_detach</span>(apollo_beta, apollo_inputs))</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>  work_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">Theta =</span> Theta, <span class="at">Phi =</span> Phi, <span class="at">thw =</span> thw)</span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a>  times_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">theta_1 =</span> theta_1)</span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a>  goods_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">phi_1 =</span> phi_1)</span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a>  sig <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">sig_1 =</span> sig_1, <span class="at">sig_2 =</span> sig_2, <span class="at">sig_3 =</span> sig_3)</span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a>  rho <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">rho_12 =</span> rho_12, <span class="at">rho_13 =</span> rho_13, <span class="at">rho_23 =</span> rho_23)</span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>  mtuem_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a>    <span class="at">work_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>),</span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a>    <span class="at">free_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tf1&quot;</span>),</span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a>    <span class="at">free_goods =</span> <span class="fu">c</span>(<span class="st">&quot;Ef1&quot;</span>),</span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a>    <span class="at">goods_cost =</span> <span class="fu">list</span>(<span class="at">Ef1 =</span> <span class="dv">1</span>),</span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a>    <span class="at">work_elasticities =</span> work_elasticities,</span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a>    <span class="at">times_elasticities =</span> times_elasticities,</span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a>    <span class="at">goods_elasticities =</span> goods_elasticities,</span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a>    <span class="at">sig =</span> sig,</span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a>    <span class="at">rho =</span> rho,</span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a>    <span class="at">Tc =</span> Tc, <span class="at">Ec =</span> EcI, <span class="at">w =</span> w, <span class="at">tau =</span> <span class="dv">168</span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a>  )</span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a>  P[[<span class="st">&quot;model&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">mtuem_likelihood</span>(mtuem_settings, functionality)</span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">apollo_prepareProb</span>(P, apollo_inputs, functionality)</span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a>  <span class="fu">return</span>(P)</span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a>}</span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">apollo_estimate</span>(apollo_beta, apollo_fixed,</span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a>                          apollo_probabilities, apollo_inputs)</span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="do">### Retrieve the estimated covariance matrix</span></span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a>corr_result <span class="ot">&lt;-</span> <span class="fu">mtuem_get_corr</span>(model, apollo_probabilities, apollo_inputs,</span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a>                               <span class="at">vars =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>, <span class="st">&quot;Tf1&quot;</span>, <span class="st">&quot;Ef1&quot;</span>))</span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="fu">print</span>(corr_result<span class="sc">$</span>covar)</span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a><span class="fu">print</span>(corr_result<span class="sc">$</span>corr)</span></code></pre></div>
+<hr />
+<h2 id="example-3-latent-class-model-1-class-1-equation">Example 3:
+Latent Class Model (1 Class, 1 Equation)</h2>
+<p>This example shows the latent class framework with a single class and
+one equation. This serves as a stepping stone to multi-class models.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">library</span>(mtuem)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">library</span>(apollo)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">apollo_initialise</span>()</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>apollo_control <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">modelName =</span> <span class="st">&quot;maed-lc-1class&quot;</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">modelDescr =</span> <span class="st">&quot;Latent class model with 1 class and 1 equation&quot;</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">indivID =</span> <span class="st">&quot;PeID&quot;</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">noValidation =</span> <span class="cn">TRUE</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>)</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>database <span class="ot">&lt;-</span> arrow<span class="sc">::</span><span class="fu">read_parquet</span>(<span class="st">&quot;data/maed.parquet.gzip&quot;</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>database <span class="ot">&lt;-</span> database[database<span class="sc">$</span>EcI <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="do">### Parameters for class 1 only</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>apollo_beta <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">Phi_1 =</span> <span class="dv">1</span>,</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">thw_1 =</span> <span class="dv">0</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="at">asc_1 =</span> <span class="dv">0</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>)</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>apollo_fixed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;asc_1&quot;</span>)</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="do">### Class membership parameters (required by apollo_lc even for 1 class)</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>apollo_lcPars <span class="ot">&lt;-</span> <span class="cf">function</span>(apollo_beta, apollo_inputs) {</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>  lcpars <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>  lcpars[[<span class="st">&quot;Phi&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">list</span>(Phi_1)</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>  lcpars[[<span class="st">&quot;thw&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">list</span>(thw_1)</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>  V <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>  V[[<span class="st">&quot;class_1&quot;</span>]] <span class="ot">&lt;-</span> asc_1</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a></span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>  classAlloc_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>    <span class="at">classes =</span> <span class="fu">c</span>(<span class="at">class_1 =</span> <span class="dv">1</span>),</span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>    <span class="at">utilities =</span> V</span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>  )</span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>  lcpars[[<span class="st">&quot;pi_values&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">apollo_classAlloc</span>(classAlloc_settings)</span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a>  <span class="fu">return</span>(lcpars)</span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>}</span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>apollo_inputs <span class="ot">&lt;-</span> <span class="fu">apollo_validateInputs</span>()</span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>apollo_probabilities <span class="ot">&lt;-</span> <span class="cf">function</span>(apollo_beta, apollo_inputs, <span class="at">functionality =</span> <span class="st">&quot;estimate&quot;</span>) {</span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>  <span class="fu">apollo_attach</span>(apollo_beta, apollo_inputs)</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>  <span class="fu">on.exit</span>(<span class="fu">apollo_detach</span>(apollo_beta, apollo_inputs))</span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a></span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a>  <span class="cf">for</span> (s <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(pi_values)) {</span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a>    work_elasticities <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a>      <span class="at">Theta =</span> <span class="dv">1</span>,</span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a>      <span class="at">Phi =</span> Phi[[s]],</span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a>      <span class="at">thw =</span> thw[[s]]</span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a>    )</span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a></span>
+<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a>    mtuem_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a>      <span class="at">work_times =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>),</span>
+<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a>      <span class="at">work_elasticities =</span> work_elasticities,</span>
+<span id="cb6-58"><a href="#cb6-58" tabindex="-1"></a>      <span class="at">Tc =</span> Tc, <span class="at">Ec =</span> EcI, <span class="at">w =</span> w, <span class="at">tau =</span> <span class="dv">168</span>,</span>
+<span id="cb6-59"><a href="#cb6-59" tabindex="-1"></a>      <span class="at">componentName =</span> <span class="fu">paste0</span>(<span class="st">&quot;class_&quot;</span>, s)</span>
+<span id="cb6-60"><a href="#cb6-60" tabindex="-1"></a>    )</span>
+<span id="cb6-61"><a href="#cb6-61" tabindex="-1"></a>    P[[<span class="fu">paste0</span>(<span class="st">&quot;class_&quot;</span>, s)]] <span class="ot">&lt;-</span> <span class="fu">mtuem_likelihood</span>(mtuem_settings, functionality)</span>
+<span id="cb6-62"><a href="#cb6-62" tabindex="-1"></a>  }</span>
+<span id="cb6-63"><a href="#cb6-63" tabindex="-1"></a></span>
+<span id="cb6-64"><a href="#cb6-64" tabindex="-1"></a>  lc_settings <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">inClassProb =</span> P, <span class="at">classProb =</span> pi_values)</span>
+<span id="cb6-65"><a href="#cb6-65" tabindex="-1"></a>  P[[<span class="st">&quot;model&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">apollo_lc</span>(lc_settings, apollo_inputs, functionality)</span>
+<span id="cb6-66"><a href="#cb6-66" tabindex="-1"></a>  P <span class="ot">&lt;-</span> <span class="fu">apollo_prepareProb</span>(P, apollo_inputs, functionality)</span>
+<span id="cb6-67"><a href="#cb6-67" tabindex="-1"></a>  <span class="fu">return</span>(P)</span>
+<span id="cb6-68"><a href="#cb6-68" tabindex="-1"></a>}</span>
+<span id="cb6-69"><a href="#cb6-69" tabindex="-1"></a></span>
+<span id="cb6-70"><a href="#cb6-70" tabindex="-1"></a><span class="do">### Estimate (use customMultiStart for latent class models)</span></span>
+<span id="cb6-71"><a href="#cb6-71" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;mtuem/R/customMultiStart.R&quot;</span>)</span>
+<span id="cb6-72"><a href="#cb6-72" tabindex="-1"></a>multi_starts <span class="ot">&lt;-</span> <span class="fu">customMultiStart</span>(</span>
+<span id="cb6-73"><a href="#cb6-73" tabindex="-1"></a>  apollo_beta,</span>
+<span id="cb6-74"><a href="#cb6-74" tabindex="-1"></a>  apollo_fixed,</span>
+<span id="cb6-75"><a href="#cb6-75" tabindex="-1"></a>  apollo_probabilities,</span>
+<span id="cb6-76"><a href="#cb6-76" tabindex="-1"></a>  apollo_inputs,</span>
+<span id="cb6-77"><a href="#cb6-77" tabindex="-1"></a>  <span class="at">customMultistart_settings =</span> <span class="fu">list</span>(</span>
+<span id="cb6-78"><a href="#cb6-78" tabindex="-1"></a>    <span class="at">apolloBetaMax =</span> apollo_beta <span class="sc">+</span> <span class="dv">1</span>,</span>
+<span id="cb6-79"><a href="#cb6-79" tabindex="-1"></a>    <span class="at">apolloBetaMin =</span> apollo_beta <span class="sc">-</span> <span class="dv">1</span>,</span>
+<span id="cb6-80"><a href="#cb6-80" tabindex="-1"></a>    <span class="at">nCandidates =</span> <span class="dv">20</span></span>
+<span id="cb6-81"><a href="#cb6-81" tabindex="-1"></a>  ),</span>
+<span id="cb6-82"><a href="#cb6-82" tabindex="-1"></a>  <span class="at">estimate_settings =</span> <span class="fu">list</span>(</span>
+<span id="cb6-83"><a href="#cb6-83" tabindex="-1"></a>    <span class="at">writeIter =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-84"><a href="#cb6-84" tabindex="-1"></a>    <span class="at">silent =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb6-85"><a href="#cb6-85" tabindex="-1"></a>    <span class="at">maxIterations =</span> <span class="dv">500</span>,</span>
+<span id="cb6-86"><a href="#cb6-86" tabindex="-1"></a>    <span class="at">estimationRoutine =</span> <span class="st">&quot;bfgs&quot;</span>,</span>
+<span id="cb6-87"><a href="#cb6-87" tabindex="-1"></a>    <span class="at">hessianRoutine =</span> <span class="st">&quot;maxLik&quot;</span></span>
+<span id="cb6-88"><a href="#cb6-88" tabindex="-1"></a>  ),</span>
+<span id="cb6-89"><a href="#cb6-89" tabindex="-1"></a>  <span class="at">first_em =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb6-90"><a href="#cb6-90" tabindex="-1"></a>  <span class="at">em_iter_max =</span> <span class="dv">3</span>,</span>
+<span id="cb6-91"><a href="#cb6-91" tabindex="-1"></a>  <span class="at">verbose =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-92"><a href="#cb6-92" tabindex="-1"></a>  <span class="at">normalization =</span> <span class="fu">list</span>(</span>
+<span id="cb6-93"><a href="#cb6-93" tabindex="-1"></a>    <span class="at">normalization =</span> <span class="st">&quot;theta_phi&quot;</span>,</span>
+<span id="cb6-94"><a href="#cb6-94" tabindex="-1"></a>    <span class="at">work_elasticities =</span> <span class="fu">c</span>(<span class="st">&quot;Theta&quot;</span>, <span class="st">&quot;Phi&quot;</span>, <span class="st">&quot;thw&quot;</span>),</span>
+<span id="cb6-95"><a href="#cb6-95" tabindex="-1"></a>    <span class="at">times_elasticities =</span> <span class="fu">c</span>(),</span>
+<span id="cb6-96"><a href="#cb6-96" tabindex="-1"></a>    <span class="at">goods_elasticities =</span> <span class="fu">c</span>(),</span>
+<span id="cb6-97"><a href="#cb6-97" tabindex="-1"></a>    <span class="at">sig =</span> <span class="fu">c</span>(),</span>
+<span id="cb6-98"><a href="#cb6-98" tabindex="-1"></a>    <span class="at">rho =</span> <span class="fu">c</span>()</span>
+<span id="cb6-99"><a href="#cb6-99" tabindex="-1"></a>  ),</span>
+<span id="cb6-100"><a href="#cb6-100" tabindex="-1"></a>  <span class="at">nClass =</span> <span class="dv">1</span></span>
+<span id="cb6-101"><a href="#cb6-101" tabindex="-1"></a>)</span>
+<span id="cb6-102"><a href="#cb6-102" tabindex="-1"></a></span>
+<span id="cb6-103"><a href="#cb6-103" tabindex="-1"></a><span class="fu">apollo_modelOutput</span>(multi_starts<span class="sc">$</span>best_model)</span></code></pre></div>
+<hr />
+<h2 id="post-estimation">Post-Estimation</h2>
+<h3 id="values-of-time">Values of Time</h3>
+<p>After estimation, compute the Value of Leisure Time (VoL) and Value
+of Time Assigned to Work (VTAW):</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">apollo_prediction</span>(model, apollo_probabilities, apollo_inputs)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>Tw <span class="ot">&lt;-</span> pred<span class="sc">$</span>Tw</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>w  <span class="ot">&lt;-</span> database<span class="sc">$</span>w</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>Tc <span class="ot">&lt;-</span> database<span class="sc">$</span>Tc</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>Ec <span class="ot">&lt;-</span> database<span class="sc">$</span>Ec</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>cteVoL  <span class="ot">&lt;-</span> <span class="fu">mean</span>((w <span class="sc">*</span> Tw <span class="sc">-</span> Ec) <span class="sc">/</span> (<span class="dv">168</span> <span class="sc">-</span> Tw <span class="sc">-</span> Tc))</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>cteVTAW <span class="ot">&lt;-</span> <span class="fu">mean</span>((w <span class="sc">*</span> Tw <span class="sc">-</span> Ec) <span class="sc">/</span> Tw)</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>delta <span class="ot">&lt;-</span> <span class="fu">apollo_deltaMethod</span>(model, <span class="fu">list</span>(</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="at">expression =</span> <span class="fu">c</span>(</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>    <span class="at">VoL  =</span> <span class="fu">paste0</span>(cteVoL,  <span class="st">&quot;*Theta/Phi&quot;</span>),</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>    <span class="at">VTAW =</span> <span class="fu">paste0</span>(cteVTAW, <span class="st">&quot;*thw/Phi&quot;</span>)</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  )</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>))</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>delta</span></code></pre></div>
+<h3 id="covariance-matrix-retrieval">Covariance Matrix Retrieval</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="do">### Using mtuem_get_corr (recommended)</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">mtuem_get_corr</span>(model, apollo_probabilities, apollo_inputs,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                          <span class="at">vars =</span> <span class="fu">c</span>(<span class="st">&quot;Tw&quot;</span>, <span class="st">&quot;Tf1&quot;</span>, <span class="st">&quot;Ef1&quot;</span>))</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>result<span class="sc">$</span>covar</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>result<span class="sc">$</span>corr</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="do">### Using get_covar functionality directly</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>covar_result <span class="ot">&lt;-</span> <span class="fu">apollo_probabilities</span>(apollo_beta, apollo_inputs, <span class="at">functionality =</span> <span class="st">&quot;get_covar&quot;</span>)</span></code></pre></div>
+
+</body>
+</html>

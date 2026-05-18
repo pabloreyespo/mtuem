@@ -4,294 +4,486 @@
 # mtuem
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
-The goal of mtuem is to facilitate the estimation of Microeconomic
-Time-Use-Expenditure models in apollo (see:
-<https://www.apollochoicemodelling.com/>)
+The **mtuem** package implements the likelihood functions for estimating
+Microeconomic Time-Use-Expenditure Models (MTUEM) within the
+[Apollo](https://www.apollochoicemodelling.com/) choice modelling
+framework. The models are based on Jara-Diaz et al. (2008), which
+maximizes a Cobb-Douglas utility function over time-use and goods
+consumption subject to time, monetary, and technical constraints.
 
 ## Installation
 
-You can install the development version of mtuem like so: 1. Install
-devtools
-
 ``` r
 install.packages("devtools")
-```
-
-2.  Install the repo via devtools
-
-``` r
 devtools::install_github("https://github.com/pabloreyespo/mtuem")
 ```
 
-## Example
+## Model Formulation Guide
 
-This is a basic example which shows you how to solve a common problem:
+### The MTUEM Framework
+
+The MTUEM derives optimal allocations of time and expenditure from
+utility maximization. The model has two budget constraints:
+
+- **Time budget**: Total time equals the time budget (typically 168
+  hours per week), split into committed time (Tc), work time (Tw), and
+  freely allocated time.
+- **Monetary budget**: Total expenditure equals labor income minus
+  committed expenses (Ec), split into freely allocated goods.
+
+### Two Parameterizations
+
+The package offers two equivalent parameterizations:
+
+|  | Theta-Phi (`mtuem_likelihood`) | Alpha-Beta (`mtuem_ab_likelihood`) |
+|----|----|----|
+| Work elasticities | `Theta`, `Phi`, `thw` | `alpha`, `beta` |
+| Identification | Fix `Theta = 1` | No fixed parameters needed |
+| Use when | Direct interpretation of time value | Alternative formulation |
+
+### Equations and the “Leave One Out” Rule
+
+- **work_times** (required): Column name(s) for work time, typically
+  `c("Tw")`.
+- **free_times** (optional): Column names for freely allocated time
+  activities. You must leave at least one out for identification. The
+  omitted category is recovered as the residual from the time budget.
+- **free_goods** (optional): Column names for freely allocated goods.
+  You must leave at least one out for identification. The omitted
+  category is recovered as the residual from the monetary budget.
+
+### Error Structure
+
+The likelihood assumes normally distributed errors. Three specification
+options exist:
+
+1.  **Inferred covariance** (no `sig`, no `rho`): The error covariance
+    is inferred from residuals. Simplest approach, valid only for
+    single-equation models.
+2.  **Explicit sigma, inferred correlations** (`sig` specified, no
+    `rho`): Standard deviations are estimated as parameters.
+    Correlations are inferred from residuals. Valid for multi-equation
+    models.
+3.  **Full estimation** (both `sig` and `rho` specified): Both standard
+    deviations and correlations are estimated as parameters.
+
+### Retrieving the Covariance Matrix
+
+After estimation, use
+`mtuem_get_corr(model, apollo_probabilities, apollo_inputs, vars)` where
+`vars` is a character vector of the time-use-expenditure column names.
+Alternatively, call the likelihood with `functionality = "get_covar"`.
+
+------------------------------------------------------------------------
+
+## Example 1: Single Equation (Work Only)
+
+The simplest model estimates only the work equation. No free times or
+free goods are specified.
 
 ``` r
 library(mtuem)
-#> Cargando paquete requerido: apollo
-#> 
-#> 
-#>              . ,,                                                            
-#>             ,      ,,                                                        
-#>  ,,,,,,    ,         ,,                                                      
-#> ,     ,,  ,            ,,,,.                                                 
-#> ,,     , ,,   ,,,,,,    ,,,                                 //  //           
-#>   ,     ,,,.   ,,,,,.   ,,      ////                        //  //           
-#> ,,     ,,,,,.           ,,     // //     //////    /////    //  //    /////  
-#> ,,,        ,,           ,      //  //    /    //  //   //   //  //   //   // 
-#>               ,,       ,      ////////   /    //  //   //   //  //   //   // 
-#>                 ,,   ,,      //     //   /   ///  //   //   //  //   //   // 
-#>                    ,         //      //  /////      ///      //  //    ///   
-#>                                          //                                  
-#>                                          //                                  
-#> 
-#> Apollo 0.3.5
-#> http://www.ApolloChoiceModelling.com
-#> See url for a detailed manual, examples and a user forum.
-#> Sign up to the user forum to receive updates on new releases.
-#> 
-#> Please cite Apollo in all written material you produce:
-#> Hess S, Palma D (2019). "Apollo: a flexible, powerful and customisable
-#> freeware package for choice model estimation and application." Journal
-#> of Choice Modelling, 32. doi.org/10.1016/j.jocm.2019.100170
-#> 
-#> The developers of Apollo acknowledge the substantial support provided by
-#> the European Research Council (ERC) through the consolidator grant DECISIONS,
-#> the proof of concept grant APOLLO, and the advanced grant SYNERGY.
+library(apollo)
 
-### Initialise code
+### Initialise
 apollo_initialise()
-
-### Set core controls
-apollo_control = list(
-  modelName       = "enut-mtuem-1eq",
-  indivID         = "id_persona"
+apollo_control <- list(
+  modelName = "maed-1eq",
+  modelDescr = "Single equation MTUEM (work only)",
+  indivID = "PeID"
 )
 
+### Load data
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
 
-# ################################################################# #
-#### LOAD DATA AND APPLY ANY TRANSFORMATIONS                     ####
-# ################################################################# #
+### Parameters: Theta fixed to 1 for identification
+apollo_beta <- c(Theta = 1, Phi = 1, thw = 0)
+apollo_fixed <- c("Theta")
 
-database = mtuem::enut.ii
-database['Tc'] = rowSums(database[,c("Tc", "Tc_sleep", "Tc_meals")])
-is_not_retist = database["Ec"] > 0
-is_worker = database["is_worker"] == 1
-can_afford_expenses =  (database["Ec"] / (database["w"]*(168 -  database["Tc"]))) < 1
-database = database[is_not_retist & can_afford_expenses & is_worker,]
+apollo_inputs <- apollo_validateInputs()
 
-apollo_beta = c(Theta   = 1,
-                Phi     = 1,
-                thw = 0)
-
-apollo_fixed = c("Theta")
-
-apollo_inputs = apollo_validateInputs(
-  database = database,
-  apollo_beta = apollo_beta,
-  apollo_fixed = apollo_fixed,
-  apollo_control = apollo_control 
-)
-#> All checks on apollo_control completed.
-#> All checks on database completed.
-
-#tricking apollo
-#mtuem_likelihood = mtuem::mtuem_likelihood
-
-apollo_probabilities=function(apollo_beta, apollo_inputs, functionality="estimate"){
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
   apollo_attach(apollo_beta, apollo_inputs)
   on.exit(apollo_detach(apollo_beta, apollo_inputs))
 
-  ### Create list of probabilities P
-  P = list()
+  P <- list()
 
-  ### Define individual alternatives
-  work_times = c("Tw")
+  work_elasticities <- list(Theta = Theta, Phi = Phi, thw = thw)
 
-  # must use this names
-  work_elasticities = list(
-    Theta = Theta,
-    Phi   = Phi,
-    thw = thw
-  )
-
-  ### Define settings for Jara-Diaz model
-  mtuem_settings = list(
-    work_times = work_times,
+  mtuem_settings <- list(
+    work_times = c("Tw"),
     work_elasticities = work_elasticities,
-    Tc = Tc,
-    Ec = Ec,
-    w = w,
-    tau = 168
+    Tc = Tc, Ec = EcI, w = w, tau = 168
   )
 
-  ### Compute probabilities using Jara-Diaz model
-  P[["model"]] = mtuem_likelihood(mtuem_settings, functionality)
-
-  ### Prepare and return outputs of function
-  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  P[["model"]] <- mtuem_likelihood(mtuem_settings, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
   return(P)
 }
 
-suppressWarnings({
-  model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs, estimate_settings = list(writeIter=F))
-  apollo_modelOutput(model)
-})
-#> Preparing user-defined functions.
-#> 
-#> Testing likelihood function...
-#> 
-#> Pre-processing likelihood function...
-#> INFORMATION: Apollo was not able to compute analytical gradients for your model.
-#>   This could be because you are using model components for which
-#>   analytical gradients are not yet implemented, or because you coded
-#>   your own model functions. If however you only used apollo_mnl,
-#>   apollo_fmnl, apollo_normalDensity, apollo_ol or apollo_op, then there
-#>   could be another issue. You might want to ask for help in the Apollo
-#>   forum (http://www.apollochoicemodelling.com/forum) on how to solve
-#>   this issue. If you do, please post your code and data (if not
-#>   confidential). 
-#> Analytical gradients could not be calculated for all components,
-#>   numerical gradients will be used.
-#> 
-#> Testing influence of parameters..
-#> Starting main estimation
-#> 
-#> BGW is using FD derivatives for model Jacobian. (Caller did not provide derivatives.)
-#> 
-#> 
-#>     it    nf     F            RELDF    PRELDF    RELDX    MODEL stppar
-#>      0     1 1.964498496e+04
-#>      1     4 1.905531350e+04 3.002e-02 2.495e-02 3.27e-02   G   1.37e+00
-#>      2     5 1.834376482e+04 3.734e-02 2.751e-02 1.95e-01   G   2.26e-02
-#>      3     6 1.830390289e+04 2.173e-03 3.926e-03 6.50e-02   S   0.00e+00
-#>      4     7 1.829727878e+04 3.619e-04 9.650e-04 3.92e-02   S   0.00e+00
-#>      5     8 1.829121979e+04 3.311e-04 3.198e-04 3.81e-02   S   0.00e+00
-#>      6     9 1.829073812e+04 2.633e-05 1.735e-05 9.61e-03   S   0.00e+00
-#>      7    10 1.829055553e+04 9.983e-06 1.072e-05 8.83e-03   G   0.00e+00
-#>      8    11 1.829054638e+04 4.998e-07 3.824e-07 3.87e-04   G   0.00e+00
-#>      9    12 1.829054434e+04 1.117e-07 7.359e-08 6.26e-04   G   0.00e+00
-#>     10    13 1.829054353e+04 4.434e-08 4.418e-08 6.57e-04   S   0.00e+00
-#>     11    14 1.829054353e+04 9.281e-12 8.879e-12 4.62e-06   S   0.00e+00
-#> 
-#> ***** Relative function convergence *****
-#> 
-#> Estimated parameters with approximate standard errors from BHHH matrix:
-#>          Estimate     BHHH se BHH t-ratio (0)
-#> Theta     1.00000          NA              NA
-#> Phi       0.66546     0.01962          33.909
-#> thw      -0.07547     0.02840          -2.658
-#> 
-#> Final LL: -18290.5435
-#> 
-#> VoL: 4.653763 
-#> VTAW: -0.314996 
-#> Calculating log-likelihood at equal shares (LL(0)) for applicable
-#>   models...
-#> Calculating log-likelihood at observed shares from estimation data
-#>   (LL(c)) for applicable models...
-#> Calculating LL of each model component...
-#> Computing covariance matrix using numerical methods (numDeriv).
-#>  0%....25%....50%...100%
-#> Negative definite Hessian with maximum eigenvalue: -563.860558
-#> Computing score matrix...
-#> 
-#> Your model was estimated using the BGW algorithm. Please acknowledge
-#>   this by citing Bunch et al. (1993) - doi.org/10.1145/151271.151279
-#> 
-#> Please acknowledge the use of Apollo by citing Hess & Palma (2019) -
-#>   doi.org/10.1016/j.jocm.2019.100170
-#> Model run by pablo using Apollo 0.3.5 on R 4.4.3 for Windows.
-#> Please acknowledge the use of Apollo by citing Hess & Palma (2019)
-#>   DOI 10.1016/j.jocm.2019.100170
-#>   www.ApolloChoiceModelling.com
-#> 
-#> Model name                                  : enut-mtuem-1eq
-#> Model description                           : No model description provided in apollo_control
-#> Model run at                                : 2025-07-09 01:16:08.808804
-#> Estimation method                           : bgw
-#> Model diagnosis                             : Relative function convergence
-#> Optimisation diagnosis                      : Maximum found
-#>      hessian properties                     : Negative definite
-#>      maximum eigenvalue                     : -563.860558
-#>      reciprocal of condition number         : 0.0144147
-#> Number of individuals                       : 5043
-#> Number of rows in database                  : 5043
-#> Number of modelled outcomes                 : 0
-#> 
-#> Number of cores used                        :  1 
-#> Model without mixing
-#> 
-#> LL(start)                                   : 0
-#> LL at equal shares, LL(0)                   : NA
-#> LL at observed shares, LL(C)                : NA
-#> LL(final)                                   : -18290.54
-#> Rho-squared vs equal shares                  :  Not applicable 
-#> Adj.Rho-squared vs equal shares              :  Not applicable 
-#> Rho-squared vs observed shares               :  Not applicable 
-#> Adj.Rho-squared vs observed shares           :  Not applicable 
-#> AIC                                         :  36585.09 
-#> BIC                                         :  -Inf 
-#> 
-#> Estimated parameters                        : 2
-#> Time taken (hh:mm:ss)                       :  00:00:0.92 
-#>      pre-estimation                         :  00:00:0.39 
-#>      estimation                             :  00:00:0.41 
-#>      post-estimation                        :  00:00:0.12 
-#> Iterations                                  :  11  
-#> 
-#> Unconstrained optimisation.
-#> 
-#> Estimates:
-#>          Estimate        s.e.   t.rat.(0)    Rob.s.e. Rob.t.rat.(0)
-#> Theta     1.00000          NA          NA          NA            NA
-#> Phi       0.66546     0.02216      30.026     0.02752        24.180
-#> thw      -0.07547     0.03616      -2.087     0.04937        -1.529
+model <- apollo_estimate(apollo_beta, apollo_fixed,
+                          apollo_probabilities, apollo_inputs)
+apollo_modelOutput(model)
 
-# Compute values of time
+### Predictions
 pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
-#> Running predictions from model using parameter estimates...
-#> Prediction at user provided parameters
-#>                  Tw        T        X      VoL     VTAW
-#> Aggregate 210940.40 173970.3 551679.3 23468.93 -1588.53
-#> Average       41.83     34.5    109.4     4.65    -0.31
-#> 
-#> The output from apollo_prediction is a matrix containing the
-#>   predictions at the estimated values.
-Tw = pred$Tw
-w  = database$w
-Tc = database$Tc
-Ec = database$Ec
-cteVoL  <- mean((w*Tw - Ec) / (168-Tw-Tc))
-cteVTAW <- mean((w*Tw - Ec) / (Tw))
-delta <- apollo_deltaMethod(model, list(
-  expression=c(
-    VoL      = paste0(cteVoL,  "*Theta/Phi"),
-    VTAW     = paste0(cteVTAW, "*thw/Phi"))
-))
-#> The expression VoL includes parameters that were fixed in estimation:
-#>   Theta
-#> These have been replaced by their fixed values, giving:
-#>   3.09688960243761*1/Phi
-#> 
-#> Running Delta method computation for user-defined function using robust standard errors
-#> 
-#>  Expression   Value   s.e. t-ratio (0)
-#>         VoL  4.6538 0.1925       24.18
-#>        VTAW -0.3150 0.1934       -1.63
-#> INFORMATION: The results of the Delta method calculations are returned invisibly as
-#>   an output from this function. Calling the function via
-#>   result=apollo_deltaMethod(...) will save this output in an object
-#>   called result (or otherwise named object).
+head(pred)
+```
 
-z = 1.96
-delta[,"CI-95%"] <- delta[,"Value"] - 1.96*delta[,"s.e."]
-delta[,"CI+95%"] <- delta[,"Value"] + 1.96*delta[,"s.e."]
+------------------------------------------------------------------------
+
+## Example 2: Three Equations with Different Error Structures
+
+This example shows a model with 3 equations: work (Tw), one free time
+(Tf1), and one free good (Ef1). We demonstrate three error structure
+specifications.
+
+### 2a: Inferred Covariance Matrix
+
+No `sig` or `rho` parameters. The covariance is inferred from residuals.
+
+``` r
+library(mtuem)
+library(apollo)
+
+apollo_initialise()
+apollo_control <- list(
+  modelName = "maed-3eq-inferred",
+  modelDescr = "Three equations with inferred covariance",
+  indivID = "PeID"
+)
+
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
+
+### Only structural parameters; no sig or rho
+apollo_beta <- c(Theta = 1, Phi = 1, thw = 0,
+                 theta_1 = 0.5, phi_1 = 0.5)
+apollo_fixed <- c("Theta")
+
+apollo_inputs <- apollo_validateInputs()
+
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+
+  work_elasticities <- list(Theta = Theta, Phi = Phi, thw = thw)
+  times_elasticities <- list(theta_1 = theta_1)
+  goods_elasticities <- list(phi_1 = phi_1)
+
+  mtuem_settings <- list(
+    work_times = c("Tw"),
+    free_times = c("Tf1"),
+    free_goods = c("Ef1"),
+    goods_cost = list(Ef1 = 1),
+    work_elasticities = work_elasticities,
+    times_elasticities = times_elasticities,
+    goods_elasticities = goods_elasticities,
+    Tc = Tc, Ec = EcI, w = w, tau = 168
+  )
+
+  P[["model"]] <- mtuem_likelihood(mtuem_settings, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+model <- apollo_estimate(apollo_beta, apollo_fixed,
+                          apollo_probabilities, apollo_inputs)
+
+### Retrieve covariance matrix after estimation
+corr_result <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs,
+                               vars = c("Tw", "Tf1", "Ef1"))
+corr_result$covar   # Covariance matrix
+corr_result$corr    # Correlation matrix
+```
+
+### 2b: Explicit Standard Deviations, Inferred Correlations
+
+Estimate `sig` parameters for each equation. Correlations are inferred
+from residuals.
+
+``` r
+library(mtuem)
+library(apollo)
+
+apollo_initialise()
+apollo_control <- list(
+  modelName = "maed-3eq-sig",
+  modelDescr = "Three equations with explicit sigma, inferred correlations",
+  indivID = "PeID"
+)
+
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
+
+### Structural parameters + one sigma per equation
+apollo_beta <- c(Theta = 1, Phi = 1, thw = 0,
+                 theta_1 = 0.5, phi_1 = 0.5,
+                 sig_1 = 5, sig_2 = 3, sig_3 = 10)
+apollo_fixed <- c("Theta")
+
+apollo_inputs <- apollo_validateInputs()
+
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+
+  work_elasticities <- list(Theta = Theta, Phi = Phi, thw = thw)
+  times_elasticities <- list(theta_1 = theta_1)
+  goods_elasticities <- list(phi_1 = phi_1)
+  sig <- list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3)
+
+  mtuem_settings <- list(
+    work_times = c("Tw"),
+    free_times = c("Tf1"),
+    free_goods = c("Ef1"),
+    goods_cost = list(Ef1 = 1),
+    work_elasticities = work_elasticities,
+    times_elasticities = times_elasticities,
+    goods_elasticities = goods_elasticities,
+    sig = sig,
+    Tc = Tc, Ec = EcI, w = w, tau = 168
+  )
+
+  P[["model"]] <- mtuem_likelihood(mtuem_settings, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+model <- apollo_estimate(apollo_beta, apollo_fixed,
+                          apollo_probabilities, apollo_inputs)
+```
+
+### 2c: Full Estimation (Sigma and Rho)
+
+Estimate both standard deviations and correlations. For 3 equations, the
+upper triangle of the correlation matrix has 3 elements: rho\[1,2\],
+rho\[1,3\], rho\[2,3\]. These must be ordered horizontally.
+
+``` r
+library(mtuem)
+library(apollo)
+
+apollo_initialise()
+apollo_control <- list(
+  modelName = "maed-3eq-full",
+  modelDescr = "Three equations with full covariance estimation",
+  indivID = "PeID"
+)
+
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
+
+### Structural + sigma + rho parameters
+### rho ordering for 3 equations: rho_12, rho_13, rho_23 (horizontal upper triangle)
+apollo_beta <- c(Theta = 1, Phi = 1, thw = 0,
+                 theta_1 = 0.5, phi_1 = 0.5,
+                 sig_1 = 5, sig_2 = 3, sig_3 = 10,
+                 rho_12 = 0, rho_13 = 0, rho_23 = 0)
+apollo_fixed <- c("Theta")
+
+apollo_inputs <- apollo_validateInputs()
+
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+
+  work_elasticities <- list(Theta = Theta, Phi = Phi, thw = thw)
+  times_elasticities <- list(theta_1 = theta_1)
+  goods_elasticities <- list(phi_1 = phi_1)
+  sig <- list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3)
+  rho <- list(rho_12 = rho_12, rho_13 = rho_13, rho_23 = rho_23)
+
+  mtuem_settings <- list(
+    work_times = c("Tw"),
+    free_times = c("Tf1"),
+    free_goods = c("Ef1"),
+    goods_cost = list(Ef1 = 1),
+    work_elasticities = work_elasticities,
+    times_elasticities = times_elasticities,
+    goods_elasticities = goods_elasticities,
+    sig = sig,
+    rho = rho,
+    Tc = Tc, Ec = EcI, w = w, tau = 168
+  )
+
+  P[["model"]] <- mtuem_likelihood(mtuem_settings, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+model <- apollo_estimate(apollo_beta, apollo_fixed,
+                          apollo_probabilities, apollo_inputs)
+
+### Retrieve the estimated covariance matrix
+corr_result <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs,
+                               vars = c("Tw", "Tf1", "Ef1"))
+print(corr_result$covar)
+print(corr_result$corr)
+```
+
+------------------------------------------------------------------------
+
+## Example 3: Latent Class Model (1 Class, 1 Equation)
+
+This example shows the latent class framework with a single class and
+one equation. This serves as a stepping stone to multi-class models.
+
+``` r
+library(mtuem)
+library(apollo)
+
+apollo_initialise()
+apollo_control <- list(
+  modelName = "maed-lc-1class",
+  modelDescr = "Latent class model with 1 class and 1 equation",
+  indivID = "PeID",
+  noValidation = TRUE
+)
+
+database <- arrow::read_parquet("data/maed.parquet.gzip")
+database <- database[database$EcI > 0, ]
+
+### Parameters for class 1 only
+apollo_beta <- c(
+  Phi_1 = 1,
+  thw_1 = 0,
+  asc_1 = 0
+)
+apollo_fixed <- c("asc_1")
+
+### Class membership parameters (required by apollo_lc even for 1 class)
+apollo_lcPars <- function(apollo_beta, apollo_inputs) {
+  lcpars <- list()
+  lcpars[["Phi"]] <- list(Phi_1)
+  lcpars[["thw"]] <- list(thw_1)
+
+  V <- list()
+  V[["class_1"]] <- asc_1
+
+  classAlloc_settings <- list(
+    classes = c(class_1 = 1),
+    utilities = V
+  )
+  lcpars[["pi_values"]] <- apollo_classAlloc(classAlloc_settings)
+  return(lcpars)
+}
+
+apollo_inputs <- apollo_validateInputs()
+
+apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  P <- list()
+
+  for (s in 1:length(pi_values)) {
+    work_elasticities <- list(
+      Theta = 1,
+      Phi = Phi[[s]],
+      thw = thw[[s]]
+    )
+
+    mtuem_settings <- list(
+      work_times = c("Tw"),
+      work_elasticities = work_elasticities,
+      Tc = Tc, Ec = EcI, w = w, tau = 168,
+      componentName = paste0("class_", s)
+    )
+    P[[paste0("class_", s)]] <- mtuem_likelihood(mtuem_settings, functionality)
+  }
+
+  lc_settings <- list(inClassProb = P, classProb = pi_values)
+  P[["model"]] <- apollo_lc(lc_settings, apollo_inputs, functionality)
+  P <- apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+### Estimate (use customMultiStart for latent class models)
+source("mtuem/R/customMultiStart.R")
+multi_starts <- customMultiStart(
+  apollo_beta,
+  apollo_fixed,
+  apollo_probabilities,
+  apollo_inputs,
+  customMultistart_settings = list(
+    apolloBetaMax = apollo_beta + 1,
+    apolloBetaMin = apollo_beta - 1,
+    nCandidates = 20
+  ),
+  estimate_settings = list(
+    writeIter = FALSE,
+    silent = TRUE,
+    maxIterations = 500,
+    estimationRoutine = "bfgs",
+    hessianRoutine = "maxLik"
+  ),
+  first_em = TRUE,
+  em_iter_max = 3,
+  verbose = FALSE,
+  normalization = list(
+    normalization = "theta_phi",
+    work_elasticities = c("Theta", "Phi", "thw"),
+    times_elasticities = c(),
+    goods_elasticities = c(),
+    sig = c(),
+    rho = c()
+  ),
+  nClass = 1
+)
+
+apollo_modelOutput(multi_starts$best_model)
+```
+
+------------------------------------------------------------------------
+
+## Post-Estimation
+
+### Values of Time
+
+After estimation, compute the Value of Leisure Time (VoL) and Value of
+Time Assigned to Work (VTAW):
+
+``` r
+pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
+
+Tw <- pred$Tw
+w  <- database$w
+Tc <- database$Tc
+Ec <- database$Ec
+
+cteVoL  <- mean((w * Tw - Ec) / (168 - Tw - Tc))
+cteVTAW <- mean((w * Tw - Ec) / Tw)
+
+delta <- apollo_deltaMethod(model, list(
+  expression = c(
+    VoL  = paste0(cteVoL,  "*Theta/Phi"),
+    VTAW = paste0(cteVTAW, "*thw/Phi")
+  )
+))
+
 delta
-#>   Expression   Value   s.e. t-ratio (0)    CI-95%   CI+95%
-#> 1        VoL  4.6538 0.1925       24.18  4.276500 5.031100
-#> 2       VTAW -0.3150 0.1934       -1.63 -0.694064 0.064064
+```
+
+### Covariance Matrix Retrieval
+
+``` r
+### Using mtuem_get_corr (recommended)
+result <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs,
+                          vars = c("Tw", "Tf1", "Ef1"))
+result$covar
+result$corr
+
+### Using get_covar functionality directly
+covar_result <- apollo_probabilities(apollo_beta, apollo_inputs, functionality = "get_covar")
 ```

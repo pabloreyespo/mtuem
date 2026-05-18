@@ -81,12 +81,12 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     bgw_settings = list(maxFunctionEvals = 1000)
   )
 
-  if (length(estimate_settings) == 1 && is.na(estimate_settings)) estimate_settings <- default_estimate_settings
   # Backward compatibility: use estimation_settings if estimate_settings not provided
   if (length(estimate_settings) == 1 && is.na(estimate_settings) &&
       !(length(estimation_settings) == 1 && is.na(estimation_settings))) {
     estimate_settings <- estimation_settings
   }
+  if (length(estimate_settings) == 1 && is.na(estimate_settings)) estimate_settings <- default_estimate_settings
   tmp <- names(default_estimate_settings)[!(names(default_estimate_settings) %in% names(estimate_settings))]
   for (i in tmp) estimate_settings[[i]] <- default_estimate_settings[[i]]
   rm(tmp)
@@ -197,8 +197,11 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     rho_params = normalization$rho
     logit_params = normalization$covs
 
-    if (nClass <= 1) {
-      # TODO seguir desde aqui
+    # Detect if this is a latent class model by checking for apollo_lcPars
+    is_lc_model <- exists("apollo_lcPars", envir = parent.frame(), inherits = TRUE)
+
+    if (!is_lc_model && nClass <= 1) {
+      # Non-LC model: use base names without suffixes
       beta_matrix <- normalize(
         beta_matrix,
         norm,
@@ -210,6 +213,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
         logit_params
       )
     } else {
+      # LC model (any number of classes): append class suffix
       for (k in 1:nClass) {
         if (!is.null(work_elasticities_params)) {work_elasticities_params_s <- paste0(work_elasticities_params,"_",k)} else {work_elasticities_params_s <- NULL}
         if (!is.null(times_elasticities_params)) {times_elasticities_params_s <- paste0(times_elasticities_params,"_",k)} else {times_elasticities_params_s <- NULL}
@@ -232,7 +236,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     }
   }
 
-  beta_matrix <<- apply(beta_matrix, 2,as.numeric)
+  beta_matrix <- apply(beta_matrix, 2, as.numeric)
   # initial testing
   works <- rep(TRUE, nCandidates)
   indexes <- 1:nCandidates
