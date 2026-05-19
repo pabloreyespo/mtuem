@@ -135,7 +135,9 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
   if (estimate_rho) {
     tmp <- rho
     rho <- diag(rep(1, length(sig)))
-    rho[upper.tri(rho, diag = FALSE)] <- rho[lower.tri(rho, diag = FALSE)]  <- tmp
+    #rho[upper.tri(rho, diag = FALSE)] <- rho[lower.tri(rho, diag = FALSE)]  <- tmp
+    rho[upper.tri(rho, diag = FALSE)] <- tmp
+    rho[lower.tri(rho, diag = FALSE)] <- t(rho)[lower.tri(rho, diag = FALSE)]
     rm(tmp)
   }
 
@@ -175,7 +177,6 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
     colnames(opt) <- c(work_times, free_times, free_goods)
     obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
     err <- obs - opt
-    err[is.na(err)] <- 0
 
     if (functionality == "get_covar") {
       return(list(
@@ -184,13 +185,16 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
         sigma = sqrt(diag(stats::cov(err, use = "complete.obs")))))
     }
 
+    err_ll <- err
+    #err_ll[is.na(err_ll)] <- 0
+
     if (!estimate_sig) {
       sig <- stats::cov(err, use = "complete.obs")
       sig <- sqrt(diag(sig))
     }
 
     if (!(flag_times | flag_goods)) {
-      mu = err/sig
+      mu = err_ll/sig
       ll = -0.5*mu^2 -log(sig) -0.5*log(2*base::pi)
     } else {
 
@@ -199,10 +203,20 @@ mtuem_ab_likelihood <- function(mtuem_settings, functionality="estimate"){
           rho <- diag(rep(1, length(sig)))
         } else {
           rho <- stats::cor(err, use = "complete.obs")
+          rho_pd <- Matrix::nearPD(rho, corr = TRUE, keepDiag = TRUE)
+          rho    <- as.matrix(rho_pd$mat)
         }
       }
 
-      mu = sweep(err, MARGIN = 2, sig, "/")
+      mu = sweep(err_ll, MARGIN = 2, sig, "/")
+
+      eigs <- eigen(rho, symmetric = TRUE, only.values = TRUE)$values
+      if (any(eigs <= 0)) {
+        # Return zero likelihood for this parameter vector so the
+        # optimizer steps away from the non-PD region:
+        return(rep(0, N))
+      }
+
       cond <- get_cond_err(mu, rho)
       cond_mu  <- cond$cond_mu
       cond_sd  <- cond$cond_sd
