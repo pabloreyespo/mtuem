@@ -190,7 +190,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
 
     obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
     err <- obs - opt
-    
+
     if (functionality == "get_covar") {
       return(list(
         covar = stats::cov(err, use = "complete.obs"),
