@@ -17,22 +17,12 @@
 #   ))
 # }
 
-mtuem_get_corr <- function(model, apollo_probabilities, apollo_inputs, vars) {
-  pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs,
-                            prediction_settings = list(silent = TRUE))
-  database <- apollo_inputs$database
+mtuem_get_corr <- function(model, apollo_probabilities, apollo_inputs,
+                            mtuem_settings) {
+  apollo_beta <- model$estimate
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
 
-  err <- database[, vars] - pred[, vars]
-
-  # Extract estimated sig from model in the same order as vars
-  sig_est <- model$estimate[paste0("sig_", seq_along(vars))]
-
-  # Standardize residuals the same way the likelihood does
-  err_std <- sweep(err, MARGIN = 2, sig_est, "/")
-
-  return(list(
-    covar     = stats::cov(err,     use = "pairwise.complete.obs"),
-    corr      = stats::cor(err,     use = "pairwise.complete.obs"),
-    corr_std  = stats::cor(err_std, use = "pairwise.complete.obs")  # comparable to rho
-  ))
+  result <- mtuem_likelihood(mtuem_settings, functionality = "get_covar")
+  return(result)
 }

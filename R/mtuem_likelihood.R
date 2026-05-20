@@ -178,7 +178,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   if(functionality %in% c("estimate", "conditionals", "raw", "get_covar")){
     tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
     if (optimal_tw) {
-      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, Tw, tau, Tc)
+      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
       xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
     } else {
       ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, apollo_inputs$database[, work_times], tau, Tc)
