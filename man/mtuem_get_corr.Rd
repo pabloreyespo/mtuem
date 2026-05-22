@@ -4,7 +4,7 @@
 \alias{mtuem_get_corr}
 \title{Function for getting the correlation between errors in the model}
 \usage{
-mtuem_get_corr(model, apollo_probabilities, apollo_inputs, vars)
+mtuem_get_corr(model, apollo_probabilities, apollo_inputs, mtuem_settings)
 }
 \arguments{
 \item{model}{Object. Model returned by apollo estimation routines.}

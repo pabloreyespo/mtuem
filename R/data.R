@@ -21,11 +21,11 @@
 #'   \item{dia_fin_semana}{Weekend day of diary (6 = Saturday, 7 = Sunday)}
 #'
 #'   \item{parentesco}{Relationship to household head}
-#'   \item{n_menores_0_5}{Number of household members under age 6 (ages 0-5)}
-#'   \item{n_menores_6_11}{Number of household members aged 6-11}
-#'   \item{n_menores_0_14}{Number of household members under age 15 (ages 0-14)}
-#'   \item{n_menores_12_17}{Number of household members aged 12-17}
-#'   \item{n_menores}{Number of household members under 18}
+#'   \item{n_menores_0_4}{Number of household members aged 0 to 4}
+#'   \item{n_menores_5_14}{Number of household members aged 5 to 14}
+#'   \item{n_nna}{Number of household members aged 0 to 14}
+#'   \item{n_menores_18}{Number of household members aged 0 to 18}
+#'   \item{n_personas_15_65}{Number of household members aged 15 to 65}
 #'   \item{n_mayores}{Number of adult household members (18+)}
 #'   \item{n_tiempo}{Number of household members who reported time use}
 #'   \item{n_trabajadores}{Number of employed workers in household}
@@ -73,6 +73,7 @@
 #'   \item{ing_personal}{Personal income: ing_trab + ing_jub_aps + ing_gpp (weekly, thousands CLP)}
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
+#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_paid_work}{Trabajo remunerado; equivale a t_to, horas semanales}
 #'   \item{t_job_search}{Busqueda de trabajo; equivale a t_to_js, horas semanales}
@@ -136,7 +137,7 @@
 #' \code{data/enut-i-ENG.dta} and \code{data/enut-i-ENG.csv}.
 #'
 #' The time-use categories are aggregations of the 25 detailed categories in
-#' \code{enut.i.raw}. See \code{agregar_actividades()} in
+#' \code{enut_i_raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
 #' Compared to ENUT II, this dataset includes \code{t_job_search} as a separate activity
@@ -149,8 +150,8 @@
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut.i
-#' @usage data(enut.i)
+#' @name enut_i
+#' @usage data(enut_i)
 #' @format A data frame with 9,497 rows and 98 variables
 NULL
 
@@ -160,7 +161,7 @@ NULL
 #' (ENUT I), applied by the Instituto Nacional de Estadisticas de Chile in
 #' 2015. Contains the 25 detailed weekly time-use activity categories and
 #' household expenditures imputed from the VIII Encuesta de Presupuestos
-#' Familiares (EPF). This dataset is the detailed companion to \code{enut.i},
+#' Familiares (EPF). This dataset is the detailed companion to \code{enut_i},
 #' which aggregates the same records into model-ready time categories.
 #'
 #' All income and expenditure variables are expressed in weekly thousands of
@@ -178,11 +179,11 @@ NULL
 #'   \item{dia_fin_semana}{Weekend day of diary (6 = Saturday, 7 = Sunday)}
 #'
 #'   \item{parentesco}{Relationship to household head}
-#'   \item{n_menores_0_5}{Number of household members under age 6}
-#'   \item{n_menores_6_11}{Number of household members aged 6 to 11}
-#'   \item{n_menores_0_14}{Number of household members under age 15}
-#'   \item{n_menores_12_17}{Number of household members aged 12 to 17}
-#'   \item{n_menores}{Number of household members under 18}
+#'   \item{n_menores_0_4}{Number of household members aged 0 to 4}
+#'   \item{n_menores_5_14}{Number of household members aged 5 to 14}
+#'   \item{n_nna}{Number of household members aged 0 to 14}
+#'   \item{n_menores_18}{Number of household members aged 0 to 18}
+#'   \item{n_personas_15_65}{Number of household members aged 15 to 65}
 #'   \item{n_mayores}{Number of adult household members}
 #'   \item{n_tiempo}{Number of household members who reported time use}
 #'   \item{n_trabajadores}{Number of employed workers in household}
@@ -229,6 +230,7 @@ NULL
 #'   \item{ing_personal}{Personal income}
 #'   \item{ingreso_hogar}{Total household disposable income}
 #'   \item{income_person_week}{Household income divided by number of members}
+#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_to}{Paid work}
 #'   \item{t_to_js}{Job search}
@@ -287,8 +289,8 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut.i.raw
-#' @usage data(enut.i.raw)
+#' @name enut_i_raw
+#' @usage data(enut_i_raw)
 #' @format A data frame with 9,497 rows and 108 variables
 NULL
 
@@ -316,11 +318,11 @@ NULL
 #'   \item{dia_fin_semana}{Weekend day of diary (6 = Saturday, 7 = Sunday)}
 #'
 #'   \item{parentesco}{Relationship to household head (from pco)}
-#'   \item{n_menores_0_5}{Number of household members under age 6 (ages 0-5)}
-#'   \item{n_menores_6_11}{Number of household members aged 6-11}
-#'   \item{n_menores_0_14}{Number of household members under age 15 (ages 0-14)}
-#'   \item{n_menores_12_17}{Number of household members aged 12-17}
-#'   \item{n_menores}{Number of household members under 18, capped at 4}
+#'   \item{n_menores_0_4}{Number of household members aged 0-4}
+#'   \item{n_menores_5_14}{Number of household members aged 5-14}
+#'   \item{n_nna}{Number of household members aged 0-14}
+#'   \item{n_menores_18}{Number of household members under 18, capped at 4}
+#'   \item{n_personas_15_65}{Number of household members aged 15-65}
 #'   \item{n_mayores}{Number of adult household members (18+), capped at 6}
 #'   \item{n_tiempo}{Number of household members who reported time use}
 #'   \item{n_trabajadores}{Number of employed workers in household}
@@ -403,7 +405,7 @@ NULL
 #'   \item{bs16}{General sense of overload from caring for a PSDF person.
 #'     Same scale as bs12. Missing: 88, 96, 99. N valid: 1378.}
 #'   \item{bs17}{Time scarcity due to caring for a child (NNA):
-#'     "Piensa que debido al tiempo que le dedica al cuidado de NNA no tiene suficiente tiempo para usted?"
+#'     "Piensa que debido al tiempo que le dedica al cuidado de [NOMBRE NNA] no tiene suficiente tiempo para usted?"
 #'     Same scale as bs12. Missing: 88, 96, 99. N valid: 7071.}
 #'   \item{bs18}{Caregiver burden from reconciling NNA care with work responsibilities.
 #'     Same scale as bs12. Missing: 88, 96, 99. N valid: 5162.}
@@ -420,12 +422,26 @@ NULL
 #'   \item{ing_personal}{Personal income: ing_trab + ing_jub_aps + ing_gpp (weekly, thousands CLP)}
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
+#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_paid_work}{Trabajo remunerado; equivale a t_to, horas semanales}
 #'   \item{t_domestic_work}{Trabajo domestico no remunerado; suma de t_tdnr_psc + t_tdnr_lv +
 #'     t_tdnr_lrc + t_tdnr_mrm + t_tdnr_admnhog + t_tdnr_comphog + t_tdnr_cmp, horas semanales}
 #'   \item{t_care_work}{Trabajo de cuidado no remunerado; suma de t_tcnr_ce + t_tcnr_re +
 #'     t_tcnr_oac, horas semanales}
+#'
+#'   \strong{Alternative care decomposition} (these variables are an alternative breakdown of the same
+#'   total care time as \code{t_care_work}; do NOT sum both sets together):
+#'   \item{t_tcnr_0_4}{Trabajo de cuidado no remunerado - cuidado de menores de 0 a 4 anos, horas semanales}
+#'   \item{t_tcnr_5_14}{Trabajo de cuidado no remunerado - cuidado de menores de 5 a 14 anos, horas semanales}
+#'   \item{t_tcnr_nna}{Trabajo de cuidado no remunerado - cuidado de ninas, ninos y adolescentes (0-14 anos);
+#'     derived as \code{t_tcnr_0_4 + t_tcnr_5_14}, horas semanales}
+#'   \item{t_tcnr_15_65}{Trabajo de cuidado no remunerado - cuidado de personas de 15 a 65 anos, horas semanales}
+#'   \item{t_tcnr_66}{Trabajo de cuidado no remunerado - cuidado de personas de 66 anos y mas, horas semanales}
+#'   \item{t_tncr_psdf}{Trabajo de cuidado no remunerado - cuidado de personas con discapacidad, horas semanales}
+#'
+#'   Note: \code{t_tcnr_nna + t_tcnr_15_65 + t_tcnr_66 + t_tncr_psdf = t_care_work}
+#'
 #'   \item{t_unpaid_voluntary}{Trabajo voluntario y ayuda a otros hogares; suma de t_tvaoh_tv +
 #'     t_tvaoh_oh, horas semanales}
 #'   \item{t_education}{Educacion y formacion; equivale a t_ed, horas semanales}
@@ -466,7 +482,7 @@ NULL
 #'   \item{Ec_transporte}{Imputed transport expenditure (weekly thousands CLP)}
 #'   \item{Ec_educacion}{Imputed education expenditure (weekly thousands CLP)}
 #'   \item{savings}{Imputed savings (weekly thousands CLP). Its classification is not clear. Its omision in Ec would mean implicitly considering as part of a free activity. }
-#'   \item{total_expenses}{Total imputed expenditures (weekly thousands CLP). ing_personal - savings (weekly thousands CLP)}
+#'  \item{total_expenses}{Total imputed expenditures (weekly thousands CLP). ing_personal - savings (weekly thousands CLP)}
 #' }
 #'
 #' @details
@@ -483,7 +499,7 @@ NULL
 #' as \code{data/enut-ii-ENG.dta} and \code{data/enut-ii-ENG.csv}.
 #'
 #' The time-use categories are aggregations of the 25 detailed categories in
-#' \code{enut.ii.raw}. See \code{agregar_actividades()} in
+#' \code{enut_ii_raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
 #' @source <https://www.ine.gob.cl/enut>
@@ -491,8 +507,8 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut.ii
-#' @usage data(enut.ii)
+#' @name enut_ii
+#' @usage data(enut_ii)
 #' @format A data frame with approximately 4,000-5,000 rows
 NULL
 
@@ -519,11 +535,11 @@ NULL
 #'   \item{dia_fin_semana}{Weekend day of diary (6 = Saturday, 7 = Sunday)}
 #'
 #'   \item{parentesco}{Relationship to household head (from pco)}
-#'   \item{n_menores_0_5}{Number of household members under age 6 (ages 0-5)}
-#'   \item{n_menores_6_11}{Number of household members aged 6-11}
-#'   \item{n_menores_0_14}{Number of household members under age 15 (ages 0-14)}
-#'   \item{n_menores_12_17}{Number of household members aged 12-17}
-#'   \item{n_menores}{Number of household members under 18, capped at 4}
+#'   \item{n_menores_0_4}{Number of household members aged 0-4}
+#'   \item{n_menores_5_14}{Number of household members aged 5-14}
+#'   \item{n_nna}{Number of household members aged 0-14}
+#'   \item{n_menores_18}{Number of household members under 18, capped at 4}
+#'   \item{n_personas_15_65}{Number of household members aged 15-65}
 #'   \item{n_mayores}{Number of adult household members (18+), capped at 6}
 #'   \item{n_tiempo}{Number of household members who reported time use}
 #'   \item{n_trabajadores}{Number of employed workers in household}
@@ -606,7 +622,7 @@ NULL
 #'   \item{bs16}{General sense of overload from caring for a PSDF person.
 #'     Same scale as bs12. Missing: 88, 96, 99. N valid: 1378.}
 #'   \item{bs17}{Time scarcity due to caring for a child (NNA):
-#'     "Piensa que debido al tiempo que le dedica al cuidado de NNA no tiene suficiente tiempo para usted?"
+#'     "Piensa que debido al tiempo que le dedica al cuidado de [NOMBRE NNA] no tiene suficiente tiempo para usted?"
 #'     Same scale as bs12. Missing: 88, 96, 99. N valid: 7071.}
 #'   \item{bs18}{Caregiver burden from reconciling NNA care with work responsibilities.
 #'     Same scale as bs12. Missing: 88, 96, 99. N valid: 5162.}
@@ -623,6 +639,7 @@ NULL
 #'   \item{ing_personal}{Personal income: ing_trab + ing_jub_aps + ing_gpp (weekly, thousands CLP)}
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
+#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_to}{Trabajo remunerado (paid work), horas semanales}
 #'   \item{t_tcnr_ce}{Trabajo de cuidado no remunerado - cuidados esenciales: cuidado fisico personal de
@@ -631,6 +648,19 @@ NULL
 #'     al establecimiento educacional, apoyo en tareas y lectura, horas semanales}
 #'   \item{t_tcnr_oac}{Trabajo de cuidado no remunerado - otros cuidados: acompanamiento medico, traslado
 #'     al trabajo u otras actividades, otros cuidados no clasificados, horas semanales}
+#'
+#'   \strong{Alternative care decomposition} (these variables are an alternative breakdown of the same
+#'   total care time as \code{t_tcnr_ce + t_tcnr_re + t_tcnr_oac}; do NOT sum both sets together):
+#'   \item{t_tcnr_0_4}{Trabajo de cuidado no remunerado - cuidado de menores de 0 a 4 anos, horas semanales}
+#'   \item{t_tcnr_5_14}{Trabajo de cuidado no remunerado - cuidado de menores de 5 a 14 anos, horas semanales}
+#'   \item{t_tcnr_nna}{Trabajo de cuidado no remunerado - cuidado de ninas, ninos y adolescentes (0-14 anos);
+#'     derived as \code{t_tcnr_0_4 + t_tcnr_5_14}, horas semanales}
+#'   \item{t_tcnr_15_65}{Trabajo de cuidado no remunerado - cuidado de personas de 15 a 65 anos, horas semanales}
+#'   \item{t_tcnr_66}{Trabajo de cuidado no remunerado - cuidado de personas de 66 anos y mas, horas semanales}
+#'   \item{t_tncr_psdf}{Trabajo de cuidado no remunerado - cuidado de personas con discapacidad, horas semanales}
+#'
+#'   Note: \code{t_tcnr_nna + t_tcnr_15_65 + t_tcnr_66 + t_tncr_psdf = t_tcnr_ce + t_tcnr_re + t_tcnr_oac}
+#'
 #'   \item{t_tdnr_psc}{Trabajo domestico no remunerado - preparacion y servicio de comida, horas semanales}
 #'   \item{t_tdnr_lv}{Trabajo domestico no remunerado - limpieza de vivienda, horas semanales}
 #'   \item{t_tdnr_lrc}{Trabajo domestico no remunerado - limpieza y reparacion de ropa, horas semanales}
@@ -700,7 +730,7 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut.ii.raw
-#' @usage data(enut.ii.raw)
+#' @name enut_ii_raw
+#' @usage data(enut_ii_raw)
 #' @format A data frame with approximately 4,000-5,000 rows and 112 variables
 NULL

@@ -1,6 +1,6 @@
 Package: mtuem
 Title: Estimate Microeconomic Time-Use-Expenditure Models in Apollo
-Version: 0.4.2
+Version: 0.5.0
 Authors@R: c(
     person(
       "Pablo", "Reyes-Polanco",
