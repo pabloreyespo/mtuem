@@ -36,11 +36,12 @@ mtuem_likelihood(mtuem_settings, functionality = "estimate")
 \item \strong{\code{"raw"}}: For debugging, produces probabilities of all alternatives and individual model components at the level of an observation, at the level of individual draws.
 \item \strong{\code{"report"}}: Prepares output summarising model and choiceset structure.
 \item \strong{\code{"validate"}}: Validates model specification, produces likelihood of the full model, at the level of individual decision-makers, after averaging across draws.
-\item \strong{\code{"get_covar"}}: Returns the covariance matrix, correlation matrix, and standard deviations computed from the residuals.
-}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{                 \}
+}\if{html}{\out{</div>}}}
 }
 \value{
-For estimation functionalities, an array of likelihood for each individual. For \code{"get_covar"}, a list with components \code{covar}, \code{corr}, and \code{sigma}. For \code{"prediction"}, a matrix with predicted values and values of time.
+For estimation functionalities, an array of likelihood for each individual.. For \code{"prediction"}, a matrix with predicted values and values of time.
 }
 \description{
 The implementation is based on Jara-Diaz et al. (2008) consisting of the maximization of a Cobb-Douglas utility function dependent on Time-use (T) and Goods Consumption (X).
@@ -70,7 +71,6 @@ and correlations are inferred from residuals. Valid for multi-equation models.
 standard deviations and correlations are estimated as parameters.
 }
 
-When \code{functionality = "get_covar"}, the function returns a list with the covariance matrix,
 correlation matrix, and standard deviations computed from the residuals.
 }
 \examples{

@@ -137,7 +137,7 @@
 #' \code{data/enut-i-ENG.dta} and \code{data/enut-i-ENG.csv}.
 #'
 #' The time-use categories are aggregations of the 25 detailed categories in
-#' \code{enut_i_raw}. See \code{agregar_actividades()} in
+#' \code{enut.i.raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
 #' Compared to ENUT II, this dataset includes \code{t_job_search} as a separate activity
@@ -150,8 +150,8 @@
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_i
-#' @usage data(enut_i)
+#' @name enut.i
+#' @usage data(enut.i)
 #' @format A data frame with 9,497 rows and 98 variables
 NULL
 
@@ -161,7 +161,7 @@ NULL
 #' (ENUT I), applied by the Instituto Nacional de Estadisticas de Chile in
 #' 2015. Contains the 25 detailed weekly time-use activity categories and
 #' household expenditures imputed from the VIII Encuesta de Presupuestos
-#' Familiares (EPF). This dataset is the detailed companion to \code{enut_i},
+#' Familiares (EPF). This dataset is the detailed companion to \code{enut.i},
 #' which aggregates the same records into model-ready time categories.
 #'
 #' All income and expenditure variables are expressed in weekly thousands of
@@ -289,8 +289,8 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_i_raw
-#' @usage data(enut_i_raw)
+#' @name enut.i.raw
+#' @usage data(enut.i.raw)
 #' @format A data frame with 9,497 rows and 108 variables
 NULL
 
@@ -422,7 +422,6 @@ NULL
 #'   \item{ing_personal}{Personal income: ing_trab + ing_jub_aps + ing_gpp (weekly, thousands CLP)}
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
-#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_paid_work}{Trabajo remunerado; equivale a t_to, horas semanales}
 #'   \item{t_domestic_work}{Trabajo domestico no remunerado; suma de t_tdnr_psc + t_tdnr_lv +
@@ -452,10 +451,14 @@ NULL
 #'   \item{t_meals}{Comer y beber; equivale a t_cpag_comer, horas semanales}
 #'   \item{t_sleep}{Dormir; equivale a t_cpag_dormir, ajustado para que la suma sea 168 horas,
 #'     horas semanales}
-#'   \item{t_commute1}{Traslados asociados a trabajo remunerado, educacion y salud; equivale a
-#'     t_tt1, horas semanales}
-#'   \item{t_commute2}{Traslados asociados a tramites del hogar y cuidados; equivale a t_tt2,
-#'     horas semanales}
+#'   \item{t_commute_to}{Traslados asociados a trabajo remunerado, horas semanales}
+#'   \item{t_commute_ed}{Traslados asociados a educacion, horas semanales}
+#'   \item{t_commute_cpaf_cp}{Traslados asociados a cuidados personales y salud, horas semanales}
+#'   \item{t_commute_tdnr_admnhog}{Traslados asociados a administracion del hogar, horas semanales}
+#'   \item{t_commute_tdnr_comphog}{Traslados asociados a compras del hogar, horas semanales}
+#'   \item{t_commute_tcnr_re}{Traslados asociados a cuidados relativos a la ensenanza, horas semanales}
+#'   \item{t_commute_tcnr_ce}{Traslados asociados a cuidados esenciales, horas semanales}
+#'   \item{t_commute_tcnr_oac}{Traslados asociados a otros cuidados, horas semanales}
 #'
 #'   \item{Tw}{Paid work time (equivalent to t_to / t_paid_work)}
 #'   \item{Tf_social}{Social life and recreation time (equivalent to t_vsyo_csar)}
@@ -499,7 +502,7 @@ NULL
 #' as \code{data/enut-ii-ENG.dta} and \code{data/enut-ii-ENG.csv}.
 #'
 #' The time-use categories are aggregations of the 25 detailed categories in
-#' \code{enut_ii_raw}. See \code{agregar_actividades()} in
+#' \code{enut.ii.raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
 #' @source <https://www.ine.gob.cl/enut>
@@ -507,13 +510,12 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_ii
-#' @usage data(enut_ii)
+#' @name enut.ii
+#' @usage data(enut.ii)
 #' @format A data frame with approximately 4,000-5,000 rows
 NULL
 
-#' enut.ii.raw
-#'
+
 #' Processed dataset from the second National Time-Use Survey (ENUT II), applied by the
 #' Instituto Nacional de Estadísticas de Chile. Contains 25 detailed time-use activity
 #' categories and household expenditures imputed from the IX Encuesta de Presupuestos
@@ -639,7 +641,6 @@ NULL
 #'   \item{ing_personal}{Personal income: ing_trab + ing_jub_aps + ing_gpp (weekly, thousands CLP)}
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
-#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_to}{Trabajo remunerado (paid work), horas semanales}
 #'   \item{t_tcnr_ce}{Trabajo de cuidado no remunerado - cuidados esenciales: cuidado fisico personal de
@@ -689,10 +690,50 @@ NULL
 #'   \item{t_mcm_video}{Medios de comunicacion y masivos - consumo de video y television, horas semanales}
 #'   \item{t_mcm_computador}{Medios de comunicacion y masivos - uso recreativo de computador e internet,
 #'     horas semanales}
-#'   \item{t_tt1}{Traslados 1 - traslados asociados a trabajo remunerado, educacion y salud (equivalente
-#'     ENUT 2015), horas semanales}
-#'   \item{t_tt2}{Traslados 2 - traslados asociados a tramites del hogar y cuidados (adicionales ENUT 2023),
+#'   \item{t_tto}{Traslados asociados a trabajo remunerado (traslado ida: to3_t, vuelta: to7_t),
 #'     horas semanales}
+#'   \item{t_ted}{Traslados asociados a educacion (traslado ida: ed2_t, vuelta: ed5_t),
+#'     horas semanales}
+#'   \item{t_tcpaf_cp}{Traslados asociados a cuidados personales y salud
+#'     (traslado ida: cp7_t, vuelta: cp10_t), horas semanales}
+#'   \item{t_ttdnr_admnhog}{Traslados asociados a administracion del hogar
+#'     (traslado ida: td14_t, vuelta: td17_t), horas semanales}
+#'   \item{t_ttdnr_comphog}{Traslados asociados a compras del hogar
+#'     (traslado ida: td20_t, vuelta: td23_t), horas semanales}
+#'   \item{t_ttcnr_re}{Traslados asociados a cuidados relativos a la ensenanza
+#'     (traslado ida: tc12_t, vuelta: tc15_t), horas semanales}
+#'   \item{t_ttcnr_oac_health}{Traslados asociados a cuidados esenciales / salud
+#'     (traslado ida: tc21_t, vuelta: tc25_t), horas semanales}
+#'   \item{t_ttcnr_oac_work}{Traslados asociados a otros cuidados / trabajo
+#'     (traslado ida: tc31_t, vuelta: tc34_t), horas semanales}
+#'
+#'   \strong{Commute activity time variables} (associated activity time within
+#'   each commute total; computed after twin imputation). The \code{_ds} suffix
+#'   uses weekday values. The \code{_fds} suffix uses imputed weekend
+#'   (sab + dom) values. All times are normalized using the same factors as
+#'   parent activities (see \code{tact_factor_*}):
+#'   \item{tact_tto_ds}{Workplace time (to5_t) associated with commute to work, weekday hours}
+#'   \item{tact_tto_fds}{Workplace time (to5_t) associated with commute to work, weekend hours}
+#'   \item{tact_ted_ds}{Education center time (ed4_t) associated with commute to education, weekday hours}
+#'   \item{tact_ted_fds}{Education center time (ed4_t) associated with commute to education, weekend hours}
+#'   \item{tact_tcpaf_cp_ds}{Health/personal care center time (cp9_t) associated with commute to personal care, weekday hours}
+#'   \item{tact_tcpaf_cp_fds}{Health/personal care center time (cp9_t) associated with commute to personal care, weekend hours}
+#'   \item{tact_ttdnr_admnhog_ds}{Domestic admin time (td16_t) associated with commute to domestic admin, weekday hours}
+#'   \item{tact_ttdnr_admnhog_fds}{Domestic admin time (td16_t) associated with commute to domestic admin, weekend hours}
+#'   \item{tact_ttdnr_comphog_ds}{Domestic shopping time (td22_t) associated with commute to domestic shopping, weekday hours}
+#'   \item{tact_ttdnr_comphog_fds}{Domestic shopping time (td22_t) associated with commute to domestic shopping, weekend hours}
+#'   \item{tact_ttcnr_re_ds}{Care education time (tc16_t) associated with commute to care-education, weekday hours}
+#'   \item{tact_ttcnr_re_fds}{Care education time (tc16_t) associated with commute to care-education, weekend hours}
+#'   \item{tact_ttcnr_oac_health_ds}{Care health time (tc22_t) associated with commute to care-other, weekday hours}
+#'   \item{tact_ttcnr_oac_health_fds}{Care health time (tc22_t) associated with commute to care-other, weekend hours}
+#'   \item{tact_ttcnr_oac_work_ds}{Care work time associated with commute to care-other, weekday hours; always NA (no single associated activity)}
+#'   \item{tact_ttcnr_oac_work_fds}{Care work time associated with commute to care-other, weekend hours; always NA}
+#'
+#'   \strong{Normalization factors} (applied during twin imputation to scale
+#'   activities to 24 hours per day):
+#'   \item{tact_factor_sab}{Saturday normalization factor: 24 / sum(all activities on Saturday)}
+#'   \item{tact_factor_dom}{Sunday normalization factor: 24 / sum(all activities on Sunday)}
+#'   \item{tact_factor_ds}{Weekday redistribution factor: (24*5 - t_to_ds) / sum(non-t_to activities on weekdays)}
 #'
 #'   \item{t_total}{Total weekly hours across all activities (should equal 168)}
 #'   \item{w}{Hourly wage rate: ing_trab / t_to (thousands CLP per hour)}
@@ -715,9 +756,18 @@ NULL
 #' The dataset is produced by running \code{data_processing/data_processing.R}. Time
 #' variables are normalized to a 168-hour week using a two-step procedure: paid work
 #' (\code{t_to}) and sleep (\code{t_cpag_dormir}) are treated as reliable anchors;
-#' all other activities are scaled proportionally. Weekend time use is imputed via a
-#' twin-matching matrix when the respondent's diary day was a weekday. Outliers are
-#' removed using Vallejo's method by groups of quintile, employment status, age
+#' all other activities are scaled proportionally. Commute time is decomposed into 8
+#' separate totals (\code{t_tto}, \code{t_ted}, \code{t_tcpaf_cp}, \code{t_ttdnr_admnhog},
+#' \code{t_ttdnr_comphog}, \code{t_ttcnr_re}, \code{t_ttcnr_oac_health}, \code{t_ttcnr_oac_work})
+#' based on the classification in \code{clasificacion_traslado.csv}. Weekend time use is
+#' imputed via a twin-matching matrix when the respondent's diary day was a weekday;
+#' this imputation also extends to the commute component variables used for percentage
+#' computation. Activity time variables (\code{tact_*}) store the actual hours
+#' spent on associated activities within each commute total, normalized using
+#' the same factors as parent activities. Normalization factors (\code{tact_factor_*})
+#' are saved for reference: \code{tact_factor_sab} and \code{tact_factor_dom} for
+#' weekend scaling, \code{tact_factor_ds} for weekday redistribution.
+#' Outliers are removed using Vallejo's method by groups of quintile, employment status, age
 #' bracket, and sex. Expenditures are imputed from EPF IX using a fractional MNL
 #' model for budget shares and a linear regression for the savings rate, then
 #' allocated to individuals by \code{prop_ing_hogar}. The script writes
@@ -730,7 +780,7 @@ NULL
 #'
 #' @docType data
 #' @keywords datasets
-#' @name enut_ii_raw
-#' @usage data(enut_ii_raw)
-#' @format A data frame with approximately 4,000-5,000 rows and 112 variables
+#' @name enut.ii.raw
+#' @usage data(enut.ii.raw)
+#' @format A data frame with approximately 4,000-5,000 rows and 129 variables
 NULL

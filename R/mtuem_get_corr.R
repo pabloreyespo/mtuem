@@ -17,12 +17,15 @@
 #   ))
 # }
 
-mtuem_get_corr <- function(model, apollo_probabilities, apollo_inputs,
-                            mtuem_settings) {
-  apollo_beta <- model$estimate
-  apollo_attach(apollo_beta, apollo_inputs)
-  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+mtuem_get_corr <- function(model, apollo_probabilities, apollo_inputs) {
+  pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
+  opt <- pred %>% select(-c("ID", "Observation", "Tfi", "Xfj", "VoL", "VTAW"))
+  obs  <- apollo_inputs$database %>% select(colnames(opt))
+  err <- obs - opt
 
-  result <- mtuem_likelihood(mtuem_settings, functionality = "get_covar")
-  return(result)
+  return(list(
+    covar = stats::cov(err, use = "complete.obs"),
+    corr =  stats::cor(err, use = "complete.obs"),
+    sigma = sqrt(diag(stats::cov(err, use = "complete.obs")))))
+
 }

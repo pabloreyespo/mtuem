@@ -27,7 +27,6 @@
 #'     standard deviations and correlations are estimated as parameters.
 #' }
 #'
-#' When \code{functionality = "get_covar"}, the function returns a list with the covariance matrix,
 #' correlation matrix, and standard deviations computed from the residuals.
 #'
 #' @param mtuem_settings List of arguments to the functions. It must contain the following. User input is required for all settings except those with a default or marked as optional.
@@ -59,9 +58,9 @@
 #'                        \item \strong{\code{"raw"}}: For debugging, produces probabilities of all alternatives and individual model components at the level of an observation, at the level of individual draws.
 #'                        \item \strong{\code{"report"}}: Prepares output summarising model and choiceset structure.
 #'                        \item \strong{\code{"validate"}}: Validates model specification, produces likelihood of the full model, at the level of individual decision-makers, after averaging across draws.
-#'                        \item \strong{\code{"get_covar"}}: Returns the covariance matrix, correlation matrix, and standard deviations computed from the residuals.
+#'
 #'                      }
-#' @return For estimation functionalities, an array of likelihood for each individual. For \code{"get_covar"}, a list with components \code{covar}, \code{corr}, and \code{sigma}. For \code{"prediction"}, a matrix with predicted values and values of time.
+#' @return For estimation functionalities, an array of likelihood for each individual.. For \code{"prediction"}, a matrix with predicted values and values of time.
 #' @examples
 #' \dontrun{
 #' # Single equation model (work only) using the maed dataset
@@ -175,7 +174,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   # ------------------------------------ #
   #### ESTIMATE, CONDITIONALS AND RAW #### ----> Calculan la verosimilitud (La que tengo en likelihoods)
   # ------------------------------------ #
-  if(functionality %in% c("estimate", "conditionals", "raw", "get_covar")){
+  if(functionality %in% c("estimate", "conditionals", "raw")){
     tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
     if (optimal_tw) {
       ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
@@ -188,15 +187,12 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     opt <- cbind(tw_opt, unlist(ti_opt), unlist(xj_opt))
     colnames(opt) <- c(work_times, free_times, free_goods)
 
-    obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
-    err <- obs - opt
-
-    if (functionality == "get_covar") {
-      return(list(
-        covar = stats::cov(err, use = "complete.obs"),
-        corr =  stats::cor(err, use = "complete.obs"),
-        sigma = sqrt(diag(stats::cov(err, use = "complete.obs")))))
+    if (is.null(apollo_inputs$obs_matrix)) {
+      obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
+    } else {
+      obs <- apollo_inputs$obs_matrix
     }
+    err <- obs - opt
 
     err_ll <- err
     #err_ll[is.na(err_ll)] <- 0
@@ -220,21 +216,25 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
         }
       }
 
-      mu = sweep(err_ll, MARGIN = 2, sig, "/")
+      mu = t(t(err_ll) / sig)
+      # mu = sweep(err_ll, MARGIN = 2, sig, "/")
 
-      eigs <- eigen(rho, symmetric = TRUE, only.values = TRUE)$values
-      if (any(eigs <= 0)) {
+      #eigs <- eigen(rho, symmetric = TRUE, only.values = TRUE)$values
+      #if (any(eigs <= 0)) {
         # Return zero likelihood for this parameter vector so the
         # optimizer steps away from the non-PD region:
-        return(rep(0, N))
-      }
+      #  return(rep(0, N))
+      #}
 
       cond <- get_cond_err(mu, rho)
+
       cond_mu  <- cond$cond_mu
       cond_sd  <- cond$cond_sd
 
-      term = -0.5*(cond_mu^2)
-      ll = sweep(term ,  MARGIN = 2, log(sig * sqrt(cond_sd)), "-") - 0.5*log(2*base::pi)
+      #term = -0.5*(cond_mu^2)
+      #ll = sweep(term ,  MARGIN = 2, log(sig * sqrt(cond_sd)), "-") - 0.5*log(2*base::pi)
+      const <- sum(log(sig)) + 0.5 * sum(log(cond_sd)) + 0.5 * ncol(cond_mu) * log(2 * base::pi)
+      ll    <- -0.5 * rowSums(cond_mu^2) - const
     }
 
     if(is.matrix(ll)) ll <- rowSums(ll)
