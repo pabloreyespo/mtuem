@@ -40,6 +40,7 @@
 #'                        \item \strong{\code{goods_elasticities}} List. Optional. Value of the elasticity parameters associated with freely allocated goods. Must be in the same order as \code{free_goods}.
 #'                        \item \strong{\code{sig}} List. Optional. Value of the sigma parameters (standard deviations) of the error covariance matrix. One element per equation. If not specified, inferred from the observed errors.
 #'                        \item \strong{\code{rho}} List. Optional. Value of the correlation parameters of the upper diagonal of the error covariance matrix. Must be ordered horizontally. Only used if \code{sig} is specified. If \code{rho} is not specified, correlations are assumed to be zero.
+#'                        \item \strong{\code{cholesky}} List. Optional. Value of the lower Cholesky decomposition triangular matrix elements (L11, L21, L22, L31, L32, L33, ...). If specified, overrides \code{sig} and \code{rho}.
 #'                        \item \strong{\code{optimal_tw}} Logical. Optional. If TRUE (default), uses the theoretical optimal work time for computing free time and goods allocations. If FALSE, uses the observed work time from the database.
 #'                        \item \strong{\code{Tc}} Numeric vector. Committed time for each observation.
 #'                        \item \strong{\code{Ec}} Numeric vector. Committed expenses for each observation.
@@ -114,6 +115,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     goods_elasticities = list(),
     sig = list(),
     rho = list(),
+    cholesky = list(),
     optimal_tw = T
   )
 
@@ -131,13 +133,37 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   free_goods <- unlist(free_goods)
   sig <- unlist(sig)
   rho <- unlist(rho)
+  cholesky <- unlist(cholesky)
 
   flag_times <- length(times_elasticities)>0
   flag_goods <- length(goods_elasticities)>0
   estimate_sig <- length(sig) > 0
   estimate_rho   <- length(rho) > 0
+  estimate_cholesky <- length(cholesky) > 0
 
-  if (estimate_rho) {
+  if (estimate_cholesky) {
+    M <- 1 + length(free_times) + length(free_goods)
+    if (length(cholesky) != M * (M + 1) / 2) {
+      stop(paste0("The length of cholesky (", length(cholesky), ") must match M * (M + 1) / 2 where M is the number of equations (", M, ")."))
+    }
+    L_mat <- matrix(0, nrow = M, ncol = M)
+    idx <- 1
+    for (r in 1:M) {
+      for (c in 1:r) {
+        L_mat[r, c] <- cholesky[idx]
+        idx <- idx + 1
+      }
+    }
+    Sigma <- L_mat %*% t(L_mat)
+    sig <- sqrt(diag(Sigma))
+    D_inv_sqrt <- diag(1 / sig, nrow = M)
+    rho <- D_inv_sqrt %*% Sigma %*% D_inv_sqrt
+    diag(rho) <- 1
+    estimate_sig <- TRUE
+    estimate_rho <- TRUE
+  }
+
+  if (estimate_rho && !estimate_cholesky) {
     tmp <- rho
     rho <- diag(rep(1, length(sig)))
     #rho[upper.tri(rho, diag = FALSE)] <- rho[lower.tri(rho, diag = FALSE)]  <- tmp
