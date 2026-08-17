@@ -1,8 +1,9 @@
 # =============================================================================
-# Script to Generate Plots:
+# Script to Generate and Save Publication-Quality Plots:
 # 1. Predictions against Real Working Time (Observed vs Predicted)
 # 2. Prediction Cobb-Douglas vs Prediction Additive Quadratic
-# 3. Labour Supply Curves (w on Y-axis, Tw on X-axis) for average individual
+# 3. Labour Supply Curves (w on Y-axis, Tw on X-axis) for representative worker
+# Output Folder: plots/
 # =============================================================================
 
 rm(list = ls())
@@ -11,6 +12,7 @@ tryCatch(devtools::load_all(".", quiet = TRUE), error = function(e) library(mtue
 library(ggplot2)
 set.seed(42)
 
+# Load and prepare database
 database <- mtuem::maed
 database <- database[database$EcI > 0, ]
 database$T1 <- database$Tf1
@@ -18,16 +20,22 @@ database$Ti <- database$Tf2
 database$E1 <- database$Ef1
 database$Ei <- database$Ef2 + database$Ef3
 
-# -----------------------------------------------------------------------------
-# 1. ESTIMATE COBB-DOUGLAS MTUEM
-# -----------------------------------------------------------------------------
+# Ensure output directories exist
+plots_dir <- file.path(getwd(), "plots")
+if (!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE)
+
+art_dir <- "C:/Users/pablo/.gemini/antigravity-cli/brain/a86158b8-36d4-4963-b612-60ac0d54c83e"
+if (!dir.exists(art_dir)) dir.create(art_dir, recursive = TRUE)
+
+# =============================================================================
+# 1. ESTIMATE COBB-DOUGLAS MTUEM (Jara-Diaz et al., 2008)
+# =============================================================================
 apollo_initialise()
 apollo_control <- list(
   modelName  = "plot_cd_3eq",
   modelDescr = "Cobb-Douglas MTUEM",
   indivID    = "PeID",
-  outputDirectory = "output",
-  silent = TRUE
+  outputDirectory = "output"
 )
 
 apollo_beta_cd <- c(
@@ -35,7 +43,7 @@ apollo_beta_cd <- c(
   chk11 = 100, chk21 = 0, chk22 = 100, chk31 = 0, chk32 = 0, chk33 = 100
 )
 apollo_fixed_cd <- c("Theta")
-apollo_inputs_cd <- apollo_validateInputs(apollo_beta = apollo_beta_cd, apollo_fixed = apollo_fixed_cd, silent = TRUE)
+apollo_inputs_cd <- apollo_validateInputs(apollo_beta = apollo_beta_cd, apollo_fixed = apollo_fixed_cd)
 
 apollo_probabilities_cd <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
   apollo_attach(apollo_beta, apollo_inputs)
@@ -58,20 +66,20 @@ apollo_probabilities_cd <- function(apollo_beta, apollo_inputs, functionality = 
   return(P)
 }
 
+cat("\n>>> Estimating Cobb-Douglas MTUEM...\n")
 model_cd <- apollo_estimate(apollo_beta_cd, apollo_fixed_cd,
                             apollo_probabilities_cd, apollo_inputs_cd,
-                            list(estimate_settings = list(estimationRoutine = "bgw", silent = TRUE)))
+                            list(estimate_settings = list(estimationRoutine = "bgw")))
 
-# -----------------------------------------------------------------------------
-# 2. ESTIMATE ADDITIVE QUADRATIC MTUEM
-# -----------------------------------------------------------------------------
+# =============================================================================
+# 2. ESTIMATE ADDITIVE QUADRATIC MTUEM (theta_w = 0, Linear units)
+# =============================================================================
 apollo_initialise()
 apollo_control <- list(
   modelName  = "plot_aq_3eq",
   modelDescr = "Additive Quadratic MTUEM",
   indivID    = "PeID",
-  outputDirectory = "output",
-  silent = TRUE
+  outputDirectory = "output"
 )
 
 apollo_beta_aq <- c(
@@ -80,7 +88,7 @@ apollo_beta_aq <- c(
   chk11 = 10, chk21 = 0, chk22 = 10, chk31 = 0, chk32 = 0, chk33 = 40
 )
 apollo_fixed_aq <- c("theta_w", "eta_1")
-apollo_inputs_aq <- apollo_validateInputs(apollo_beta = apollo_beta_aq, apollo_fixed = apollo_fixed_aq, silent = TRUE)
+apollo_inputs_aq <- apollo_validateInputs(apollo_beta = apollo_beta_aq, apollo_fixed = apollo_fixed_aq)
 
 apollo_probabilities_aq <- function(apollo_beta, apollo_inputs, functionality = "estimate") {
   apollo_attach(apollo_beta, apollo_inputs)
@@ -103,13 +111,14 @@ apollo_probabilities_aq <- function(apollo_beta, apollo_inputs, functionality = 
   return(P)
 }
 
+cat("\n>>> Estimating Additive Quadratic MTUEM...\n")
 model_aq <- apollo_estimate(apollo_beta_aq, apollo_fixed_aq,
                             apollo_probabilities_aq, apollo_inputs_aq,
-                            list(estimate_settings = list(estimationRoutine = "bgw", silent = TRUE)))
+                            list(estimate_settings = list(estimationRoutine = "bgw")))
 
-# -----------------------------------------------------------------------------
-# 3. EXTRACT PREDICTIONS
-# -----------------------------------------------------------------------------
+# =============================================================================
+# 3. COMPUTE PREDICTIONS
+# =============================================================================
 pred_cd <- apollo_prediction(model_cd, apollo_probabilities_cd, apollo_inputs_cd)
 pred_aq <- apollo_prediction(model_aq, apollo_probabilities_aq, apollo_inputs_aq)
 
@@ -122,91 +131,106 @@ df_plot <- data.frame(
   Ec     = database$EcI
 )
 
-# Output directory for artifacts
-art_dir <- "C:/Users/pablo/.gemini/antigravity-cli/brain/a86158b8-36d4-4963-b612-60ac0d54c83e"
-if (!dir.exists(art_dir)) dir.create(art_dir, recursive = TRUE)
-
 # =============================================================================
-# PLOT 1: PREDICTIONS AGAINST REAL WORKING TIME (Observed vs Predicted)
+# 4. PLOT 1: PREDICTIONS AGAINST REAL WORKING TIME (Observed vs Predicted)
 # =============================================================================
 p1_cd <- ggplot(df_plot, aes(x = Tw_obs, y = Tw_cd)) +
-  geom_point(color = "#2b5c8f", alpha = 0.5, size = 2) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "#d95f02", linewidth = 1) +
-  geom_smooth(method = "lm", color = "#2b5c8f", se = FALSE, linewidth = 0.8) +
+  geom_point(color = "#2b5c8f", alpha = 0.45, size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "#d95f02", linewidth = 0.9) +
+  geom_smooth(method = "lm", color = "#2b5c8f", se = FALSE, linewidth = 0.9) +
   labs(
     title = "Cobb-Douglas MTUEM",
-    subtitle = sprintf("RMSE = %.2f h | MAE = %.2f h | r = %.3f",
+    subtitle = sprintf("RMSE: %.2f h | MAE: %.2f h | r = %.3f",
                        sqrt(mean((df_plot$Tw_obs - df_plot$Tw_cd)^2)),
                        mean(abs(df_plot$Tw_obs - df_plot$Tw_cd)),
                        cor(df_plot$Tw_obs, df_plot$Tw_cd)),
     x = "Observed Work Time (hours/week)",
     y = "Predicted Work Time (hours/week)"
   ) +
-  xlim(0, 85) + ylim(0, 85) +
-  theme_minimal(base_size = 12) +
-  theme(plot.title = element_text(face = "bold"))
+  xlim(0, 80) + ylim(0, 80) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.background = element_rect(fill = "white", color = "grey75"),
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+    panel.grid.minor = element_blank(),
+    plot.title    = element_text(face = "bold", size = 13, color = "#111111"),
+    plot.subtitle = element_text(size = 10, color = "#444444")
+  )
 
 p1_aq <- ggplot(df_plot, aes(x = Tw_obs, y = Tw_aq)) +
-  geom_point(color = "#1b9e77", alpha = 0.5, size = 2) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "#d95f02", linewidth = 1) +
-  geom_smooth(method = "lm", color = "#1b9e77", se = FALSE, linewidth = 0.8) +
+  geom_point(color = "#1b9e77", alpha = 0.45, size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "#d95f02", linewidth = 0.9) +
+  geom_smooth(method = "lm", color = "#1b9e77", se = FALSE, linewidth = 0.9) +
   labs(
     title = "Additive Quadratic MTUEM",
-    subtitle = sprintf("RMSE = %.2f h | MAE = %.2f h | r = %.3f",
+    subtitle = sprintf("RMSE: %.2f h | MAE: %.2f h | r = %.3f",
                        sqrt(mean((df_plot$Tw_obs - df_plot$Tw_aq)^2)),
                        mean(abs(df_plot$Tw_obs - df_plot$Tw_aq)),
                        cor(df_plot$Tw_obs, df_plot$Tw_aq)),
     x = "Observed Work Time (hours/week)",
     y = "Predicted Work Time (hours/week)"
   ) +
-  xlim(0, 85) + ylim(0, 85) +
-  theme_minimal(base_size = 12) +
-  theme(plot.title = element_text(face = "bold"))
-
-# Save Plot 1 as 2-panel
-png(file.path(art_dir, "plot1_pred_vs_obs.png"), width = 1000, height = 480, res = 120)
-gridExtra::grid.arrange(p1_cd, p1_aq, ncol = 2,
-                        top = grid::textGrob("Predicted vs Observed Working Time (Tw)",
-                                             gp = grid::gpar(fontsize = 16, fontface = "bold")))
-dev.off()
-
-# =============================================================================
-# PLOT 2: PREDICTION COBB-DOUGLAS VS PREDICTION ADDITIVE QUADRATIC
-# =============================================================================
-p2 <- ggplot(df_plot, aes(x = Tw_cd, y = Tw_aq)) +
-  geom_point(color = "#7570b3", alpha = 0.6, size = 2.2) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "#e7298a", linewidth = 1) +
-  geom_smooth(method = "lm", color = "#386cb0", se = TRUE, alpha = 0.2) +
-  labs(
-    title = "Cobb-Douglas Predictions vs Additive Quadratic Predictions",
-    subtitle = sprintf("Correlation between model predictions: r = %.3f | Mean CD = %.2f h, Mean AQ = %.2f h",
-                       cor(df_plot$Tw_cd, df_plot$Tw_aq), mean(df_plot$Tw_cd), mean(df_plot$Tw_aq)),
-    x = "Cobb-Douglas Predicted Work Time Tw (h/week)",
-    y = "Additive Quadratic Predicted Work Time Tw (h/week)"
-  ) +
-  xlim(5, 80) + ylim(5, 80) +
-  theme_minimal(base_size = 13) +
+  xlim(0, 80) + ylim(0, 80) +
+  theme_bw(base_size = 12) +
   theme(
-    plot.title = element_text(face = "bold", size = 14),
-    panel.grid.minor = element_blank()
+    panel.background = element_rect(fill = "white", color = "grey75"),
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+    panel.grid.minor = element_blank(),
+    plot.title    = element_text(face = "bold", size = 13, color = "#111111"),
+    plot.subtitle = element_text(size = 10, color = "#444444")
   )
 
-png(file.path(art_dir, "plot2_cd_vs_aq.png"), width = 700, height = 550, res = 120)
-print(p2)
-dev.off()
+p1_combined <- gridExtra::arrangeGrob(
+  p1_cd, p1_aq, ncol = 2,
+  top = grid::textGrob("Predicted vs Observed Working Time (Tw)",
+                       gp = grid::gpar(fontsize = 15, fontface = "bold"))
+)
+
+cat("Saving Plot 1: Predictions vs Observed (300 DPI)...\n")
+ggsave(file.path(plots_dir, "plot1_pred_vs_obs.png"), plot = p1_combined, width = 10, height = 5.2, dpi = 300, bg = "white")
+ggsave(file.path(art_dir, "plot1_pred_vs_obs.png"), plot = p1_combined, width = 10, height = 5.2, dpi = 300, bg = "white")
 
 # =============================================================================
-# PLOT 3: LABOUR SUPPLY CURVES (Simulate across representative individual)
-# Average individual: Mean Ec and Mean Tc, varying wage w in [0.5, 40]
-# Tw on X-axis, w on Y-axis
+# 5. PLOT 2: PREDICTION COBB-DOUGLAS VS PREDICTION ADDITIVE QUADRATIC
+# =============================================================================
+p2 <- ggplot(df_plot, aes(x = Tw_cd, y = Tw_aq)) +
+  geom_point(color = "#7570b3", alpha = 0.55, size = 2.2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "#e7298a", linewidth = 0.9) +
+  geom_smooth(method = "lm", color = "#386cb0", se = TRUE, alpha = 0.2, linewidth = 0.9) +
+  labs(
+    title = "Cobb-Douglas vs Additive Quadratic Predictions",
+    subtitle = sprintf("Correlation r = %.3f | Mean CD: %.2f h | Mean AQ: %.2f h",
+                       cor(df_plot$Tw_cd, df_plot$Tw_aq), mean(df_plot$Tw_cd), mean(df_plot$Tw_aq)),
+    x = "Cobb-Douglas Predicted Work Time Tw (hours/week)",
+    y = "Additive Quadratic Predicted Work Time Tw (hours/week)"
+  ) +
+  xlim(10, 75) + ylim(10, 75) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.background = element_rect(fill = "white", color = "grey75"),
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+    panel.grid.minor = element_blank(),
+    plot.title    = element_text(face = "bold", size = 13.5, color = "#111111"),
+    plot.subtitle = element_text(size = 10.5, color = "#444444")
+  )
+
+cat("Saving Plot 2: Cobb-Douglas vs Additive Quadratic Predictions (300 DPI)...\n")
+ggsave(file.path(plots_dir, "plot2_cd_vs_aq.png"), plot = p2, width = 7.5, height = 5.5, dpi = 300, bg = "white")
+ggsave(file.path(art_dir, "plot2_cd_vs_aq.png"), plot = p2, width = 7.5, height = 5.5, dpi = 300, bg = "white")
+
+# =============================================================================
+# 6. PLOT 3: LABOUR SUPPLY CURVES FOR REPRESENTATIVE INDIVIDUAL
 # =============================================================================
 mean_Tc <- mean(database$Tc)
 mean_Ec <- mean(database$EcI)
 tau     <- 168
 
-w_seq <- seq(0.5, 40, length.out = 300)
+w_seq <- seq(4.5, 35, length.out = 300)
 
-# Cobb-Douglas Tw* simulation
+# Cobb-Douglas simulation
 b_cd <- model_cd$estimate
 Theta_cd <- 1
 Phi_cd   <- b_cd["Phi"]
@@ -222,7 +246,7 @@ tw_sim_cd <- sapply(w_seq, function(w_val) {
   return(tw)
 })
 
-# Additive Quadratic Tw* simulation
+# Additive Quadratic simulation
 b_aq <- model_aq$estimate
 theta_w_aq <- 0
 beta_w_aq  <- b_aq["beta_w"]
@@ -255,34 +279,45 @@ df_supply <- rbind(
 )
 df_supply <- df_supply[!is.na(df_supply$Tw), ]
 
-p3 <- ggplot(df_supply, aes(x = Tw, y = w, color = Model, linetype = Model)) +
-  geom_line(linewidth = 1.3) +
+p3 <- ggplot() +
+  # Real observed data points
+  geom_point(data = database, aes(x = Tw, y = w),
+             color = "#8c96c6", alpha = 0.35, size = 2.2, shape = 16) +
+  # Simulated curves
+  geom_path(data = df_supply, aes(x = Tw, y = w, color = Model, linetype = Model), linewidth = 1.3) +
+  # Sample mean point
   geom_point(data = data.frame(Tw = mean(database$Tw), w = mean(database$w)),
              aes(x = Tw, y = w), inherit.aes = FALSE,
-             color = "#000000", size = 3.5, shape = 18) +
-  annotate("text", x = mean(database$Tw) + 1.5, y = mean(database$w) + 1,
-           label = sprintf("Sample Mean\n(Tw = %.1fh, w = $%.2f)", mean(database$Tw), mean(database$w)),
-           hjust = 0, size = 3.6, fontface = "italic") +
-  scale_color_manual(values = c("Cobb-Douglas MTUEM (Jara-Diaz 2008)" = "#2b5c8f",
-                                "Additive Quadratic MTUEM (theta_w = 0)" = "#1b9e77")) +
+             color = "#d95f02", size = 4.2, shape = 18) +
+  annotate("text", x = mean(database$Tw) + 1.2, y = mean(database$w) + 1.4,
+           label = sprintf("Sample Mean\n(Tw = %.1f h, w = $%.2f)", mean(database$Tw), mean(database$w)),
+           hjust = 0, size = 3.6, fontface = "bold", color = "#111111") +
+  scale_color_manual(values = c("Cobb-Douglas MTUEM (Jara-Diaz 2008)" = "#08519c",
+                                "Additive Quadratic MTUEM (theta_w = 0)" = "#006d2c")) +
   scale_linetype_manual(values = c("Cobb-Douglas MTUEM (Jara-Diaz 2008)" = "solid",
                                   "Additive Quadratic MTUEM (theta_w = 0)" = "dashed")) +
+  xlim(0, 80) + ylim(0, 45) +
   labs(
     title = "Labour Supply Curves for the Representative Individual",
-    subtitle = sprintf("Simulated at sample means: Tc = %.2f h/week, Ec = $%.2f/week", mean_Tc, mean_Ec),
+    subtitle = sprintf("Simulated for representative worker (Tc = %.2f h, Ec = $%.2f) overlaid on observed sample data (N = %d)",
+                       mean_Tc, mean_Ec, nrow(database)),
     x = "Work Time Tw (hours/week)",
     y = "Hourly Wage Rate w ($/hour)"
   ) +
-  theme_minimal(base_size = 13) +
+  theme_bw(base_size = 12) +
   theme(
-    plot.title = element_text(face = "bold", size = 14),
+    panel.background = element_rect(fill = "white", color = "grey75"),
+    plot.background  = element_rect(fill = "white", color = NA),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+    panel.grid.minor = element_blank(),
+    plot.title    = element_text(face = "bold", size = 13.5, color = "#111111"),
+    plot.subtitle = element_text(size = 10, color = "#444444"),
     legend.position = "bottom",
-    legend.title = element_blank(),
-    panel.grid.minor = element_blank()
+    legend.title = element_blank()
   )
 
-png(file.path(art_dir, "plot3_labour_supply.png"), width = 750, height = 550, res = 120)
-print(p3)
-dev.off()
+cat("Saving Plot 3: Labour Supply Curves (300 DPI)...\n")
+ggsave(file.path(plots_dir, "plot3_labour_supply.png"), plot = p3, width = 8, height = 5.8, dpi = 300, bg = "white")
+ggsave(file.path(art_dir, "plot3_labour_supply.png"), plot = p3, width = 8, height = 5.8, dpi = 300, bg = "white")
 
-cat("All plots successfully generated and saved to:", art_dir, "\n")
+cat("\n>>> All plots successfully updated with high DPI, white backgrounds, and real data scatter!\n")
