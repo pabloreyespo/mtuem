@@ -23,7 +23,7 @@
 #' @param em_iter_max Numeric vector. Number of iterations of EM algorithm to be run. Only valid if \code{first_em} is set to TRUE. Default: 5.
 #' @param non_saddle Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE
 #' @param verbose Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.
-#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".
+#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig}, \code{rho}, and \code{cholesky} as well as "normalization" = "theta_phi" or "alpha_beta".
 #' @param nClass Numeric. Number of latent classes. Default: 1.
 #'
 #' @return a named list containing the best model, the best log-likelihood and all estimated models.
@@ -57,7 +57,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     times_elasticities = c(),
     goods_elasticities = c(),
     sig = c(),
-    rho = c()
+    rho = c(),
+    cholesky = c()
   )
 
   if (length(customMultistart_settings) == 1 && is.na(customMultistart_settings)) customMultistart_settings <- default_customMultistart_settings
@@ -111,14 +112,30 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     beta_matrix[,av] <- rand
   }
 
-  normalize <- function(beta_matrix, normalization, work_elasticities, times_elasticities, goods_elasticities, sig, rho, covs) {
+  normalize <- function(beta_matrix, normalization, work_elasticities, times_elasticities, goods_elasticities, sig, rho, cholesky, covs) {
+    cholesky_diag <- c()
+    cholesky_off <- c()
+    if (length(cholesky) > 0) {
+      K <- length(cholesky)
+      diag_indices <- c()
+      k <- 1
+      idx <- 1
+      while (idx <= K) {
+        diag_indices <- c(diag_indices, idx)
+        k <- k + 1
+        idx <- idx + k
+      }
+      cholesky_diag <- cholesky[diag_indices]
+      cholesky_off  <- cholesky[-diag_indices]
+    }
+
     if (normalization== "alpha_beta") {
       tmp <- apollo_variables[(apollo_variables %in% work_elasticities)]
       mask <- beta_matrix[, tmp] >= 0.5
       beta_matrix[, tmp][mask] <- 0.49
       rm(tmp)
 
-      tmp <- apollo_variables[apollo_variables %in% c(times_elasticities, goods_elasticities, sig)]
+      tmp <- apollo_variables[apollo_variables %in% c(times_elasticities, goods_elasticities, sig, cholesky_diag)]
       mask <- beta_matrix[, tmp] <= 0
       beta_matrix[, tmp][mask] <- 0.001
       rm(tmp)
@@ -135,7 +152,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
      } else {
       # TODO asegurarse de que funcione bien con los covariates
       tmp <- apollo_variables[
-        (apollo_variables %in% c(work_elasticities, times_elasticities, goods_elasticities, sig)) & !startsWith(apollo_variables, "thw")
+        (apollo_variables %in% c(work_elasticities, times_elasticities, goods_elasticities, sig, cholesky_diag)) & !startsWith(apollo_variables, "thw")
       ]
       mask <- beta_matrix[, tmp] <= 0
       beta_matrix[, tmp][mask] <- 0.001
@@ -178,8 +195,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
         "*" )
     }
 
-    covs <- covs[covs %in% apollo_variables]
-    tmp <- c(rho, covs)
+    tmp <- c(rho, cholesky_off)
     if (length(tmp) > 0) {
           beta_matrix[, tmp] <- 0
     }
@@ -195,6 +211,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     goods_elasticities_params = normalization$goods_elasticities
     sig_params = normalization$sig
     rho_params = normalization$rho
+    cholesky_params = normalization$cholesky
     logit_params = normalization$covs
 
     # Detect if this is a latent class model by checking for apollo_lcPars
@@ -210,6 +227,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
         goods_elasticities_params,
         sig_params,
         rho_params,
+        cholesky_params,
         logit_params
       )
     } else {
@@ -220,6 +238,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
         if (!is.null(goods_elasticities_params)) {goods_elasticities_params_s <- paste0(goods_elasticities_params,"_",k)} else {goods_elasticities_params_s <- NULL}
         if (!is.null(sig_params)) {sig_params_s <- paste0(sig_params,"_",k)} else {sig_params_s <- NULL}
         if (!is.null(rho_params)) {rho_params_s <- paste0(rho_params,"_",k)} else {rho_params_s <- NULL}
+        if (!is.null(cholesky_params)) {cholesky_params_s <- paste0(cholesky_params,"_",k)} else {cholesky_params_s <- NULL}
         if (!is.null(logit_params)) {logit_params_s <- paste0(logit_params,"_",k)} else {logit_params_s <- NULL}
 
         beta_matrix <- normalize(
@@ -230,6 +249,7 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
           goods_elasticities = goods_elasticities_params_s,
           sig = sig_params_s,
           rho = rho_params_s,
+          cholesky = cholesky_params_s,
           covs = logit_params_s
         )
       }
@@ -338,6 +358,8 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
       } else {
         flag_expression <- (code==4&is_bgw|code==0&is_bfgs) & (ll>best_ll)
       }
+
+      if (is.na(flag_expression)) flag_expression <- FALSE
 
       if (flag_expression) {
         best_ll <- models[[i]]$maximum

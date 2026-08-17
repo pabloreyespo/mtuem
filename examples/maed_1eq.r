@@ -50,7 +50,7 @@ apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "es
 }
 
 model <- apollo_estimate(apollo_beta, apollo_fixed,
-                          apollo_probabilities, apollo_inputs)
+                          apollo_probabilities, apollo_inputs, estimate_settings = est_set)
 apollo_modelOutput(model)
 
 ### Predictions

@@ -1,6 +1,7 @@
 #' Function for getting optimal time allocated to work, with Theta-Phi formulation
 #' @keywords internal
 #' @export
+#'
 get_tw_thph <- function(work_elasticities, tau, Tc, Ec, w) {
   ec   <- Ec / (w * (tau-Tc))
   base <- work_elasticities$Theta + work_elasticities$Phi + work_elasticities$thw
@@ -84,6 +85,86 @@ get_values_of_time_albe <- function(tw, work_elasticities, Tc, Ec, w) {
     VoL  <- cteVoLi * coefVoL
     VTAW <- VoL - w
 
+    return(cbind(VoL, VTAW))
+  }
+
+#' Function for getting the aggregates of the additive quadratic formulation
+#'
+#' Computes the four sufficient statistics of the additive quadratic MTUEM over
+#' the freely allocated activities and goods:
+#' \eqn{S_\theta=\sum \theta_i/\beta_i}, \eqn{B=\sum 1/\beta_i},
+#' \eqn{S_\phi=\sum P_j\phi_j/\eta_j} and \eqn{H=\sum P_j^2/\eta_j}.
+#' The goods aggregates are price weighted because the monetary budget adds
+#' expenditures \eqn{P_jX_j}, not quantities.
+#'
+#' @keywords internal
+#' @export
+#'
+get_additive_quadratic_essentials <- function(times_elasticities, times_satiations, goods_elasticities, goods_satiations, goods_cost = 1) {
+  theta <- unlist(times_elasticities)
+  beta  <- unlist(times_satiations)
+  phi   <- unlist(goods_elasticities)
+  eta   <- unlist(goods_satiations)
+  P     <- unlist(goods_cost)
+  if (length(P) == 1) P <- rep(P, length(eta))
+
+  values <- list(
+    Sth = sum(theta / beta),
+    Sph = sum(P * phi / eta),
+    B   = sum(1 / beta),
+    H   = sum(P^2 / eta)
+  )
+  return(values)
+}
+
+#' Function for getting optimal time allocated to work, with additive quadratic formulation
+#' @keywords internal
+#' @export
+get_tw_additive_quadratic <- function(work_elasticity, work_satiation, Sth, Sph, B, H, tau, Tc, Ec, w) {
+  num_1 <- unlist(work_elasticity)
+  num_2 <- w*(Sph+Ec) / H
+  num_3 <- (Sth-(tau-Tc)) / B
+  den <- unlist(work_satiation) + w^2/H + 1/B
+  tw_opt <- (num_1 + num_2 - num_3) / den
+  tw_opt <- matrix(tw_opt, ncol = 1)
+  return(tw_opt)
+}
+
+#' Function for getting optimal time allocated to activities, with additive quadratic formulation
+#' @keywords internal
+#' @export
+get_ti_additive_quadratic <- function(times_elasticities, times_satiations, Sth, B, tau, Tw, Tc) {
+  theta <- unlist(times_elasticities)
+  beta  <- unlist(times_satiations)
+  Tw    <- as.numeric(unlist(Tw))
+  mu    <- (Sth - (tau - Tw - Tc)) / B  # time shadow price, one value per observation
+  ti_opt <- outer(rep(1, length(mu)), theta / beta) - outer(mu, 1 / beta)
+  return(ti_opt)
+}
+
+#' Function for getting optimal allocation of expenses to goods, with additive quadratic formulation
+#' @keywords internal
+#' @export
+get_xi_additive_quadratic <- function(goods_elasticities, goods_satiations, goods_cost, Sph, H, Tw, Ec, w) {
+  phi <- unlist(goods_elasticities)
+  eta <- unlist(goods_satiations)
+  P   <- unlist(goods_cost)
+  if (length(P) == 1) P <- rep(P, length(eta))
+  Tw  <- as.numeric(unlist(Tw))
+  lambda <- (Sph - (w*Tw - Ec)) / H  # money shadow price, one value per observation
+  xj_opt <- outer(rep(1, length(lambda)), phi / eta) - outer(lambda, P / eta)
+  return(xj_opt)
+}
+
+#' Function for getting values of time, with additive quadratic formulation
+#' @keywords internal
+#' @export
+get_values_of_time_additive_quadratic <- function(Sth, Sph, B, H, Tw, tau, Tc, Ec, w) {
+    Tw <- as.numeric(unlist(Tw))
+    mu = (Sth - (tau - Tw - Tc)) / B
+    lambda = (Sph - (w*Tw - Ec)) / H
+    VoL  <- mu / lambda
+    VTAW <- VoL - w
     return(cbind(VoL, VTAW))
   }
 

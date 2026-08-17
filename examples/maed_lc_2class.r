@@ -172,7 +172,7 @@ multi_starts <- customMultiStart(
   customMultistart_settings = list(
     apolloBetaMax = apollo_beta + 1,
     apolloBetaMin = apollo_beta - 1,
-    nCandidates = 20
+    nCandidates = 5
   ),
   estimate_settings = est_set,
   first_em = TRUE,
@@ -185,7 +185,9 @@ multi_starts <- customMultiStart(
     times_elasticities = c("th1", "th2"),
     goods_elasticities = c(),
     sig = c("sig1", "sig2", "sig3"),
-    rho = c("rho12", "rho13", "rho23")
+    rho = c("rho12", "rho13", "rho23"),
+
+    covs = c("asc", "x_female", "x_older45")
   ),
   nClass = 2
 )

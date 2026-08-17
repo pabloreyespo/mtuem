@@ -146,6 +146,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     if (length(cholesky) != M * (M + 1) / 2) {
       stop(paste0("The length of cholesky (", length(cholesky), ") must match M * (M + 1) / 2 where M is the number of equations (", M, ")."))
     }
+    
     L_mat <- matrix(0, nrow = M, ncol = M)
     idx <- 1
     for (r in 1:M) {
@@ -229,6 +230,9 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
     }
 
     if (!(flag_times | flag_goods)) {
+      if (any(is.na(sig)) || any(sig <= 1e-6) || any(is.infinite(sig))) {
+        return(rep(0, N))
+      }
       mu = err_ll/sig
       ll = -0.5*mu^2 -log(sig) -0.5*log(2*base::pi)
     } else {
@@ -242,18 +246,28 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
         }
       }
 
-      mu = t(t(err_ll) / sig)
-      # mu = sweep(err_ll, MARGIN = 2, sig, "/")
+      if (any(is.na(sig)) || any(sig <= 1e-6) || any(is.infinite(sig)) || 
+          any(is.na(rho)) || any(is.infinite(rho))) {
+        return(rep(0, N))
+      }
 
+      eigs <- eigen(rho, symmetric = TRUE, only.values = TRUE)$values
+      if (any(is.na(eigs)) || any(eigs <= 1e-6)) {
+        return(rep(0, N))
+      }
+
+      mu = t(t(err_ll) / sig)
+
+      ######################################################################
+      # maybe delete
       #eigs <- eigen(rho, symmetric = TRUE, only.values = TRUE)$values
       #if (any(eigs <= 0)) {
         # Return zero likelihood for this parameter vector so the
         # optimizer steps away from the non-PD region:
       #  return(rep(0, N))
       #}
-
+      ####################################################################
       cond <- get_cond_err(mu, rho)
-
       cond_mu  <- cond$cond_mu
       cond_sd  <- cond$cond_sd
 

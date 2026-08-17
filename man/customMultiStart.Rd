@@ -53,7 +53,7 @@ customMultiStart(
 
 \item{verbose}{Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.}
 
-\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig} and \code{rho} as well as "normalization" = "theta_phi" or "alpha_beta".}
+\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig}, \code{rho}, and \code{cholesky} as well as "normalization" = "theta_phi" or "alpha_beta".}
 
 \item{nClass}{Numeric. Number of latent classes. Default: 1.}
 }
