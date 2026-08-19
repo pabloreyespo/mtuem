@@ -23,7 +23,7 @@
 #' @param em_iter_max Numeric vector. Number of iterations of EM algorithm to be run. Only valid if \code{first_em} is set to TRUE. Default: 5.
 #' @param non_saddle Boolean. If TRUE the procedure will inspect if the estimation result is at least a local optimum to be accepted as a best solution. If FALSE saddle points will also be accepted. Default: TRUE
 #' @param verbose Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.
-#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig}, \code{rho}, and \code{cholesky} as well as "normalization" = "theta_phi" or "alpha_beta".
+#' @param normalization Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig}, \code{rho}, and \code{cholesky} as well as "normalization" = "theta_phi" or "alpha_beta". For latent class models (\code{nClass > 1}), names are automatically suffixed with \code{"_1"}, \code{"_2"}, etc. for each class. A parameter that is shared ACROSS classes (e.g. a single covariance structure common to every class) should be passed using its un-suffixed name; after the per-class passes, one additional normalization pass is run using the raw names in \code{normalization}, so shared parameters (which have no class suffix in \code{apollo_beta}) are normalized correctly as well.
 #' @param nClass Numeric. Number of latent classes. Default: 1.
 #'
 #' @return a named list containing the best model, the best log-likelihood and all estimated models.
@@ -160,42 +160,55 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
 
       th <- work_elasticities[startsWith(work_elasticities, "Theta" )]
       ph <- work_elasticities[startsWith(work_elasticities, "Phi" )]
-      if (th %in% apollo_variables) {
+      if (length(th) == 1 && th %in% apollo_variables) {
         cap_times_elasticities <- beta_matrix[,th]
       } else {
         cap_times_elasticities <- 1
       }
 
-      if (ph %in% apollo_variables) {
+      if (length(ph) == 1 && ph %in% apollo_variables) {
         cap_goods_elasticities <- beta_matrix[,ph]
       } else {
         cap_goods_elasticities <- 1
       }
     }
 
+    # Parameters not present in apollo_variables (e.g. fixed parameters, or a
+    # class-suffixed name that does not exist because the parameter is shared
+    # across classes) are dropped here so the blocks below are a no-op for them.
+    times_elasticities <- intersect(times_elasticities, apollo_variables)
+    goods_elasticities <- intersect(goods_elasticities, apollo_variables)
+
     if (length(times_elasticities)>0) {
-        rsum <- rowSums(beta_matrix[,times_elasticities])
+        rsum <- rowSums(beta_matrix[,times_elasticities, drop = FALSE])
         mask <- rsum > cap_times_elasticities
         rand <- stats::runif(sum(mask),0,1)
+        cap_times_elasticities_masked <- if (length(cap_times_elasticities) == 1) {
+          rep(cap_times_elasticities, sum(mask))
+        } else {
+          cap_times_elasticities[mask]
+        }
         beta_matrix[mask, times_elasticities] <- sweep(
-          beta_matrix[mask, times_elasticities],
+          beta_matrix[mask, times_elasticities, drop = FALSE],
           1,
-          cap_times_elasticities / (rsum[mask] + rand),
+          cap_times_elasticities_masked / (rsum[mask] + rand),
           "*" )
     }
 
     if (length(goods_elasticities)>0) {
-      rsum <- rowSums(beta_matrix[,goods_elasticities])
+      rsum <- rowSums(beta_matrix[,goods_elasticities, drop = FALSE])
       mask <- rsum > cap_goods_elasticities
       rand <- stats::runif(sum(mask),0,1)
       beta_matrix[mask, goods_elasticities] <- sweep(
-        beta_matrix[mask, goods_elasticities],
+        beta_matrix[mask, goods_elasticities, drop = FALSE],
         1,
         cap_goods_elasticities[mask] / (rsum[mask] + rand),
         "*" )
     }
 
-    tmp <- c(rho, cholesky_off)
+    # Intersect with apollo_variables so this is a no-op for parameters that
+    # are not actually present as beta names (see comment above).
+    tmp <- intersect(c(rho, cholesky_off), apollo_variables)
     if (length(tmp) > 0) {
           beta_matrix[, tmp] <- 0
     }
@@ -204,7 +217,9 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
     return(beta_matrix)
   }
 
-  if (normalization$normalization %in% c("alpha_beta", "theta_phi")) {
+  # normalization defaults to NA (an atomic vector), in which case no
+  # normalization pass is run at all.
+  if (is.list(normalization) && normalization$normalization %in% c("alpha_beta", "theta_phi")) {
     norm = normalization$normalization
     work_elasticities_params = normalization$work_elasticities
     times_elasticities_params = normalization$times_elasticities
@@ -253,6 +268,22 @@ customMultiStart <- function(apollo_beta, apollo_fixed, apollo_probabilities, ap
           covs = logit_params_s
         )
       }
+
+      # Additional pass for parameters shared ACROSS classes (e.g. a single
+      # covariance structure common to every class), passed without a class
+      # suffix in `normalization`. The intersect()/length-guards added above
+      # make this a no-op whenever no such shared parameter exists.
+      beta_matrix <- normalize(
+        beta_matrix = beta_matrix,
+        normalization = norm,
+        work_elasticities = work_elasticities_params,
+        times_elasticities = times_elasticities_params,
+        goods_elasticities = goods_elasticities_params,
+        sig = sig_params,
+        rho = rho_params,
+        cholesky = cholesky_params,
+        covs = logit_params
+      )
     }
   }
 
