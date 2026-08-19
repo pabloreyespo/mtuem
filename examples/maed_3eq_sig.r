@@ -3,20 +3,22 @@ library(apollo)
 library(mtuem)
 set.seed(42)
 
-# =============================================================================
-# Example 2b: Three Equations with Explicit Standard Deviations
-# =============================================================================
-# 3 equations: work (Tw), one free time (Tf1), one free good (Ef1).
-# sig parameters are estimated (one per equation).
-# Correlations are inferred from residuals.
-# =============================================================================
+# Example 2b: three equations (Tw, Tf1, Ef1) with one estimated sig per
+# equation. Correlations are profiled out of the likelihood.
 
 apollo_initialise()
 apollo_control <- list(
   modelName = "maed-3eq-sig",
-  modelDescr = "Three equations with explicit sigma, inferred correlations",
+  modelDescr = "Three equations with explicit sigma, profiled correlations",
   indivID = "PeID",
   outputDirectory = "output"
+)
+
+est_set <- list(
+  writeIter = FALSE,
+  maxIterations = 500,
+  estimationRoutine = "bgw",
+  hessianRoutine = "numDeriv"
 )
 
 database <- mtuem::maed
@@ -58,14 +60,46 @@ apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "es
   return(P)
 }
 
+### Single estimation from the starting values above
 model <- apollo_estimate(apollo_beta, apollo_fixed,
-                          apollo_probabilities, apollo_inputs)
+                         apollo_probabilities, apollo_inputs,
+                         estimate_settings = est_set)
 apollo_modelOutput(model)
 
-### Retrieve covariance matrix
-corr_result <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs,
-                               vars = c("Tw", "Tf1", "Ef1"))
-cat("\n--- Covariance Matrix ---\n")
+### Starting values module: same model, best of several random starts
+multi_start <- customMultiStart(
+  apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
+  customMultistart_settings = list(
+    apolloBetaMax = apollo_beta + 1,
+    apolloBetaMin = apollo_beta - 1,
+    nCandidates = 5
+  ),
+  estimate_settings = est_set,
+  non_saddle = TRUE,
+  normalization = list(
+    normalization = "theta_phi",
+    work_elasticities = c("Theta", "Phi", "thw"),
+    times_elasticities = c("theta_1"),
+    goods_elasticities = c("phi_1"),
+    sig = c("sig_1", "sig_2", "sig_3")
+  )
+)
+model <- multi_start$best_model
+apollo_modelOutput(model)
+
+### Error covariance implied by the residuals
+corr_result <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs)
 print(corr_result$covar)
-cat("\n--- Correlation Matrix ---\n")
 print(corr_result$corr)
+
+### Values of time. mtuem_values_of_time rebuilds the optimal work time from the
+### estimates and reports the sample means of
+###   VoL  = ((w * Tw - Ec) / (tau - Tw - Tc)) * Theta / Phi
+###   VTAW = ((w * Tw - Ec) / Tw) * thw / Phi,  equivalently VoL - w
+### with delta method standard errors, printing one line per quantity with its
+### confidence interval. vot$summary and vot$individual hold the same numbers.
+vot <- mtuem_values_of_time(model, apollo_inputs, Ec = "EcI")
+
+### Predicted allocations
+pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
+head(pred)

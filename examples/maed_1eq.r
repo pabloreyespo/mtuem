@@ -3,15 +3,8 @@ library(apollo)
 library(mtuem)
 set.seed(42)
 
-# =============================================================================
-# Example 1: Single Equation (Work Only)
-# =============================================================================
-# The simplest model estimates only the work equation.
-# No free times or free goods are specified.
-# Theta is fixed to 1 for identification.
-# =============================================================================
+# Example 1: single equation (work only). Theta is fixed to 1 for identification.
 
-### Initialise
 apollo_initialise()
 apollo_control <- list(
   modelName = "maed-1eq",
@@ -20,11 +13,16 @@ apollo_control <- list(
   outputDirectory = "output"
 )
 
-### Load data
+est_set <- list(
+  writeIter = FALSE,
+  maxIterations = 500,
+  estimationRoutine = "bgw",
+  hessianRoutine = "numDeriv"
+)
+
 database <- mtuem::maed
 database <- database[database$EcI > 0, ]
 
-### Parameters: Theta fixed to 1 for identification
 apollo_beta <- c(Theta = 1, Phi = 1, thw = 0)
 apollo_fixed <- c("Theta")
 
@@ -49,27 +47,38 @@ apollo_probabilities <- function(apollo_beta, apollo_inputs, functionality = "es
   return(P)
 }
 
+### Single estimation from the starting values above
 model <- apollo_estimate(apollo_beta, apollo_fixed,
-                          apollo_probabilities, apollo_inputs, estimate_settings = est_set)
+                         apollo_probabilities, apollo_inputs,
+                         estimate_settings = est_set)
 apollo_modelOutput(model)
 
-### Predictions
+### Starting values module: same model, best of several random starts
+multi_start <- customMultiStart(
+  apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs,
+  customMultistart_settings = list(
+    apolloBetaMax = apollo_beta + 1,
+    apolloBetaMin = apollo_beta - 1,
+    nCandidates = 5
+  ),
+  estimate_settings = est_set,
+  non_saddle = TRUE,
+  normalization = list(
+    normalization = "theta_phi",
+    work_elasticities = c("Theta", "Phi", "thw")
+  )
+)
+model <- multi_start$best_model
+apollo_modelOutput(model)
+
+### Values of time. mtuem_values_of_time rebuilds the optimal work time from the
+### estimates and reports the sample means of
+###   VoL  = ((w * Tw - Ec) / (tau - Tw - Tc)) * Theta / Phi
+###   VTAW = ((w * Tw - Ec) / Tw) * thw / Phi,  equivalently VoL - w
+### with delta method standard errors, printing one line per quantity with its
+### confidence interval. vot$summary and vot$individual hold the same numbers.
+vot <- mtuem_values_of_time(model, apollo_inputs, Ec = "EcI")
+
+### Predicted allocations
 pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs)
 head(pred)
-
-### Values of Time
-Tw <- pred$Tw
-w  <- database$w
-Tc <- database$Tc
-Ec <- database$Ec
-
-cteVoL  <- mean((w * Tw - Ec) / (168 - Tw - Tc))
-cteVTAW <- mean((w * Tw - Ec) / Tw)
-
-delta <- apollo_deltaMethod(model, list(
-  expression = c(
-    VoL  = paste0(cteVoL,  "*Theta/Phi"),
-    VTAW = paste0(cteVTAW, "*thw/Phi")
-  )
-))
-delta
