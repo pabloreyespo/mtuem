@@ -53,7 +53,7 @@ customMultiStart(
 
 \item{verbose}{Boolean. If TRUE the estimation procedure will be printed in the console. Default FALSE.}
 
-\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig}, \code{rho}, and \code{cholesky} as well as "normalization" = "theta_phi" or "alpha_beta".}
+\item{normalization}{Named list. If not NULL (default) normalizes the parameters. Each list must contain the name of the respective parameters inside \code{work_elasticities}, \code{times_elasticities}, \code{goods_elasticities}, \code{sig}, \code{rho}, and \code{cholesky} as well as "normalization" = "theta_phi" or "alpha_beta". For latent class models (\code{nClass > 1}), names are automatically suffixed with \code{"_1"}, \code{"_2"}, etc. for each class. A parameter that is shared ACROSS classes (e.g. a single covariance structure common to every class) should be passed using its un-suffixed name; after the per-class passes, one additional normalization pass is run using the raw names in \code{normalization}, so shared parameters (which have no class suffix in \code{apollo_beta}) are normalized correctly as well.}
 
 \item{nClass}{Numeric. Number of latent classes. Default: 1.}
 }
