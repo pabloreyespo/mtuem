@@ -202,24 +202,7 @@ mtuem_likelihood <- function(mtuem_settings, functionality="estimate"){
   #### ESTIMATE, CONDITIONALS AND RAW #### ----> Calculan la verosimilitud (La que tengo en likelihoods)
   # ------------------------------------ #
   if(functionality %in% c("estimate", "conditionals", "raw")){
-    tw_opt <- get_tw_thph(work_elasticities, tau, Tc, Ec, w)
-    if (optimal_tw) {
-      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, tw_opt, tau, Tc)
-      xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, tw_opt, Ec, w)
-    } else {
-      ti_opt <- get_ti_thph(times_elasticities, work_elasticities$Theta, apollo_inputs$database[, work_times], tau, Tc)
-      xj_opt <- get_xi_thph(goods_elasticities, goods_cost, work_elasticities$Phi, apollo_inputs$database[, work_times], Ec, w)
-    }
-
-    opt <- cbind(tw_opt, unlist(ti_opt), unlist(xj_opt))
-    colnames(opt) <- c(work_times, free_times, free_goods)
-
-    if (is.null(apollo_inputs$obs_matrix)) {
-      obs <- as.matrix(apollo_inputs$database[, colnames(opt)] )
-    } else {
-      obs <- apollo_inputs$obs_matrix
-    }
-    err <- obs - opt
+    err <- mtuem_residuals(mtuem_settings, apollo_inputs)
 
     err_ll <- err
     #err_ll[is.na(err_ll)] <- 0
