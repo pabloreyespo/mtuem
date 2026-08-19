@@ -1,6 +1,6 @@
 Package: mtuem
 Title: Estimate Microeconomic Time-Use-Expenditure Models in Apollo
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: c(
     person(
       "Pablo", "Reyes-Polanco",
@@ -14,13 +14,14 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Depends: R (>= 4.3.0)
-Imports: apollo, stats, MASS
+Imports: apollo, stats, MASS, Matrix
 LazyData: true
 LazyDataCompression: gzip
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
-    arrow
+    arrow,
+    testthat
 VignetteBuilder: knitr
 URL: https://github.com/pabloreyespo/mtuem
 BugReports: https://github.com/pabloreyespo/mtuem/issues
