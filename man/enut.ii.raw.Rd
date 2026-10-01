@@ -3,13 +3,9 @@
 \docType{data}
 \name{enut.ii.raw}
 \alias{enut.ii.raw}
-\title{Processed dataset from the second National Time-Use Survey (ENUT II), applied by the
-Instituto Nacional de Estadísticas de Chile. Contains 25 detailed time-use activity
-categories and household expenditures imputed from the IX Encuesta de Presupuestos
-Familiares (EPF). Used as the primary input for structural time-use models via
-\code{get_data()}.}
+\title{enut.ii.raw}
 \format{
-A data frame with approximately 4,000-5,000 rows and 129 variables
+A data frame with 13,373 rows and 151 variables
 }
 \source{
 \url{https://www.ine.gob.cl/enut}
@@ -20,11 +16,19 @@ A data frame with approximately 4,000-5,000 rows and 129 variables
 data(enut.ii.raw)
 }
 \description{
-All income and expenditure variables are expressed in weekly thousands of Chilean pesos,
-deflated by IPC adjustment (factor 0.362). Time variables are expressed in weekly hours,
-normalized to sum to 168.
+Processed dataset from the second National Time-Use Survey (ENUT II), applied by the
+Instituto Nacional de Estadísticas de Chile. Contains 25 detailed time-use activity
+categories and household expenditures imputed from the IX Encuesta de Presupuestos
+Familiares (EPF). Used as the primary input for structural time-use models via
+\code{get_data()}.
 }
 \details{
+All income and expenditure variables are expressed in weekly thousands of nominal Chilean pesos
+of the survey period (September to December 2023): monthly amounts divided by 1000 and by 4, with
+EPF IX expenditures scaled by 1.18 to the ENUT period. No IPC deflation is applied. Time variables
+are expressed in weekly hours,
+normalized to sum to 168.
+
 \describe{
 \item{id_persona}{Individual identifier}
 \item{id_hog}{Household identifier}
@@ -141,7 +145,11 @@ Same scale as bs12. Missing: 88, 96, 99. N valid: 7071.}
 \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
 
-\item{t_to}{Trabajo remunerado (paid work), horas semanales}
+\item{t_to}{Trabajo remunerado (paid work), horas semanales. Contracted hours
+(\code{adjust_working_hours()}); the diary value (to5) is only used for the weekend
+imputation and the diary versus contract filter. Excludes work commutes (to3, to7, in
+\code{t_tto}) and job search (to9, in \code{t_to_js})}
+\item{t_to_js}{Busqueda de trabajo o inicio de negocio (to9), horas semanales}
 \item{t_tcnr_ce}{Trabajo de cuidado no remunerado - cuidados esenciales: cuidado fisico personal de
 miembros del hogar (aseo, alimentacion, vestido), horas semanales}
 \item{t_tcnr_re}{Trabajo de cuidado no remunerado - cuidados relativos a la ensenanza: acompanamiento
@@ -173,16 +181,21 @@ horas semanales}
 horas semanales}
 \item{t_tvaoh_oh}{Trabajo voluntario y ayuda a otros hogares - ayuda directa a otros hogares,
 horas semanales}
-\item{t_cpaf_cp}{Cuidados personales - actividades fisiologicas (higiene, visitas medicas, ejercicio),
-excluye sueno y comidas, horas semanales}
+\item{t_cpaf_cp}{Cuidados personales (bano, vestirse, arreglarse, consultas medicas), excluye sueno,
+comidas y traslados a salud, horas semanales. Sports and exercise are in \code{t_vsyo_dep}}
 \item{t_cpag_comer}{Cuidados personales - comer y beber, horas semanales}
 \item{t_cpag_dormir}{Cuidados personales - dormir; ajustado para que la suma de actividades sea
 168 horas, horas semanales}
-\item{t_ed}{Educacion y formacion (asistencia a clases, estudio, capacitacion), horas semanales}
-\item{t_vsyo_csar}{Vida social y ocio - convivencia social y actividades recreativas (reuniones,
-fiestas, deportes como espectador), horas semanales}
-\item{t_vsyo_aa}{Vida social y ocio - artes y aficiones (artes plasticas, artesania, juegos),
-horas semanales}
+\item{t_ed}{Educacion y formacion (asistencia a clases, estudio, capacitacion), excluye traslados
+(ed2, ed5, in \code{t_ted}), horas semanales}
+\item{t_vsyo_csar}{Vida social y ocio - convivencia con familiares o amigos (vs1) y celebraciones
+civicas o religiosas (vs3), horas semanales}
+\item{t_vsyo_ev}{Vida social y ocio - asistencia como publico a eventos culturales, de
+entretenimiento o deportivos (vs2), horas semanales}
+\item{t_vsyo_aa}{Vida social y ocio - artes y aficiones: instrumentos, pintura, baile, canto (vs4) y
+juegos de mesa, cartas o videojuegos (vs5), horas semanales}
+\item{t_vsyo_dep}{Vida social y ocio - practica de deporte o ejercicio fisico (vs6), horas semanales}
+\item{t_descanso}{Descanso, meditacion o relajacion sin hacer nada mas (vs11), horas semanales}
 \item{t_mcm_leer}{Medios de comunicacion y masivos - lectura (libros, prensa, digital), horas semanales}
 \item{t_mcm_audio}{Medios de comunicacion y masivos - consumo de audio (radio, musica, podcasts),
 horas semanales}
@@ -204,7 +217,8 @@ horas semanales}
 \item{t_ttcnr_oac_health}{Traslados asociados a cuidados esenciales / salud
 (traslado ida: tc21_t, vuelta: tc25_t), horas semanales}
 \item{t_ttcnr_oac_work}{Traslados asociados a otros cuidados / trabajo
-(traslado ida: tc31_t, vuelta: tc34_t), horas semanales}
+(traslado ida: tc31_t, vuelta: tc34_t), horas semanales. tc21, tc25, tc31 and tc34 are
+removed from \code{t_tcnr_oac}, whose INE aggregate contains them}
 
 \strong{Commute activity time variables} (associated activity time within
 each commute total; computed after twin imputation). The \code{_ds} suffix

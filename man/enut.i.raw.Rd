@@ -5,7 +5,7 @@
 \alias{enut.i.raw}
 \title{enut.i.raw}
 \format{
-A data frame with 9,497 rows and 108 variables
+A data frame with 9,412 rows and 112 variables
 }
 \source{
 \url{https://www.ine.gob.cl/enut}
@@ -25,7 +25,7 @@ which aggregates the same records into model-ready time categories.
 }
 \details{
 All income and expenditure variables are expressed in weekly thousands of
-Chilean pesos. Time variables are expressed in weekly hours and normalized to
+nominal Chilean pesos of 2015. Time variables are expressed in weekly hours and normalized to
 sum to 168.
 
 \describe{
@@ -42,7 +42,7 @@ sum to 168.
 \item{n_menores_0_4}{Number of household members aged 0 to 4}
 \item{n_menores_5_14}{Number of household members aged 5 to 14}
 \item{n_nna}{Number of household members aged 0 to 14}
-\item{n_menores_18}{Number of household members aged 0 to 18}
+\item{n_menores_18}{Number of household members under 18, capped at 4}
 \item{n_personas_15_65}{Number of household members aged 15 to 65}
 \item{n_mayores}{Number of adult household members}
 \item{n_tiempo}{Number of household members who reported time use}
@@ -90,7 +90,6 @@ sum to 168.
 \item{ing_personal}{Personal income}
 \item{ingreso_hogar}{Total household disposable income}
 \item{income_person_week}{Household income divided by number of members}
-\item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 
 \item{t_to}{Paid work}
 \item{t_to_js}{Job search}
@@ -110,8 +109,12 @@ sum to 168.
 \item{t_cpag_comer}{Eating and drinking}
 \item{t_cpag_dormir}{Sleeping, adjusted to balance the 168 hour total}
 \item{t_ed}{Education and training}
-\item{t_vsyo_csar}{Social life and recreation}
-\item{t_vsyo_aa}{Arts and hobbies}
+\item{t_vsyo_csar}{Social life: conversation with friends or family (s11) and civic or religious
+celebrations (s22)}
+\item{t_vsyo_ev}{Cinema, theatre, concerts (s21) and sports events (s23)}
+\item{t_vsyo_aa}{Arts and hobbies: music, dance, writing (s31) and board or video games (s32)}
+\item{t_vsyo_dep}{Sports and exercise (s41)}
+\item{t_descanso}{Rest; not asked in ENUT I, always 0}
 \item{t_mcm_leer}{Reading}
 \item{t_mcm_video}{Video and television}
 \item{t_mcm_audio}{Audio media}

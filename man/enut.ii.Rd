@@ -5,7 +5,7 @@
 \alias{enut.ii}
 \title{enut.ii}
 \format{
-A data frame with approximately 4,000-5,000 rows
+A data frame with 13,373 rows and 122 variables
 }
 \source{
 \url{https://www.ine.gob.cl/enut}
@@ -24,8 +24,10 @@ Familiares (EPF). Used as the primary input for structural time-use models via
 \code{get_data()} and \code{get_data_tc()}.
 }
 \details{
-All income and expenditure variables are expressed in weekly thousands of Chilean pesos,
-deflated by IPC adjustment (factor 0.362). Time variables are expressed in weekly hours,
+All income and expenditure variables are expressed in weekly thousands of nominal Chilean pesos
+of the survey period (September to December 2023): monthly amounts divided by 1000 and by 4, with
+EPF IX expenditures scaled by 1.18 to the ENUT period. No IPC deflation is applied. Time variables
+are expressed in weekly hours,
 normalized to sum to 168.
 
 \describe{
@@ -144,7 +146,8 @@ Same scale as bs12. Missing: 88, 96, 99. N valid: 7071.}
 \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
 
-\item{t_paid_work}{Trabajo remunerado; equivale a t_to, horas semanales}
+\item{t_paid_work}{Trabajo remunerado; equivale a t_to (horas contratadas), horas semanales}
+\item{t_job_search}{Busqueda de trabajo o inicio de negocio; equivale a t_to_js, horas semanales}
 \item{t_domestic_work}{Trabajo domestico no remunerado; suma de t_tdnr_psc + t_tdnr_lv +
 t_tdnr_lrc + t_tdnr_mrm + t_tdnr_admnhog + t_tdnr_comphog + t_tdnr_cmp, horas semanales}
 \item{t_care_work}{Trabajo de cuidado no remunerado; suma de t_tcnr_ce + t_tcnr_re +
@@ -165,32 +168,30 @@ Note: \code{t_tcnr_nna + t_tcnr_15_65 + t_tcnr_66 + t_tncr_psdf = t_care_work}
 \item{t_unpaid_voluntary}{Trabajo voluntario y ayuda a otros hogares; suma de t_tvaoh_tv +
 t_tvaoh_oh, horas semanales}
 \item{t_education}{Educacion y formacion; equivale a t_ed, horas semanales}
-\item{t_leisure}{Ocio; suma de t_vsyo_csar + t_vsyo_aa + t_mcm_leer + t_mcm_video +
-t_mcm_audio + t_mcm_computador, horas semanales}
+\item{t_leisure}{Ocio; suma de t_vsyo_csar + t_vsyo_ev + t_vsyo_aa + t_vsyo_dep + t_mcm_leer +
+t_mcm_video + t_mcm_audio + t_mcm_computador, horas semanales}
+\item{t_rest}{Descanso, meditacion o relajacion; equivale a t_descanso, horas semanales}
 \item{t_personal_care}{Cuidados personales fisiologicos (excluye sueno y comidas); equivale
 a t_cpaf_cp, horas semanales}
 \item{t_meals}{Comer y beber; equivale a t_cpag_comer, horas semanales}
 \item{t_sleep}{Dormir; equivale a t_cpag_dormir, ajustado para que la suma sea 168 horas,
 horas semanales}
-\item{t_commute_to}{Traslados asociados a trabajo remunerado, horas semanales}
-\item{t_commute_ed}{Traslados asociados a educacion, horas semanales}
-\item{t_commute_cpaf_cp}{Traslados asociados a cuidados personales y salud, horas semanales}
-\item{t_commute_tdnr_admnhog}{Traslados asociados a administracion del hogar, horas semanales}
-\item{t_commute_tdnr_comphog}{Traslados asociados a compras del hogar, horas semanales}
-\item{t_commute_tcnr_re}{Traslados asociados a cuidados relativos a la ensenanza, horas semanales}
-\item{t_commute_tcnr_ce}{Traslados asociados a cuidados esenciales, horas semanales}
-\item{t_commute_tcnr_oac}{Traslados asociados a otros cuidados, horas semanales}
+\item{t_commute}{Todos los traslados: t_tto + t_ted + t_tcpaf_cp + t_ttdnr_admnhog +
+t_ttdnr_comphog + t_ttcnr_re + t_ttcnr_oac_health + t_ttcnr_oac_work, horas semanales}
 
 \item{Tw}{Paid work time (equivalent to t_to / t_paid_work)}
-\item{Tf_social}{Social life and recreation time (equivalent to t_vsyo_csar)}
+\item{Tf_social}{Social life time (equivalent to t_vsyo_csar)}
+\item{Tf_events}{Attending cultural, entertainment or sports events (equivalent to t_vsyo_ev)}
 \item{Tf_hobbies}{Hobbies and arts time (equivalent to t_vsyo_aa)}
+\item{Tf_sports}{Sports and exercise time (equivalent to t_vsyo_dep)}
 \item{Tf_read}{Reading time (equivalent to t_mcm_leer)}
 \item{Tf_listen}{Audio consumption time (equivalent to t_mcm_audio)}
 \item{Tf_watch}{TV and video consumption time (equivalent to t_mcm_video)}
 \item{Tf_computer}{Recreational computer/internet use time (equivalent to t_mcm_computador)}
+\item{Tf_rest}{Resting, meditating or relaxing (equivalent to t_descanso)}
 \item{Tc_meals}{Time spent eating and drinking (equivalent to t_cpag_comer)}
 \item{Tc_sleep}{Time spent sleeping, adjusted to balance 168 hours (equivalent to t_cpag_dormir)}
-\item{Tc_other}{All other time use (domestic work, care, other personal care, volunteering, commuting, education)}
+\item{Tc_other}{All other time use (job search, domestic work, care, other personal care, volunteering, commuting, education)}
 
 \item{t_total}{Total weekly hours across all activities (should equal 168)}
 \item{w}{Hourly wage rate: ing_trab / t_paid_work (thousands CLP per hour)}

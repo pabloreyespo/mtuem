@@ -7,7 +7,8 @@
 #' de Presupuestos Familiares (EPF). Used as the primary input for structural time-use
 #' models via \code{get_data()} and \code{get_data_tc()}.
 #'
-#' All income and expenditure variables are expressed in weekly thousands of Chilean pesos.
+#' All income and expenditure variables are expressed in weekly thousands of nominal Chilean
+#' pesos of 2015 (monthly amounts divided by 1000 and by 4; EPF VIII expenditures divided by 1.025).
 #' Time variables are expressed in weekly hours, normalized to sum to 168.
 #'
 #' \describe{
@@ -24,7 +25,7 @@
 #'   \item{n_menores_0_4}{Number of household members aged 0 to 4}
 #'   \item{n_menores_5_14}{Number of household members aged 5 to 14}
 #'   \item{n_nna}{Number of household members aged 0 to 14}
-#'   \item{n_menores_18}{Number of household members aged 0 to 18}
+#'   \item{n_menores_18}{Number of household members under 18, capped at 4}
 #'   \item{n_personas_15_65}{Number of household members aged 15 to 65}
 #'   \item{n_mayores}{Number of adult household members (18+)}
 #'   \item{n_tiempo}{Number of household members who reported time use}
@@ -73,7 +74,6 @@
 #'   \item{ing_personal}{Personal income: ing_trab + ing_jub_aps + ing_gpp (weekly, thousands CLP)}
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
-#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_paid_work}{Trabajo remunerado; equivale a t_to, horas semanales}
 #'   \item{t_job_search}{Busqueda de trabajo; equivale a t_to_js, horas semanales}
@@ -84,23 +84,29 @@
 #'   \item{t_unpaid_voluntary}{Trabajo voluntario y ayuda a otros hogares; suma de t_tvaoh_tv +
 #'     t_tvaoh_oh, horas semanales}
 #'   \item{t_education}{Educacion y formacion; equivale a t_ed, horas semanales}
-#'   \item{t_leisure}{Ocio; suma de t_vsyo_csar + t_vsyo_aa + t_mcm_leer + t_mcm_video +
-#'     t_mcm_audio + t_mcm_computador, horas semanales}
+#'   \item{t_leisure}{Ocio; suma de t_vsyo_csar + t_vsyo_ev + t_vsyo_aa + t_vsyo_dep + t_mcm_leer +
+#'     t_mcm_video + t_mcm_audio + t_mcm_computador, horas semanales}
+#'   \item{t_rest}{Descanso; equivale a t_descanso. Not asked in ENUT I, always 0 (ENUT II item vs11)}
 #'   \item{t_personal_care}{Cuidados personales fisiologicos (excluye sueno y comidas); equivale
 #'     a t_cpaf_cp, horas semanales}
 #'   \item{t_meals}{Comer y beber; equivale a t_cpag_comer, horas semanales}
 #'   \item{t_sleep}{Dormir; equivale a t_cpag_dormir, ajustado para que la suma sea 168 horas,
 #'     horas semanales}
-#'   \item{t_commute1}{Traslados asociados a trabajo remunerado, educacion y salud; equivale a
-#'     t_tt1, horas semanales}
+#'   \item{t_commute}{Traslados asociados a trabajo remunerado, educacion y salud; equivale a
+#'     t_tt1, horas semanales. ENUT I only asks these three commutes}
 #'
 #'   \item{Tw}{Paid work time (equivalent to t_to / t_paid_work)}
-#'   \item{Tf_social}{Social life and recreation time (equivalent to t_vsyo_csar)}
-#'   \item{Tf_hobbies}{Hobbies and arts time (equivalent to t_vsyo_aa)}
+#'   \item{Tf_social}{Social life time: conversation with friends or family and civic or religious
+#'     celebrations (equivalent to t_vsyo_csar)}
+#'   \item{Tf_events}{Cinema, theatre, concerts and sports events (equivalent to t_vsyo_ev)}
+#'   \item{Tf_hobbies}{Hobbies and arts time: music, dance, writing, board or video games
+#'     (equivalent to t_vsyo_aa)}
+#'   \item{Tf_sports}{Sports and exercise time (equivalent to t_vsyo_dep)}
 #'   \item{Tf_read}{Reading time (equivalent to t_mcm_leer)}
 #'   \item{Tf_listen}{Audio consumption time (equivalent to t_mcm_audio)}
 #'   \item{Tf_watch}{TV and video consumption time (equivalent to t_mcm_video)}
 #'   \item{Tf_computer}{Recreational computer/internet use time (equivalent to t_mcm_computador)}
+#'   \item{Tf_rest}{Resting (equivalent to t_descanso); always 0 in ENUT I}
 #'   \item{Tc_meals}{Time spent eating and drinking (equivalent to t_cpag_comer)}
 #'   \item{Tc_sleep}{Time spent sleeping, adjusted to balance 168 hours (equivalent to t_cpag_dormir)}
 #'   \item{Tc_other}{All other time use (job search, domestic work, care, personal care,
@@ -140,10 +146,11 @@
 #' \code{enut.i.raw}. See \code{agregar_actividades()} in
 #' \code{data_processing/processing_functions.R} for the exact aggregation mapping.
 #'
-#' Compared to ENUT II, this dataset includes \code{t_job_search} as a separate activity
-#' category (absent in ENUT II) and a single commute category (\code{t_commute1}) since
-#' ENUT I does not distinguish a second commute type. \code{Tc_other} therefore also
-#' absorbs job search time.
+#' The aggregated variables have the same names and definitions as \code{enut.ii}. Two
+#' differences come from the questionnaires: ENUT I asks only work, health and education
+#' commutes (ENUT II asks eight), and ENUT I has no rest item, so \code{t_rest} and
+#' \code{Tf_rest} are 0 and rest time is spread over the other activities by the 168
+#' hour rescaling. \code{Tc_other} includes job search time in both surveys.
 #'
 #' @source <https://www.ine.gob.cl/enut>
 #' @source <https://www.ine.gob.cl/estadisticas/sociales/ingresos-y-gastos/encuesta-de-presupuestos-familiares>
@@ -152,7 +159,7 @@
 #' @keywords datasets
 #' @name enut.i
 #' @usage data(enut.i)
-#' @format A data frame with 9,497 rows and 98 variables
+#' @format A data frame with 9,412 rows and 109 variables
 NULL
 
 #' enut.i.raw
@@ -165,7 +172,7 @@ NULL
 #' which aggregates the same records into model-ready time categories.
 #'
 #' All income and expenditure variables are expressed in weekly thousands of
-#' Chilean pesos. Time variables are expressed in weekly hours and normalized to
+#' nominal Chilean pesos of 2015. Time variables are expressed in weekly hours and normalized to
 #' sum to 168.
 #'
 #' \describe{
@@ -182,7 +189,7 @@ NULL
 #'   \item{n_menores_0_4}{Number of household members aged 0 to 4}
 #'   \item{n_menores_5_14}{Number of household members aged 5 to 14}
 #'   \item{n_nna}{Number of household members aged 0 to 14}
-#'   \item{n_menores_18}{Number of household members aged 0 to 18}
+#'   \item{n_menores_18}{Number of household members under 18, capped at 4}
 #'   \item{n_personas_15_65}{Number of household members aged 15 to 65}
 #'   \item{n_mayores}{Number of adult household members}
 #'   \item{n_tiempo}{Number of household members who reported time use}
@@ -230,7 +237,6 @@ NULL
 #'   \item{ing_personal}{Personal income}
 #'   \item{ingreso_hogar}{Total household disposable income}
 #'   \item{income_person_week}{Household income divided by number of members}
-#'   \item{I}{Individual fixed income. I=ing_jub_aps+ing_g (weekly, thousands CLP)}
 #'
 #'   \item{t_to}{Paid work}
 #'   \item{t_to_js}{Job search}
@@ -250,8 +256,12 @@ NULL
 #'   \item{t_cpag_comer}{Eating and drinking}
 #'   \item{t_cpag_dormir}{Sleeping, adjusted to balance the 168 hour total}
 #'   \item{t_ed}{Education and training}
-#'   \item{t_vsyo_csar}{Social life and recreation}
-#'   \item{t_vsyo_aa}{Arts and hobbies}
+#'   \item{t_vsyo_csar}{Social life: conversation with friends or family (s11) and civic or religious
+#'     celebrations (s22)}
+#'   \item{t_vsyo_ev}{Cinema, theatre, concerts (s21) and sports events (s23)}
+#'   \item{t_vsyo_aa}{Arts and hobbies: music, dance, writing (s31) and board or video games (s32)}
+#'   \item{t_vsyo_dep}{Sports and exercise (s41)}
+#'   \item{t_descanso}{Rest; not asked in ENUT I, always 0}
 #'   \item{t_mcm_leer}{Reading}
 #'   \item{t_mcm_video}{Video and television}
 #'   \item{t_mcm_audio}{Audio media}
@@ -291,7 +301,7 @@ NULL
 #' @keywords datasets
 #' @name enut.i.raw
 #' @usage data(enut.i.raw)
-#' @format A data frame with 9,497 rows and 108 variables
+#' @format A data frame with 9,412 rows and 112 variables
 NULL
 
 #' enut.ii
@@ -303,8 +313,10 @@ NULL
 #' Familiares (EPF). Used as the primary input for structural time-use models via
 #' \code{get_data()} and \code{get_data_tc()}.
 #'
-#' All income and expenditure variables are expressed in weekly thousands of Chilean pesos,
-#' deflated by IPC adjustment (factor 0.362). Time variables are expressed in weekly hours,
+#' All income and expenditure variables are expressed in weekly thousands of nominal Chilean pesos
+#' of the survey period (September to December 2023): monthly amounts divided by 1000 and by 4, with
+#' EPF IX expenditures scaled by 1.18 to the ENUT period. No IPC deflation is applied. Time variables
+#' are expressed in weekly hours,
 #' normalized to sum to 168.
 #'
 #' \describe{
@@ -423,7 +435,8 @@ NULL
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
 #'
-#'   \item{t_paid_work}{Trabajo remunerado; equivale a t_to, horas semanales}
+#'   \item{t_paid_work}{Trabajo remunerado; equivale a t_to (horas contratadas), horas semanales}
+#'   \item{t_job_search}{Busqueda de trabajo o inicio de negocio; equivale a t_to_js, horas semanales}
 #'   \item{t_domestic_work}{Trabajo domestico no remunerado; suma de t_tdnr_psc + t_tdnr_lv +
 #'     t_tdnr_lrc + t_tdnr_mrm + t_tdnr_admnhog + t_tdnr_comphog + t_tdnr_cmp, horas semanales}
 #'   \item{t_care_work}{Trabajo de cuidado no remunerado; suma de t_tcnr_ce + t_tcnr_re +
@@ -444,32 +457,30 @@ NULL
 #'   \item{t_unpaid_voluntary}{Trabajo voluntario y ayuda a otros hogares; suma de t_tvaoh_tv +
 #'     t_tvaoh_oh, horas semanales}
 #'   \item{t_education}{Educacion y formacion; equivale a t_ed, horas semanales}
-#'   \item{t_leisure}{Ocio; suma de t_vsyo_csar + t_vsyo_aa + t_mcm_leer + t_mcm_video +
-#'     t_mcm_audio + t_mcm_computador, horas semanales}
+#'   \item{t_leisure}{Ocio; suma de t_vsyo_csar + t_vsyo_ev + t_vsyo_aa + t_vsyo_dep + t_mcm_leer +
+#'     t_mcm_video + t_mcm_audio + t_mcm_computador, horas semanales}
+#'   \item{t_rest}{Descanso, meditacion o relajacion; equivale a t_descanso, horas semanales}
 #'   \item{t_personal_care}{Cuidados personales fisiologicos (excluye sueno y comidas); equivale
 #'     a t_cpaf_cp, horas semanales}
 #'   \item{t_meals}{Comer y beber; equivale a t_cpag_comer, horas semanales}
 #'   \item{t_sleep}{Dormir; equivale a t_cpag_dormir, ajustado para que la suma sea 168 horas,
 #'     horas semanales}
-#'   \item{t_commute_to}{Traslados asociados a trabajo remunerado, horas semanales}
-#'   \item{t_commute_ed}{Traslados asociados a educacion, horas semanales}
-#'   \item{t_commute_cpaf_cp}{Traslados asociados a cuidados personales y salud, horas semanales}
-#'   \item{t_commute_tdnr_admnhog}{Traslados asociados a administracion del hogar, horas semanales}
-#'   \item{t_commute_tdnr_comphog}{Traslados asociados a compras del hogar, horas semanales}
-#'   \item{t_commute_tcnr_re}{Traslados asociados a cuidados relativos a la ensenanza, horas semanales}
-#'   \item{t_commute_tcnr_ce}{Traslados asociados a cuidados esenciales, horas semanales}
-#'   \item{t_commute_tcnr_oac}{Traslados asociados a otros cuidados, horas semanales}
+#'   \item{t_commute}{Todos los traslados: t_tto + t_ted + t_tcpaf_cp + t_ttdnr_admnhog +
+#'     t_ttdnr_comphog + t_ttcnr_re + t_ttcnr_oac_health + t_ttcnr_oac_work, horas semanales}
 #'
 #'   \item{Tw}{Paid work time (equivalent to t_to / t_paid_work)}
-#'   \item{Tf_social}{Social life and recreation time (equivalent to t_vsyo_csar)}
+#'   \item{Tf_social}{Social life time (equivalent to t_vsyo_csar)}
+#'   \item{Tf_events}{Attending cultural, entertainment or sports events (equivalent to t_vsyo_ev)}
 #'   \item{Tf_hobbies}{Hobbies and arts time (equivalent to t_vsyo_aa)}
+#'   \item{Tf_sports}{Sports and exercise time (equivalent to t_vsyo_dep)}
 #'   \item{Tf_read}{Reading time (equivalent to t_mcm_leer)}
 #'   \item{Tf_listen}{Audio consumption time (equivalent to t_mcm_audio)}
 #'   \item{Tf_watch}{TV and video consumption time (equivalent to t_mcm_video)}
 #'   \item{Tf_computer}{Recreational computer/internet use time (equivalent to t_mcm_computador)}
+#'   \item{Tf_rest}{Resting, meditating or relaxing (equivalent to t_descanso)}
 #'   \item{Tc_meals}{Time spent eating and drinking (equivalent to t_cpag_comer)}
 #'   \item{Tc_sleep}{Time spent sleeping, adjusted to balance 168 hours (equivalent to t_cpag_dormir)}
-#'   \item{Tc_other}{All other time use (domestic work, care, other personal care, volunteering, commuting, education)}
+#'   \item{Tc_other}{All other time use (job search, domestic work, care, other personal care, volunteering, commuting, education)}
 #'
 #'   \item{t_total}{Total weekly hours across all activities (should equal 168)}
 #'   \item{w}{Hourly wage rate: ing_trab / t_paid_work (thousands CLP per hour)}
@@ -512,18 +523,21 @@ NULL
 #' @keywords datasets
 #' @name enut.ii
 #' @usage data(enut.ii)
-#' @format A data frame with approximately 4,000-5,000 rows
+#' @format A data frame with 13,373 rows and 122 variables
 NULL
 
-
+#' enut.ii.raw
+#'
 #' Processed dataset from the second National Time-Use Survey (ENUT II), applied by the
 #' Instituto Nacional de Estadísticas de Chile. Contains 25 detailed time-use activity
 #' categories and household expenditures imputed from the IX Encuesta de Presupuestos
 #' Familiares (EPF). Used as the primary input for structural time-use models via
 #' \code{get_data()}.
 #'
-#' All income and expenditure variables are expressed in weekly thousands of Chilean pesos,
-#' deflated by IPC adjustment (factor 0.362). Time variables are expressed in weekly hours,
+#' All income and expenditure variables are expressed in weekly thousands of nominal Chilean pesos
+#' of the survey period (September to December 2023): monthly amounts divided by 1000 and by 4, with
+#' EPF IX expenditures scaled by 1.18 to the ENUT period. No IPC deflation is applied. Time variables
+#' are expressed in weekly hours,
 #' normalized to sum to 168.
 #'
 #' \describe{
@@ -642,7 +656,11 @@ NULL
 #'   \item{ingreso_hogar}{Total household disposable income (weekly, thousands CLP)}
 #'   \item{income_person_week}{Household income divided by number of members (weekly, thousands CLP)}
 #'
-#'   \item{t_to}{Trabajo remunerado (paid work), horas semanales}
+#'   \item{t_to}{Trabajo remunerado (paid work), horas semanales. Contracted hours
+#'     (\code{adjust_working_hours()}); the diary value (to5) is only used for the weekend
+#'     imputation and the diary versus contract filter. Excludes work commutes (to3, to7, in
+#'     \code{t_tto}) and job search (to9, in \code{t_to_js})}
+#'   \item{t_to_js}{Busqueda de trabajo o inicio de negocio (to9), horas semanales}
 #'   \item{t_tcnr_ce}{Trabajo de cuidado no remunerado - cuidados esenciales: cuidado fisico personal de
 #'     miembros del hogar (aseo, alimentacion, vestido), horas semanales}
 #'   \item{t_tcnr_re}{Trabajo de cuidado no remunerado - cuidados relativos a la ensenanza: acompanamiento
@@ -674,16 +692,21 @@ NULL
 #'     horas semanales}
 #'   \item{t_tvaoh_oh}{Trabajo voluntario y ayuda a otros hogares - ayuda directa a otros hogares,
 #'     horas semanales}
-#'   \item{t_cpaf_cp}{Cuidados personales - actividades fisiologicas (higiene, visitas medicas, ejercicio),
-#'     excluye sueno y comidas, horas semanales}
+#'   \item{t_cpaf_cp}{Cuidados personales (bano, vestirse, arreglarse, consultas medicas), excluye sueno,
+#'     comidas y traslados a salud, horas semanales. Sports and exercise are in \code{t_vsyo_dep}}
 #'   \item{t_cpag_comer}{Cuidados personales - comer y beber, horas semanales}
 #'   \item{t_cpag_dormir}{Cuidados personales - dormir; ajustado para que la suma de actividades sea
 #'     168 horas, horas semanales}
-#'   \item{t_ed}{Educacion y formacion (asistencia a clases, estudio, capacitacion), horas semanales}
-#'   \item{t_vsyo_csar}{Vida social y ocio - convivencia social y actividades recreativas (reuniones,
-#'     fiestas, deportes como espectador), horas semanales}
-#'   \item{t_vsyo_aa}{Vida social y ocio - artes y aficiones (artes plasticas, artesania, juegos),
-#'     horas semanales}
+#'   \item{t_ed}{Educacion y formacion (asistencia a clases, estudio, capacitacion), excluye traslados
+#'     (ed2, ed5, in \code{t_ted}), horas semanales}
+#'   \item{t_vsyo_csar}{Vida social y ocio - convivencia con familiares o amigos (vs1) y celebraciones
+#'     civicas o religiosas (vs3), horas semanales}
+#'   \item{t_vsyo_ev}{Vida social y ocio - asistencia como publico a eventos culturales, de
+#'     entretenimiento o deportivos (vs2), horas semanales}
+#'   \item{t_vsyo_aa}{Vida social y ocio - artes y aficiones: instrumentos, pintura, baile, canto (vs4) y
+#'     juegos de mesa, cartas o videojuegos (vs5), horas semanales}
+#'   \item{t_vsyo_dep}{Vida social y ocio - practica de deporte o ejercicio fisico (vs6), horas semanales}
+#'   \item{t_descanso}{Descanso, meditacion o relajacion sin hacer nada mas (vs11), horas semanales}
 #'   \item{t_mcm_leer}{Medios de comunicacion y masivos - lectura (libros, prensa, digital), horas semanales}
 #'   \item{t_mcm_audio}{Medios de comunicacion y masivos - consumo de audio (radio, musica, podcasts),
 #'     horas semanales}
@@ -705,7 +728,8 @@ NULL
 #'   \item{t_ttcnr_oac_health}{Traslados asociados a cuidados esenciales / salud
 #'     (traslado ida: tc21_t, vuelta: tc25_t), horas semanales}
 #'   \item{t_ttcnr_oac_work}{Traslados asociados a otros cuidados / trabajo
-#'     (traslado ida: tc31_t, vuelta: tc34_t), horas semanales}
+#'     (traslado ida: tc31_t, vuelta: tc34_t), horas semanales. tc21, tc25, tc31 and tc34 are
+#'     removed from \code{t_tcnr_oac}, whose INE aggregate contains them}
 #'
 #'   \strong{Commute activity time variables} (associated activity time within
 #'   each commute total; computed after twin imputation). The \code{_ds} suffix
@@ -782,5 +806,5 @@ NULL
 #' @keywords datasets
 #' @name enut.ii.raw
 #' @usage data(enut.ii.raw)
-#' @format A data frame with approximately 4,000-5,000 rows and 129 variables
+#' @format A data frame with 13,373 rows and 151 variables
 NULL
