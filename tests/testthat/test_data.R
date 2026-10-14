@@ -87,3 +87,23 @@ test_that("the maed binary covariates really are binary", {
     expect_true(all(as.numeric(d[[v]]) %in% c(0, 1)), info = v)
   }
 })
+
+test_that("enut.bigcities savings and expenditures come from the same donors", {
+  # Arrange: since 1.2.1 each household gets the mean (Ef1, Ef2, Ec, savings) /
+  # income vector of its EPF donors, so the four destinations exhaust income and
+  # the savings rate stays inside the EPF support (rates above -1). The old
+  # regression without residual broke the second property in the first quintile.
+  for (name in c("enut.bigcities", "enut.bigcities.raw")) {
+    d <- get(name, envir = asNamespace("mtuem"))
+    con <- d[d$ing_personal > 0, ]
+
+    # Act
+    slack <- d$ing_personal - (d$Ef1 + d$Ef2 + d$Ec + d$savings)
+    rate <- con$savings / con$ing_personal
+
+    # Assert
+    expect_true(all(abs(slack) <= 0.05), info = name)
+    expect_true(all(rate > -1), info = name)
+    expect_true(all(abs(d$total_expenses - (d$Ef1 + d$Ef2 + d$Ec)) <= 0.05), info = name)
+  }
+})

@@ -826,12 +826,16 @@ NULL
 #'
 #' Expenditures are imputed from the IX EPF in three broad categories, the ones of the MTUEM
 #' models: \code{Ef1} = food + recreation + restaurants + communications, \code{Ef2} = clothing,
-#' \code{Ec} = utilities + household + health + transport + education. Savings come from a
-#' regression estimated by conurbation. The composition of expenditure is imputed with a
-#' Hawkins (2021) style hot-deck: each household gets the mean expenditure shares of one EPF
-#' donor per member aged 15 or more, drawn from its EPF sampling stratum (comuna group x NSE)
-#' and income quintile. The shares predicted by a fractional MNL estimated by conurbation are
-#' kept as \code{Ef1_fmnl}, \code{Ef2_fmnl} and \code{Ec_fmnl}. Money is in weekly thousands of
+#' \code{Ec} = utilities + household + health + transport + education. Savings and the
+#' composition of expenditure come from the same EPF donors, with a cell hot-deck inspired by the
+#' fusion scheme of Hawkins and Habib (2022): each household draws one EPF donor per member aged
+#' 15 or more from its EPF sampling stratum (comuna group x NSE) and income quintile, and gets the
+#' mean of their (Ef1, Ef2, Ec, savings) / household income vectors, which sum to one. Amounts are
+#' those ratios times the ENUT household income, so Ef1 + Ef2 + Ec + savings equals income. The
+#' expenditure shares predicted by a fractional MNL estimated by conurbation, applied to the same
+#' total expenditure, are kept as \code{Ef1_fmnl}, \code{Ef2_fmnl} and \code{Ec_fmnl}. Since
+#' version 1.2.1, savings come from the donors instead of a regression without residual, which
+#' removed their dispersion. Money is in weekly thousands of
 #' nominal Chilean pesos of 2023 (EPF amounts inflated by 18 percent).
 #'
 #' The pipeline is \code{pipeline/main.py} of the enut-bigcities project; see
@@ -846,11 +850,11 @@ NULL
 #'   \item{n_15_mas}{Number of household members aged 15 or more}
 #'   \item{quintil}{Household income quintile within the conurbation (1-5)}
 #'   \item{w}{Hourly wage rate: ing_trab / Tw (thousands CLP per hour)}
-#'   \item{Ef1}{Imputed food, recreation, restaurants and communications expenditure, Hawkins hot-deck (weekly thousands CLP)}
-#'   \item{Ef2}{Imputed clothing expenditure, Hawkins hot-deck (weekly thousands CLP)}
-#'   \item{Ec}{Imputed committed expenditure (utilities, household, health, transport, education), Hawkins hot-deck (weekly thousands CLP)}
-#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl}{The same categories with the shares of the fractional MNL}
-#'   \item{savings}{Imputed savings, allocated by income share (weekly thousands CLP)}
+#'   \item{Ef1}{Imputed food, recreation, restaurants and communications expenditure, donor hot-deck (weekly thousands CLP)}
+#'   \item{Ef2}{Imputed clothing expenditure, donor hot-deck (weekly thousands CLP)}
+#'   \item{Ec}{Imputed committed expenditure (utilities, household, health, transport, education), donor hot-deck (weekly thousands CLP)}
+#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl}{The same categories with the shares of the fractional MNL over the same total expenditure}
+#'   \item{savings}{Imputed savings from the same donors as the expenditures, allocated by income share (weekly thousands CLP)}
 #'   \item{total_expenses}{ing_personal - savings (weekly thousands CLP)}
 #' }
 #'
@@ -880,12 +884,16 @@ NULL
 #'
 #' Expenditures are imputed from the IX EPF in three broad categories, the ones of the MTUEM
 #' models: \code{Ef1} = food + recreation + restaurants + communications, \code{Ef2} = clothing,
-#' \code{Ec} = utilities + household + health + transport + education. Savings come from a
-#' regression estimated by conurbation. The composition of expenditure is imputed with a
-#' Hawkins (2021) style hot-deck: each household gets the mean expenditure shares of one EPF
-#' donor per member aged 15 or more, drawn from its EPF sampling stratum (comuna group x NSE)
-#' and income quintile. The shares predicted by a fractional MNL estimated by conurbation are
-#' kept as \code{Ef1_fmnl}, \code{Ef2_fmnl} and \code{Ec_fmnl}. Money is in weekly thousands of
+#' \code{Ec} = utilities + household + health + transport + education. Savings and the
+#' composition of expenditure come from the same EPF donors, with a cell hot-deck inspired by the
+#' fusion scheme of Hawkins and Habib (2022): each household draws one EPF donor per member aged
+#' 15 or more from its EPF sampling stratum (comuna group x NSE) and income quintile, and gets the
+#' mean of their (Ef1, Ef2, Ec, savings) / household income vectors, which sum to one. Amounts are
+#' those ratios times the ENUT household income, so Ef1 + Ef2 + Ec + savings equals income. The
+#' expenditure shares predicted by a fractional MNL estimated by conurbation, applied to the same
+#' total expenditure, are kept as \code{Ef1_fmnl}, \code{Ef2_fmnl} and \code{Ec_fmnl}. Since
+#' version 1.2.1, savings come from the donors instead of a regression without residual, which
+#' removed their dispersion. Money is in weekly thousands of
 #' nominal Chilean pesos of 2023 (EPF amounts inflated by 18 percent).
 #'
 #' The pipeline is \code{pipeline/main.py} of the enut-bigcities project; see
@@ -900,11 +908,11 @@ NULL
 #'   \item{n_15_mas}{Number of household members aged 15 or more}
 #'   \item{quintil}{Household income quintile within the conurbation (1-5)}
 #'   \item{w}{Hourly wage rate: ing_trab / Tw (thousands CLP per hour)}
-#'   \item{Ef1}{Imputed food, recreation, restaurants and communications expenditure, Hawkins hot-deck (weekly thousands CLP)}
-#'   \item{Ef2}{Imputed clothing expenditure, Hawkins hot-deck (weekly thousands CLP)}
-#'   \item{Ec}{Imputed committed expenditure (utilities, household, health, transport, education), Hawkins hot-deck (weekly thousands CLP)}
-#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl}{The same categories with the shares of the fractional MNL}
-#'   \item{savings}{Imputed savings, allocated by income share (weekly thousands CLP)}
+#'   \item{Ef1}{Imputed food, recreation, restaurants and communications expenditure, donor hot-deck (weekly thousands CLP)}
+#'   \item{Ef2}{Imputed clothing expenditure, donor hot-deck (weekly thousands CLP)}
+#'   \item{Ec}{Imputed committed expenditure (utilities, household, health, transport, education), donor hot-deck (weekly thousands CLP)}
+#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl}{The same categories with the shares of the fractional MNL over the same total expenditure}
+#'   \item{savings}{Imputed savings from the same donors as the expenditures, allocated by income share (weekly thousands CLP)}
 #'   \item{total_expenses}{ing_personal - savings (weekly thousands CLP)}
 #' }
 #'
