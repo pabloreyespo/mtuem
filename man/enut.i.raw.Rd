@@ -5,7 +5,7 @@
 \alias{enut.i.raw}
 \title{enut.i.raw}
 \format{
-A data frame with 9,412 rows and 112 variables
+A data frame with 9,497 rows and 121 variables
 }
 \source{
 \url{https://www.ine.gob.cl/enut}
@@ -72,6 +72,7 @@ sum to 168.
 \item{quintil}{Household income quintile}
 \item{macrozona}{Geographic macro-zone}
 \item{region}{Region code}
+\item{cut}{Comuna code (CUT of 2015), from the sampling stratum VarStrat}
 \item{prop_ing_hogar}{Respondent share of total personal income in the household}
 
 \item{cae}{Economic activity category}
@@ -136,12 +137,15 @@ celebrations (s22)}
 \item{educacion}{Imputed education expenditure}
 \item{restaurantes}{Imputed restaurants and food away from home expenditure}
 \item{total_expenses}{Total imputed expenditure: ing_personal - savings}
+\item{Ef1_jdi, Ef2_jdi, Ec_jdi, savings_jdi}{Ef1 (food, recreation, restaurants, communications), Ef2 (clothing), Ec (utilities, household, health, transport, education) and savings imputed from the same EPF donors with a cell hot-deck, allocated by income share; Ef1_jdi + Ef2_jdi + Ec_jdi + savings_jdi = ing_personal (weekly thousands CLP)}
+\item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl, savings_fmnl}{The same categories with the fractional MNL shares and the savings regression, allocated by income share (weekly thousands CLP)}
 }
 
 The dataset is produced by running \code{data_processing/data_processing.R}.
 The script creates detailed time-use categories with \code{agregar_actividades()},
 imputes weekend diaries through the twin matrix, removes outliers using
-Vallejo's method, imputes EPF VIII expenditures with \code{imputacion_gastos()},
+Vallejo's method, imputes EPF VIII expenditures with \code{imputacion_gastos()} (see
+\code{enut.i} for the unsuffixed, \code{_jdi} and \code{_fmnl} columns),
 and writes \code{data/enut-i-raw.dta} plus \code{data/enut-i-raw.csv}. English
 copies are written as \code{data/enut-i-raw-ENG.dta} and
 \code{data/enut-i-raw-ENG.csv}.

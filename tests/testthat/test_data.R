@@ -107,3 +107,29 @@ test_that("enut.bigcities savings and expenditures come from the same donors", {
     expect_true(all(abs(d$total_expenses - (d$Ef1 + d$Ef2 + d$Ec)) <= 0.05), info = name)
   }
 })
+
+test_that("enut.i and enut.ii _jdi columns exhaust income and stay in the EPF support", {
+  # Arrange: Ef1_jdi + Ef2_jdi + Ec_jdi + savings_jdi is the household income share of
+  # each person (same EPF donors for savings and expenditure), and the savings rate is
+  # above -1 like in the EPF sample. The _fmnl columns aggregate the FMNL divisions with
+  # the regression savings.
+  for (name in c("enut.i", "enut.i.raw", "enut.ii", "enut.ii.raw")) {
+    d <- get(name, envir = asNamespace("mtuem"))
+    skip_if_not("Ef1_jdi" %in% names(d),
+      paste(name, "predates the _jdi columns: rerun its pipeline and data-raw/update_from_pipelines.R"))
+    jdi <- c("Ef1_jdi", "Ef2_jdi", "Ec_jdi", "savings_jdi")
+    fmnl <- c("Ef1_fmnl", "Ef2_fmnl", "Ec_fmnl", "savings_fmnl")
+    expect_true(all(c(jdi, fmnl) %in% names(d)), info = name)
+    con <- d[d$ing_personal > 0 & !is.na(d$savings_jdi), ]
+
+    # Act
+    slack_jdi <- con$ing_personal - rowSums(con[, jdi])
+    slack_fmnl <- con$ing_personal - rowSums(con[, fmnl])
+    rate <- con$savings_jdi / con$ing_personal
+
+    # Assert
+    expect_true(all(abs(slack_jdi) <= 0.05), info = name)
+    expect_true(all(abs(slack_fmnl) <= 0.1), info = name)
+    expect_true(all(rate > -1), info = name)
+  }
+})

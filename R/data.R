@@ -58,6 +58,7 @@
 #'   \item{quintil}{Household income quintile (1-5)}
 #'   \item{macrozona}{Geographic macro-zone: "norte", "metropolitana", "centro", or "sur"}
 #'   \item{region}{Region code (numeric)}
+#'   \item{cut}{Comuna code (CUT of 2015, before the Nuble region: Chillan is 8401), from the sampling stratum VarStrat}
 #'   \item{prop_ing_hogar}{Respondent's share of total personal income in the household; used to allocate household-level expenditures to individuals}
 #'
 #'   \item{cae}{Economic activity category: "Ocupada(o)", "Desocupada(o)", "Inactiva(o)", "Menor de 15 años", or "Sin clasificar"}
@@ -127,6 +128,8 @@
 #'   \item{Ec_educacion}{Imputed education expenditure (weekly thousands CLP)}
 #'   \item{savings}{Imputed savings (weekly thousands CLP). Its classification is not clear. Its omision in Ec would mean implicitly considering as part of a free activity. }
 #'  \item{total_expenses}{Total imputed expenditures (weekly thousands CLP). ing_personal - savings (weekly thousands CLP)}
+#'   \item{Ef1_jdi, Ef2_jdi, Ec_jdi, savings_jdi}{Ef1 (food, recreation, restaurants, communications), Ef2 (clothing), Ec (utilities, household, health, transport, education) and savings imputed from the same EPF donors with a cell hot-deck, allocated by income share; Ef1_jdi + Ef2_jdi + Ec_jdi + savings_jdi = ing_personal (weekly thousands CLP)}
+#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl, savings_fmnl}{The same categories with the fractional MNL shares and the savings regression, allocated by income share (weekly thousands CLP)}
 #' }
 #'
 #' @details
@@ -136,9 +139,19 @@
 #' all other activities are scaled proportionally. Weekend time use is imputed via a
 #' twin-matching matrix when the respondent's diary day was a weekday. Outliers are
 #' removed using Vallejo's method by groups of quintile, employment status, age
-#' bracket, and sex. Expenditures are imputed from EPF VIII using a fractional MNL
-#' model for budget shares and a linear regression for the savings rate, then
-#' allocated to individuals by \code{prop_ing_hogar}. The script writes
+#' bracket, and sex. Expenditures are imputed from EPF VIII; the unsuffixed columns use a
+#' fractional MNL model for budget shares and a linear regression for savings, and are
+#' allocated to individuals by \code{prop_ing_hogar}. The EPF VIII only identifies the zone
+#' (Gran Santiago or the other regional capitals), so the \code{_jdi} cells are zone x income
+#' quintile x household size (1 to 5+), then zone x quintile, then quintile, using the first
+#' with at least 10 EPF households.
+#' The \code{_jdi} columns impute savings and expenditure from the same EPF donors: each
+#' household draws one EPF household per member aged 15 or more from its cell and gets the mean
+#' of their (10 divisions, savings) / household income vectors, which sum to one, times its own
+#' income (a cell hot-deck inspired by Hawkins and Habib, 2022). The \code{_fmnl} columns use the
+#' fractional MNL shares times income minus the regression savings. Unlike the regression, the
+#' donors keep the dispersion of savings and the savings rates inside the EPF support.
+#' The script writes
 #' \code{data/enut-i.dta} plus \code{data/enut-i.csv}. English copies are written as
 #' \code{data/enut-i-ENG.dta} and \code{data/enut-i-ENG.csv}.
 #'
@@ -159,7 +172,7 @@
 #' @keywords datasets
 #' @name enut.i
 #' @usage data(enut.i)
-#' @format A data frame with 9,412 rows and 109 variables
+#' @format A data frame with 9,412 rows and 118 variables
 NULL
 
 #' enut.i.raw
@@ -219,6 +232,7 @@ NULL
 #'   \item{quintil}{Household income quintile}
 #'   \item{macrozona}{Geographic macro-zone}
 #'   \item{region}{Region code}
+#'   \item{cut}{Comuna code (CUT of 2015), from the sampling stratum VarStrat}
 #'   \item{prop_ing_hogar}{Respondent share of total personal income in the household}
 #'
 #'   \item{cae}{Economic activity category}
@@ -283,13 +297,16 @@ NULL
 #'   \item{educacion}{Imputed education expenditure}
 #'   \item{restaurantes}{Imputed restaurants and food away from home expenditure}
 #'   \item{total_expenses}{Total imputed expenditure: ing_personal - savings}
+#'   \item{Ef1_jdi, Ef2_jdi, Ec_jdi, savings_jdi}{Ef1 (food, recreation, restaurants, communications), Ef2 (clothing), Ec (utilities, household, health, transport, education) and savings imputed from the same EPF donors with a cell hot-deck, allocated by income share; Ef1_jdi + Ef2_jdi + Ec_jdi + savings_jdi = ing_personal (weekly thousands CLP)}
+#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl, savings_fmnl}{The same categories with the fractional MNL shares and the savings regression, allocated by income share (weekly thousands CLP)}
 #' }
 #'
 #' @details
 #' The dataset is produced by running \code{data_processing/data_processing.R}.
 #' The script creates detailed time-use categories with \code{agregar_actividades()},
 #' imputes weekend diaries through the twin matrix, removes outliers using
-#' Vallejo's method, imputes EPF VIII expenditures with \code{imputacion_gastos()},
+#' Vallejo's method, imputes EPF VIII expenditures with \code{imputacion_gastos()} (see
+#' \code{enut.i} for the unsuffixed, \code{_jdi} and \code{_fmnl} columns),
 #' and writes \code{data/enut-i-raw.dta} plus \code{data/enut-i-raw.csv}. English
 #' copies are written as \code{data/enut-i-raw-ENG.dta} and
 #' \code{data/enut-i-raw-ENG.csv}.
@@ -301,7 +318,7 @@ NULL
 #' @keywords datasets
 #' @name enut.i.raw
 #' @usage data(enut.i.raw)
-#' @format A data frame with 9,412 rows and 112 variables
+#' @format A data frame with 9,497 rows and 121 variables
 NULL
 
 #' enut.ii
@@ -365,6 +382,8 @@ NULL
 #'     used internally to scale weekday diary hours during weekend imputation}
 #'   \item{quintil}{Household income quintile (1-5), computed from cumulative survey weights}
 #'   \item{macrozona}{Geographic macro-zone: "norte", "metropolitana", "centro", or "sur"}
+#'   \item{cut}{Comuna code (CUT), from varunit}
+#'   \item{n_15_mas}{Number of household members aged 15 or more}
 #'   \item{region_ord}{Ordinal region code}
 #'   \item{glosa_region}{Region name label}
 #'   \item{prop_ing_hogar}{Respondent's share of total personal income in the household; used to allocate household-level expenditures to individuals}
@@ -497,6 +516,8 @@ NULL
 #'   \item{Ec_educacion}{Imputed education expenditure (weekly thousands CLP)}
 #'   \item{savings}{Imputed savings (weekly thousands CLP). Its classification is not clear. Its omision in Ec would mean implicitly considering as part of a free activity. }
 #'  \item{total_expenses}{Total imputed expenditures (weekly thousands CLP). ing_personal - savings (weekly thousands CLP)}
+#'   \item{Ef1_jdi, Ef2_jdi, Ec_jdi, savings_jdi}{Ef1 (food, recreation, restaurants, communications), Ef2 (clothing), Ec (utilities, household, health, transport, education) and savings imputed from the same EPF donors with a cell hot-deck, allocated by income share; Ef1_jdi + Ef2_jdi + Ec_jdi + savings_jdi = ing_personal (weekly thousands CLP)}
+#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl, savings_fmnl}{The same categories with the fractional MNL shares and the savings regression, allocated by income share (weekly thousands CLP)}
 #' }
 #'
 #' @details
@@ -506,9 +527,19 @@ NULL
 #' all other activities are scaled proportionally. Weekend time use is imputed via a
 #' twin-matching matrix when the respondent's diary day was a weekday. Outliers are
 #' removed using Vallejo's method by groups of quintile, employment status, age
-#' bracket, and sex. Expenditures are imputed from EPF IX using a fractional MNL
-#' model for budget shares and a linear regression for the savings rate, then
-#' allocated to individuals by \code{prop_ing_hogar}. The script writes
+#' bracket, and sex. Expenditures are imputed from EPF IX; the unsuffixed columns take savings
+#' from a linear regression and the shares of the 10 divisions from a cell hot-deck (mean shares
+#' of one EPF donor per member aged 15 or more, cells EPF stratum x income quintile, then region
+#' x NSE x quintile, macrozone x NSE x quintile and macrozone x quintile), and are allocated to
+#' individuals by \code{prop_ing_hogar}. The \code{_jdi} columns use the same cells and the same
+#' draw of donors.
+#' The \code{_jdi} columns impute savings and expenditure from the same EPF donors: each
+#' household draws one EPF household per member aged 15 or more from its cell and gets the mean
+#' of their (10 divisions, savings) / household income vectors, which sum to one, times its own
+#' income (a cell hot-deck inspired by Hawkins and Habib, 2022). The \code{_fmnl} columns use the
+#' fractional MNL shares times income minus the regression savings. Unlike the regression, the
+#' donors keep the dispersion of savings and the savings rates inside the EPF support.
+#' The script writes
 #' \code{data/enut-ii.dta} plus \code{data/enut-ii.csv}. English copies are written
 #' as \code{data/enut-ii-ENG.dta} and \code{data/enut-ii-ENG.csv}.
 #'
@@ -523,7 +554,7 @@ NULL
 #' @keywords datasets
 #' @name enut.ii
 #' @usage data(enut.ii)
-#' @format A data frame with 13,373 rows and 122 variables
+#' @format A data frame with 13,373 rows and 133 variables
 NULL
 
 #' enut.ii.raw
@@ -586,6 +617,8 @@ NULL
 #'     used internally to scale weekday diary hours during weekend imputation}
 #'   \item{quintil}{Household income quintile (1-5), computed from cumulative survey weights}
 #'   \item{macrozona}{Geographic macro-zone: "norte", "metropolitana", "centro", or "sur"}
+#'   \item{cut}{Comuna code (CUT), from varunit}
+#'   \item{n_15_mas}{Number of household members aged 15 or more}
 #'   \item{region_ord}{Ordinal region code}
 #'   \item{glosa_region}{Region name label}
 #'   \item{prop_ing_hogar}{Respondent's share of total personal income in the household; used to allocate household-level expenditures to individuals}
@@ -774,6 +807,8 @@ NULL
 #'   \item{restaurantes}{Imputed restaurants and food away from home expenditure (individual share, weekly thousands CLP)}
 #'   \item{savings}{Imputed household savings, allocated by income share (weekly thousands CLP)}
 #'   \item{total_expenses}{Total imputed expenditure: ing_personal - savings (weekly thousands CLP)}
+#'   \item{Ef1_jdi, Ef2_jdi, Ec_jdi, savings_jdi}{Ef1 (food, recreation, restaurants, communications), Ef2 (clothing), Ec (utilities, household, health, transport, education) and savings imputed from the same EPF donors with a cell hot-deck, allocated by income share; Ef1_jdi + Ef2_jdi + Ec_jdi + savings_jdi = ing_personal (weekly thousands CLP)}
+#'   \item{Ef1_fmnl, Ef2_fmnl, Ec_fmnl, savings_fmnl}{The same categories with the fractional MNL shares and the savings regression, allocated by income share (weekly thousands CLP)}
 #' }
 #'
 #' @details
@@ -792,9 +827,19 @@ NULL
 #' are saved for reference: \code{tact_factor_sab} and \code{tact_factor_dom} for
 #' weekend scaling, \code{tact_factor_ds} for weekday redistribution.
 #' Outliers are removed using Vallejo's method by groups of quintile, employment status, age
-#' bracket, and sex. Expenditures are imputed from EPF IX using a fractional MNL
-#' model for budget shares and a linear regression for the savings rate, then
-#' allocated to individuals by \code{prop_ing_hogar}. The script writes
+#' bracket, and sex. Expenditures are imputed from EPF IX; the unsuffixed columns take savings
+#' from a linear regression and the shares of the 10 divisions from a cell hot-deck (mean shares
+#' of one EPF donor per member aged 15 or more, cells EPF stratum x income quintile, then region
+#' x NSE x quintile, macrozone x NSE x quintile and macrozone x quintile), and are allocated to
+#' individuals by \code{prop_ing_hogar}. The \code{_jdi} columns use the same cells and the same
+#' draw of donors.
+#' The \code{_jdi} columns impute savings and expenditure from the same EPF donors: each
+#' household draws one EPF household per member aged 15 or more from its cell and gets the mean
+#' of their (10 divisions, savings) / household income vectors, which sum to one, times its own
+#' income (a cell hot-deck inspired by Hawkins and Habib, 2022). The \code{_fmnl} columns use the
+#' fractional MNL shares times income minus the regression savings. Unlike the regression, the
+#' donors keep the dispersion of savings and the savings rates inside the EPF support.
+#' The script writes
 #' \code{data/enut-ii-raw.dta} plus \code{data/enut-ii-raw.csv}. English copies are
 #' written as \code{data/enut-ii-raw-ENG.dta} and
 #' \code{data/enut-ii-raw-ENG.csv}.
@@ -806,7 +851,7 @@ NULL
 #' @keywords datasets
 #' @name enut.ii.raw
 #' @usage data(enut.ii.raw)
-#' @format A data frame with 13,373 rows and 151 variables
+#' @format A data frame with 13,373 rows and 162 variables
 NULL
 
 #' enut.bigcities
