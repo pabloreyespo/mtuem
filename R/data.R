@@ -318,7 +318,7 @@ NULL
 #' @keywords datasets
 #' @name enut.i.raw
 #' @usage data(enut.i.raw)
-#' @format A data frame with 9,497 rows and 121 variables
+#' @format A data frame with 9,412 rows and 121 variables
 NULL
 
 #' enut.ii

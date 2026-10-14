@@ -5,7 +5,7 @@
 \alias{enut.i.raw}
 \title{enut.i.raw}
 \format{
-A data frame with 9,497 rows and 121 variables
+A data frame with 9,412 rows and 121 variables
 }
 \source{
 \url{https://www.ine.gob.cl/enut}
