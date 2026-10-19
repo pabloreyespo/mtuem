@@ -11,7 +11,9 @@ pytest.importorskip("jax")
 
 import mtuem  # noqa: E402
 from cases import build  # noqa: E402
-from mtuem import apollo, numderiv  # noqa: E402
+from mtuem import _engine as engine  # noqa: E402
+from mtuem import numderiv  # noqa: E402
+from mtuem._engine.loglike import _LogLike  # noqa: E402
 from mtuem import autodiff as ad  # noqa: E402
 
 REF = Path(__file__).parent / "reference"
@@ -40,8 +42,8 @@ def test_autodiff_log_likelihood_matches_r(case, point):
 def test_autodiff_estimation_matches_r(case):
     ref = load_ref(case)
     beta, fixed, pf, inputs = build(case, autodiff=True)
-    model = apollo.estimate(beta, fixed, pf, inputs, {"silent": True})
-    assert model.code == 4 and model.eigValue < 0
+    model = engine.estimate(beta, fixed, pf, inputs, silent=True)
+    assert model.code == 0 and model.eigValue < 0
     assert model.maximum == pytest.approx(ref["maximum"], abs=1e-3)
     se = num(ref["se"]).dropna()
     np.testing.assert_allclose(model.estimate[se.index], num(ref["estimate"])[se.index], rtol=2e-3, atol=2e-3)
@@ -52,7 +54,7 @@ def test_autodiff_estimation_matches_r(case):
 def test_autodiff_lc_standard_errors_match_r_at_the_r_optimum():
     ref = load_ref("lc_cholesky")
     _, fixed, pf, inputs = build("lc_cholesky", autodiff=True)
-    model = apollo.estimate(ref["estimate"], fixed, pf, inputs, {"silent": True})
+    model = engine.estimate(ref["estimate"], fixed, pf, inputs, silent=True)
     assert model.maximum == pytest.approx(ref["maximum"], abs=1e-3)
     se = num(ref["se"]).dropna()
     np.testing.assert_allclose(model.se[se.index], se, rtol=2e-3)
@@ -62,7 +64,7 @@ def test_autodiff_lc_standard_errors_match_r_at_the_r_optimum():
 def test_exact_gradient_and_hessian_agree_with_numderiv():
     ref = load_ref("lc_cholesky")
     beta, fixed, pf, inputs = build("lc_cholesky", autodiff=True)
-    ll = apollo._LogLike(pd.Series(ref["beta_test"], dtype=float), fixed, pf, inputs)
+    ll = _LogLike(pd.Series(ref["beta_test"], dtype=float), fixed, pf, inputs)
     x = ll.base[ll.free].to_numpy()
     g_exact = ll.scores(x).sum(axis=0)
     g_num = numderiv.gradient(ll.total, x)
@@ -77,7 +79,7 @@ def test_scores_stay_finite_when_a_class_probability_underflows():
     ref = load_ref("lc_shared")
     _, fixed, pf, inputs = build("lc_shared", autodiff=True)
     assert float(np.min(inputs.attach(ref["estimate"]).pi_values[0])) == 0.0
-    ll = apollo._LogLike(pd.Series(ref["estimate"], dtype=float), fixed, pf, inputs)
+    ll = _LogLike(pd.Series(ref["estimate"], dtype=float), fixed, pf, inputs)
     assert np.all(np.isfinite(ll.scores(ll.base[ll.free].to_numpy())))
 
 
@@ -87,11 +89,11 @@ def test_posteriors_prediction_and_values_of_time_match_numpy_backend():
     out = {}
     for flag in (False, True):
         _, fixed, pf, inputs = build("lc_cholesky", autodiff=flag)
-        model = apollo.ApolloModel(estimate=est, apollo_beta=est, apollo_fixed=fixed,
-                                   apollo_control=inputs.apollo_control, maximum=0.0, LLStart=0.0)
+        model = engine.Estimate(estimate=est, beta_start=est, fixed=fixed,
+                                  control=inputs.control, maximum=0.0, LLStart=0.0)
         out[flag] = (
-            apollo.lc_conditionals(model, pf, inputs)[["X1", "X2"]].to_numpy(),
-            apollo.prediction(model, pf, inputs, {"silent": True}).drop(columns=["ID", "Observation"]).to_numpy(),
+            engine.lc_conditionals(model, pf, inputs)[["X1", "X2"]].to_numpy(),
+            engine.prediction(model, pf, inputs, silent=True).drop(columns=["ID", "Observation"]).to_numpy(),
             mtuem.mtuem_values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)["summary"]["mean"].to_numpy(),
         )
     for a, b in zip(out[False], out[True]):
@@ -100,7 +102,7 @@ def test_posteriors_prediction_and_values_of_time_match_numpy_backend():
 
 def test_em_and_multistart_run_with_the_autodiff_backend():
     beta, fixed, pf, inputs = build("lc_cholesky", autodiff=True)
-    em = apollo.lc_em(beta, fixed, pf, inputs, {"EMmaxIterations": 2, "postEM": 0, "silent": True})
+    em = engine.lc_em(beta, fixed, pf, inputs, max_iterations=2, post_em=0, estimate_kwargs={"silent": True})
     assert em.maximum >= em.LLStart
     beta, fixed, pf, inputs = build("eq1", autodiff=True)
     res = mtuem.customMultiStart(beta, fixed, pf, inputs, {"nCandidates": 2}, {"maxIterations": 100}, seed=1,

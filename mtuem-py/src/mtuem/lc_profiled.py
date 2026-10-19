@@ -113,9 +113,9 @@ def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "est
     """Latent class Theta-Phi likelihood with the covariance concentrated out (inner fixed point).
 
     ``lc_settings`` holds ``class_settings`` (one ``mtuem_settings`` per class, without ``sig``,
-    ``rho`` or ``cholesky``), ``classProb`` (from ``apollo.class_alloc``) and optionally
+    ``rho`` or ``cholesky``), ``classProb`` (from the engine's ``class_alloc``) and optionally
     ``em_settings`` with ``tol`` (1e-10), ``maxIterations`` (50) and ``minWeight`` (2 * M).
-    The result is already the class mixture, so do not pass it through ``apollo.lc``.
+    The result is already the class mixture, so do not pass it through the engine's ``lc``.
     """
     em = {"tol": 1e-10, "maxIterations": 50, "minWeight": None}
     em.update(lc_settings.get("em_settings") or {})
@@ -188,7 +188,7 @@ def mtuem_get_profiled_sigma() -> dict:
 
 def mtuem_profile_ic(model, nClass: int, nEq: int) -> dict:
     """AIC/BIC counting the profiled-out covariance parameters, nClass * nEq * (nEq + 1) / 2."""
-    k = len(model.estimate) - len(model.apollo_fixed) + nClass * nEq * (nEq + 1) / 2
+    k = len(model.estimate) - len(model.fixed) + nClass * nEq * (nEq + 1) / 2
     ll = model.maximum
     n = model.nObs
     return {"k": k, "AIC": -2 * ll + 2 * k, "BIC": -2 * ll + k * np.log(n)}

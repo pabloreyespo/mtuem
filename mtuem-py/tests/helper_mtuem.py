@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 import mtuem
-from mtuem import apollo
+from mtuem import _engine as engine
+from mtuem.config import Control
 
 
 def inputs_of(database: pd.DataFrame, **extra) -> SimpleNamespace:
@@ -89,11 +90,11 @@ def cov2cor(S) -> np.ndarray:
     return S / np.outer(d, d)
 
 
-def mtuem_fake_apollo_model(estimate: dict, varcov) -> apollo.ApolloModel:
-    """Minimal model object that apollo.delta_method accepts."""
+def mtuem_fake_model(estimate: dict, varcov) -> engine.Estimate:
+    """Minimal estimate object that engine.delta_method accepts."""
     est = pd.Series(estimate, dtype=float)
     vc = pd.DataFrame(np.asarray(varcov, dtype=float), index=est.index, columns=est.index)
-    return apollo.ApolloModel(
-        estimate=est, apollo_beta=est.copy(), apollo_fixed=[], apollo_control=apollo.ApolloControl(),
+    return engine.Estimate(
+        estimate=est, beta_start=est.copy(), fixed=[], control=Control(),
         maximum=0.0, LLStart=0.0, varcov=vc, robvarcov=vc.copy(),
     )

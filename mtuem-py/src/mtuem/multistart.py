@@ -7,17 +7,31 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from . import apollo
+from . import _engine as engine
+from ._engine.latent import _loglik_per_indiv
+from ._engine.loglike import _model_component
 
 DEFAULT_ESTIMATE_SETTINGS = {
     "writeIter": False,
     "maxIterations": 500,
-    "estimationRoutine": "bgw",
     "hessianRoutine": "numDeriv",
     "scaleHessian": False,
     "scaleAfterConvergence": False,
     "bgw_settings": {"maxFunctionEvals": 1000},
 }
+
+
+def _estimate_kwargs(est_set: Mapping, silent: bool | None = None) -> dict:
+    """Keyword arguments of ``engine.estimate`` from the settings dict of ``customMultiStart``."""
+    kwargs = {
+        "max_iterations": int(est_set["maxIterations"]),
+        "max_function_evals": int(dict(est_set.get("bgw_settings") or {}).get("maxFunctionEvals", 100000)),
+        "hessian": "none" if est_set.get("hessianRoutine") == "none" else None,
+        "silent": bool(est_set.get("silent", False)) if silent is None else silent,
+    }
+    if "saddleEscapes" in est_set:
+        kwargs["saddle_escapes"] = int(est_set["saddleEscapes"])
+    return kwargs
 
 
 def _cholesky_split(cholesky: list[str]) -> tuple[list[str], list[str]]:
@@ -105,7 +119,6 @@ def customMultiStart(
     est_set = dict(DEFAULT_ESTIMATE_SETTINGS)
     est_set.update(estimate_settings or {})
     est_set["scaleAfterConvergence"] = False
-    routine = est_set["estimationRoutine"]
     rng = np.random.default_rng(seed)
 
     n_cand = int(ms["nCandidates"])
@@ -120,7 +133,7 @@ def customMultiStart(
         norm = normalization["normalization"]
         keys = ("work_elasticities", "times_elasticities", "goods_elasticities", "sig", "rho", "cholesky")
         params = {k: list(normalization.get(k) or []) for k in keys}
-        is_lc = apollo_inputs.apollo_lcPars is not None
+        is_lc = apollo_inputs.lc_pars is not None
         if not is_lc and nClass <= 1:
             beta_matrix = _normalize(beta_matrix, rng, variables, norm, *params.values())
         else:
@@ -135,13 +148,14 @@ def customMultiStart(
     for i in range(n_cand):
         with np.errstate(all="ignore"):
             P = apollo_probabilities(beta_matrix.iloc[i].to_dict(), apollo_inputs, "estimate")
-            ll = float(np.sum(apollo._loglik_per_indiv(P["model"], apollo_inputs)))
+            ll = float(np.sum(_loglik_per_indiv(_model_component(P), apollo_inputs)))
         works.append(not np.isnan(ll))
     print("Done...", sum(works), "candidates available")
 
-    models: dict[int, apollo.ApolloModel | None] = {}
+    models: dict[int, engine.Estimate | None] = {}
     best_model, best_ll = None, -np.inf
-    quiet = dict(est_set, silent=True)
+    kwargs = _estimate_kwargs(est_set)
+    quiet = _estimate_kwargs(est_set, silent=True)
     for i in [i for i in range(n_cand) if works[i]]:
         cand = i + 1
         print(f"Candidate {cand} ...", end="" if not verbose else "\n")
@@ -151,15 +165,14 @@ def customMultiStart(
             if first_em:
                 print("Starting EM...", end="" if not verbose else "\n")
                 with sink:
-                    em = apollo.lc_em(start, fixed, apollo_probabilities, apollo_inputs,
-                                      {"EMmaxIterations": em_iter_max, "postEM": 0, "silent": True},
-                                      quiet)
+                    em = engine.lc_em(start, fixed, apollo_probabilities, apollo_inputs,
+                                      max_iterations=em_iter_max, post_em=0, estimate_kwargs=quiet)
                 start = em.estimate.to_dict()
                 print(f"LL: {-round(em.maximum, 2)} ...", end="")
             print("Starting solver...", end="" if not verbose else "\n")
             sink = contextlib.nullcontext() if verbose else contextlib.redirect_stdout(io.StringIO())
             with sink, np.errstate(all="ignore"):
-                model = apollo.estimate(start, fixed, apollo_probabilities, apollo_inputs, est_set if verbose else quiet)
+                model = engine.estimate(start, fixed, apollo_probabilities, apollo_inputs, **(kwargs if verbose else quiet))
             models[cand] = model
             print(f"LL: {-round(model.maximum, 2)} ...Done...", end="")
         except (FloatingPointError, ValueError, np.linalg.LinAlgError, ZeroDivisionError) as err:
@@ -167,7 +180,7 @@ def customMultiStart(
             models[cand] = None
             continue
 
-        converged = (model.code == 4 and routine == "bgw") or (model.code == 0 and routine == "bfgs")
+        converged = model.code == 0
         eig = model.eigValue if np.isfinite(model.eigValue) else np.inf
         ok = converged and model.maximum > best_ll and (eig < 0 if non_saddle else True)
         if ok:

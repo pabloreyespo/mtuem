@@ -6,7 +6,8 @@ from numpy.testing import assert_allclose
 
 import mtuem
 from helper_mtuem import cov2cor, inputs_of, mtuem_dmvnorm_ref
-from mtuem import apollo
+from mtuem import _engine as engine
+from mtuem.config import Control
 
 
 def test_mtuem_residuals_refactor_preserves_mtuem_likelihood_output_closed_form_check():
@@ -196,7 +197,7 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_class_collapse
 
 def test_custom_multistart_normalizes_shared_unsuffixed_covariance_parameters_without_erroring():
     # A 2-class, 1-equation latent class model with one covariance parameter (chk11)
-    # SHARED across both classes, i.e. not suffixed with _1/_2 in apollo_beta.
+    # SHARED across both classes, i.e. not suffixed with _1/_2 in the start values.
     db = mtuem.maed()
     db = db[db["EcI"] > 0].iloc[:100].reset_index(drop=True)
     beta = {
@@ -206,21 +207,21 @@ def test_custom_multistart_normalizes_shared_unsuffixed_covariance_parameters_wi
     }
     fixed = ["Theta_1", "Theta_2", "asc_1", "x_female_1", "x_older45_1"]
 
-    def apollo_lcPars(b, apollo_inputs):
+    def lc_pars(b, inputs):
         V = {
             "class_1": b.asc_1 + b.female * b.x_female_1 + b.older45 * b.x_older45_1,
             "class_2": b.asc_2 + b.female * b.x_female_2 + b.older45 * b.x_older45_2,
         }
         return {
             "Theta": [b.Theta_1, b.Theta_2], "Phi": [b.Phi_1, b.Phi_2], "thw": [b.thw_1, b.thw_2],
-            "pi_values": apollo.class_alloc({"classes": {"class_1": 1, "class_2": 2}, "utilities": V}),
+            "pi_values": engine.class_alloc({"classes": {"class_1": 1, "class_2": 2}, "utilities": V}),
         }
 
-    control = {"modelName": "test-shared-cov-normalize", "indivID": "PeID", "noValidation": True, "noDiagnostics": True}
-    inputs = apollo.validate_inputs(db, beta, fixed, control, apollo_lcPars, silent=True)
+    control = Control(model_name="test-shared-cov-normalize", indiv_id="PeID")
+    inputs = engine.make_inputs(db, beta, fixed, control, lc_pars)
 
-    def apollo_probabilities(apollo_beta, apollo_inputs, functionality="estimate"):
-        b = apollo_inputs.attach(apollo_beta)
+    def probabilities(params, inputs, functionality="estimate"):
+        b = inputs.attach(params)
         P = {}
         for s in range(len(b.pi_values)):
             settings = {
@@ -229,12 +230,12 @@ def test_custom_multistart_normalizes_shared_unsuffixed_covariance_parameters_wi
                 "cholesky": {"chk11": b.chk11},
                 "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168, "componentName": f"class_{s + 1}",
             }
-            P[f"class_{s + 1}"] = mtuem.mtuem_likelihood(settings, functionality, apollo_inputs)
-        P["model"] = apollo.lc({"inClassProb": P, "classProb": b.pi_values}, apollo_inputs, functionality)
-        return apollo.prepare_prob(P, apollo_inputs, functionality)
+            P[f"class_{s + 1}"] = mtuem.mtuem_likelihood(settings, functionality, inputs)
+        P["model"] = engine.lc({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
+        return P
 
     result = mtuem.customMultiStart(
-        beta, fixed, apollo_probabilities, inputs,
+        beta, fixed, probabilities, inputs,
         customMultistart_settings={"nCandidates": 2},
         estimate_settings={"maxIterations": 1, "hessianRoutine": "none", "estimationRoutine": "bfgs"},
         first_em=False,

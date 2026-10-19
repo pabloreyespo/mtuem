@@ -170,7 +170,7 @@ def test_em_settings_control_the_fixed_point_and_change_the_answer_when_truncate
 def _ic_model(n_est, fixed, maximum, nObs):
     return SimpleNamespace(
         estimate=pd.Series(np.zeros(n_est), index=[f"b{i}" for i in range(1, n_est + 1)]),
-        apollo_fixed=fixed, maximum=maximum, nObs=nObs,
+        fixed=fixed, maximum=maximum, nObs=nObs,
     )
 
 

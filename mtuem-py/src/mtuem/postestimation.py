@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from . import apollo
+from . import _engine as engine
 from .lc_profiled import mtuem_get_profiled_sigma
 from .utils import cov_complete, get_tw_thph
 
@@ -16,7 +16,7 @@ from .utils import cov_complete, get_tw_thph
 # ----------------------------------------------------------------------------------------------
 def mtuem_get_corr(model, apollo_probabilities, apollo_inputs) -> dict:
     """Covariance, correlation and sds of observed minus predicted allocations."""
-    pred = apollo.prediction(model, apollo_probabilities, apollo_inputs, {"silent": True})
+    pred = engine.prediction(model, apollo_probabilities, apollo_inputs, silent=True)
     drop = ["ID", "Observation", "Tfi", "Xfj", "VoL", "VTAW"]
     opt = pred.drop(columns=[c for c in drop if c in pred.columns])
     err = apollo_inputs.database[list(opt.columns)].to_numpy(dtype=float) - opt.to_numpy(dtype=float)
@@ -64,9 +64,7 @@ def mtuem_cholesky_deltaMethod(
                 return float(S[i, j] / np.sqrt(S[i, i] * S[j, j]))
 
             expressions[f"rho_{lab(j)}_{lab(i)}"] = rho
-    settings = {"expression": expressions}
-    settings.update(deltaMethod_settings_extra or {})
-    return apollo.delta_method(model, settings)
+    return engine.delta_method(model, expressions, **dict(deltaMethod_settings_extra or {}))
 
 
 # ----------------------------------------------------------------------------------------------
@@ -116,7 +114,7 @@ def _vot_posterior(model, apollo_probabilities, apollo_inputs, nClass: int) -> n
     post = None
     if apollo_probabilities is not None:
         try:
-            post = apollo.lc_conditionals(model, apollo_probabilities, apollo_inputs)
+            post = engine.lc_conditionals(model, apollo_probabilities, apollo_inputs)
         except (ValueError, AttributeError, KeyError):
             post = None
     if post is None:
@@ -192,10 +190,10 @@ def mtuem_values_of_time(
         indiv.append(pd.DataFrame({"class": s, "Tw": Tw, "VoL": coef_vol * cte_vol_i,
                                    "VTAW": coef_vtaw * cte_vtaw_i, "weight": wt}))
         if standard_errors:
-            delta = apollo.delta_method(model, {"expression": {
+            delta = engine.delta_method(model, {
                 "VoL": lambda p, c=cte_vol, n=names: c * p[n["Theta"]] / p[n["Phi"]],
                 "VTAW": lambda p, c=cte_vtaw, n=names: c * p[n["thw"]] / p[n["Phi"]],
-            }}, silent=silent)
+            }, silent=silent)
             deltas.append(delta)
             vol_se, vtaw_se = delta["s.e."].to_numpy(dtype=float)
         else:

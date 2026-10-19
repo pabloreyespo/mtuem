@@ -7,11 +7,11 @@ import pytest
 from numpy.testing import assert_allclose
 
 import mtuem
-from helper_mtuem import cov2cor, mtuem_fake_apollo_model
+from helper_mtuem import cov2cor, mtuem_fake_model
 
 
 def test_a_cholesky_parameter_count_that_is_not_m_times_m_plus_1_over_2_is_rejected():
-    model = mtuem_fake_apollo_model({"a": 1, "b": 2}, np.eye(2) * 0.01)
+    model = mtuem_fake_model({"a": 1, "b": 2}, np.eye(2) * 0.01)
 
     with pytest.raises(ValueError, match=re.escape("M * (M + 1) / 2")):
         mtuem.mtuem_cholesky_deltaMethod(model, ["a", "b"])
@@ -19,7 +19,7 @@ def test_a_cholesky_parameter_count_that_is_not_m_times_m_plus_1_over_2_is_rejec
 
 def test_delta_method_recovers_the_sigmas_and_correlation_implied_by_the_cholesky_factor():
     est = {"chk11": 2, "chk21": 0.5, "chk22": 1.5}
-    model = mtuem_fake_apollo_model(est, np.diag([0.01, 0.02, 0.03]))
+    model = mtuem_fake_model(est, np.diag([0.01, 0.02, 0.03]))
 
     res = mtuem.mtuem_cholesky_deltaMethod(model, list(est))
 
@@ -36,7 +36,7 @@ def test_delta_method_recovers_the_sigmas_and_correlation_implied_by_the_cholesk
 
 def test_equation_names_label_the_delta_method_output_when_supplied():
     est = {"chk11": 2, "chk21": 0.5, "chk22": 1.5, "chk31": 0.3, "chk32": 0.2, "chk33": 1.1}
-    model = mtuem_fake_apollo_model(est, np.diag(np.full(6, 0.01)))
+    model = mtuem_fake_model(est, np.diag(np.full(6, 0.01)))
 
     res = mtuem.mtuem_cholesky_deltaMethod(model, list(est), eq_names=["Tw", "Tf1", "Ef1"])
 
@@ -47,7 +47,7 @@ def test_equation_names_label_the_delta_method_output_when_supplied():
 
 def test_delta_method_values_match_the_covariance_implied_by_a_3_equation_factor():
     est = {"chk11": 2, "chk21": 0.5, "chk22": 1.5, "chk31": 0.3, "chk32": 0.2, "chk33": 1.1}
-    model = mtuem_fake_apollo_model(est, np.diag(np.full(6, 0.01)))
+    model = mtuem_fake_model(est, np.diag(np.full(6, 0.01)))
     L = np.array([[2, 0, 0], [0.5, 1.5, 0], [0.3, 0.2, 1.1]])
     Sigma = L @ L.T
     sig = np.sqrt(np.diag(Sigma))

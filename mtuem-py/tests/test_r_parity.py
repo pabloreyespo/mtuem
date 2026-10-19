@@ -14,7 +14,10 @@ import pytest
 
 import mtuem
 from cases import CASES, CHK, build
-from mtuem import apollo
+from mtuem import _engine as engine
+from mtuem._engine.latent import _loglik_per_indiv
+from mtuem._engine.output import _estimates_table, print_matrix
+from mtuem.config import Control
 
 REF = Path(__file__).parent / "reference"
 SINGLE = ["eq1", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky"]
@@ -30,7 +33,7 @@ def num(series) -> pd.Series:
 
 def total_ll(case: str, beta: dict) -> float:
     _, _, pf, inputs = build(case)
-    return float(np.sum(apollo._loglik_per_indiv(pf(beta, inputs, "estimate")["model"], inputs)))
+    return float(np.sum(_loglik_per_indiv(pf(beta, inputs, "estimate")["model"], inputs)))
 
 
 @pytest.fixture(scope="module")
@@ -38,7 +41,7 @@ def single_models():
     out = {}
     for case in SINGLE:
         beta, fixed, pf, inputs = build(case)
-        out[case] = (apollo.estimate(beta, fixed, pf, inputs, {"silent": True}), pf, inputs)
+        out[case] = (engine.estimate(beta, fixed, pf, inputs, silent=True), pf, inputs)
     return out
 
 
@@ -55,7 +58,7 @@ def test_log_likelihood_matches_r(case, point):
 def test_estimation_matches_r(case, single_models):
     ref = load_ref(case)
     model = single_models[case][0]
-    assert model.code == 4
+    assert model.code == 0
     assert model.maximum == pytest.approx(ref["maximum"], abs=1e-3)
     assert model.eigValue < 0
     est, se, robse = num(ref["estimate"]), num(ref["se"]), num(ref["robse"])
@@ -68,7 +71,7 @@ def test_estimation_matches_r(case, single_models):
 def test_lc_standard_errors_match_r_at_the_r_optimum():
     ref = load_ref("lc_cholesky")
     _, fixed, pf, inputs = build("lc_cholesky")
-    model = apollo.estimate(ref["estimate"], fixed, pf, inputs, {"silent": True})
+    model = engine.estimate(ref["estimate"], fixed, pf, inputs, silent=True)
     assert model.maximum == pytest.approx(ref["maximum"], abs=1e-3)
     se, robse = num(ref["se"]).dropna(), num(ref["robse"]).dropna()
     np.testing.assert_allclose(model.se[se.index], se, rtol=2e-3)
@@ -81,7 +84,7 @@ def test_lc_estimation_reaches_at_least_the_r_likelihood(case):
     # optimiser must reach a likelihood at least as high.
     ref = load_ref(case)
     beta, fixed, pf, inputs = build(case)
-    model = apollo.estimate(beta, fixed, pf, inputs, {"silent": True, "hessianRoutine": "none"})
+    model = engine.estimate(beta, fixed, pf, inputs, silent=True, hessian="none")
     assert model.maximum >= ref["maximum"] - 1e-3
 
 
@@ -101,8 +104,8 @@ def test_lc_values_of_time_means_match_r(case):
     ref = load_ref(case)
     _, fixed, pf, inputs = build(case)
     est = pd.Series(ref["estimate"], dtype=float)
-    model = apollo.ApolloModel(estimate=est, apollo_beta=est, apollo_fixed=fixed,
-                               apollo_control=inputs.apollo_control, maximum=ref["maximum"], LLStart=0.0)
+    model = engine.Estimate(estimate=est, beta_start=est, fixed=fixed,
+                           control=inputs.control, maximum=ref["maximum"], LLStart=0.0)
     vot = mtuem.mtuem_values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)
     r = pd.DataFrame(ref["vot"])
     np.testing.assert_allclose(vot["summary"]["mean"], r["mean"], rtol=1e-6)
@@ -120,7 +123,7 @@ def test_residual_correlation_matches_r(case, single_models):
 def test_prediction_matches_r(single_models):
     ref = load_ref("eq3_cholesky")
     model, pf, inputs = single_models["eq3_cholesky"]
-    pred = apollo.prediction(model, pf, inputs, {"silent": True}).head(10)
+    pred = engine.prediction(model, pf, inputs, silent=True).head(10)
     r = pd.DataFrame(ref["pred_head"])
     for col in ["Tw", "Tf1", "Tfi", "Ef1", "Xfj", "VoL", "VTAW"]:
         np.testing.assert_allclose(pred[col], r[col], rtol=1e-4)
@@ -154,25 +157,25 @@ def _r_block(case: str, header: str) -> list[str]:
 
 
 @pytest.mark.parametrize("case", CASES)
-def test_estimates_table_prints_like_apollo(case):
+def test_estimates_table_prints_like_r(case):
     ref = load_ref(case)
     est = num(ref["estimate"])
-    model = apollo.ApolloModel(estimate=est, apollo_beta=est, apollo_fixed=ref["fixed"],
-                               apollo_control=apollo.ApolloControl(), maximum=0.0, LLStart=0.0,
-                               se=num(ref["se"]), robse=num(ref["robse"]))
+    model = engine.Estimate(estimate=est, beta_start=est, fixed=ref["fixed"],
+                           control=Control(), maximum=0.0, LLStart=0.0,
+                           se=num(ref["se"]), robse=num(ref["robse"]))
     r_table = _r_block(case, "Estimates:")
     if "Rob.s.e." not in r_table[0]:
         pytest.skip("R could not compute a Hessian here and printed BHHH standard errors instead")
-    table = apollo.apollo_print_matrix(apollo._estimates_table(model)).splitlines()
+    table = print_matrix(_estimates_table(model)).splitlines()
     assert table == r_table
 
 
 @pytest.mark.parametrize("case", CASES)
-def test_density_mode_reproduces_r_too(case):
-    # workInLogs = FALSE: likelihood functions return densities, as in R and Apollo.
+def test_exponentiated_log_likelihood_reproduces_r_densities(case):
+    # The engine works in logs: exp of the log-likelihood is the density R reports.
     ref = load_ref(case)
     _, _, pf, inputs = build(case)
-    inputs.work_in_logs = False
-    L = np.asarray(pf(ref["estimate"], inputs, "estimate")["model"], dtype=float)
+    logL = np.asarray(pf(ref["estimate"], inputs, "estimate")["model"], dtype=float)
+    L = np.exp(logL)
     assert np.all(L >= 0)
     assert float(np.sum(np.log(L))) == pytest.approx(ref["ll_at_estimate"], rel=1e-10, abs=1e-8)

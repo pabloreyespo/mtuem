@@ -5,7 +5,8 @@ import pandas as pd
 from numpy.testing import assert_allclose
 
 import mtuem
-from mtuem import apollo
+from mtuem import _engine as engine
+from mtuem.config import Control
 
 FAST = {"maxIterations": 2, "hessianRoutine": "none", "estimationRoutine": "bfgs"}
 
@@ -16,21 +17,21 @@ def cms_setup():
     db = db[db["EcI"] > 0].iloc[:120].reset_index(drop=True)
     beta = {"Theta": 1, "Phi": 1, "thw": 0, "sig1": 8}
     fixed = ["Theta"]
-    control = {"modelName": "test-cms", "indivID": "PeID", "noValidation": True, "noDiagnostics": True}
-    inputs = apollo.validate_inputs(db, beta, fixed, control, silent=True)
+    control = Control(model_name="test-cms", indiv_id="PeID")
+    inputs = engine.make_inputs(db, beta, fixed, control)
 
-    def apollo_probabilities(apollo_beta, apollo_inputs, functionality="estimate"):
-        b = apollo_inputs.attach(apollo_beta)
+    def probabilities(params, inputs, functionality="estimate"):
+        b = inputs.attach(params)
         settings = {
             "work_times": ["Tw"],
             "work_elasticities": {"Theta": b.Theta, "Phi": b.Phi, "thw": b.thw},
             "sig": {"sig1": b.sig1},
             "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168,
         }
-        P = {"model": mtuem.mtuem_likelihood(settings, functionality, apollo_inputs)}
-        return apollo.prepare_prob(P, apollo_inputs, functionality)
+        P = {"model": mtuem.mtuem_likelihood(settings, functionality, inputs)}
+        return P
 
-    return beta, fixed, apollo_probabilities, inputs
+    return beta, fixed, probabilities, inputs
 
 
 def test_custom_multistart_returns_the_best_model_its_log_likelihood_and_every_candidate():
@@ -44,7 +45,7 @@ def test_custom_multistart_returns_the_best_model_its_log_likelihood_and_every_c
     assert set(res) == {"best_model", "best_ll", "models"}
     # Unlike R, only candidates that pass the initial screening get an entry in models.
     assert 0 < len(res["models"]) <= 3
-    succeeded = [m for m in res["models"].values() if isinstance(m, apollo.ApolloModel)]
+    succeeded = [m for m in res["models"].values() if isinstance(m, engine.Estimate)]
     assert len(succeeded) > 0
     if res["best_model"] is not None:
         assert res["best_ll"] == res["best_model"].maximum
@@ -63,7 +64,7 @@ def test_custom_multistart_samples_candidates_inside_the_requested_box():
         estimate_settings=FAST, verbose=False, seed=1,
     )
 
-    lls = [m.maximum for m in res["models"].values() if isinstance(m, apollo.ApolloModel)]
+    lls = [m.maximum for m in res["models"].values() if isinstance(m, engine.Estimate)]
     assert len(lls) > 0
     assert_allclose(np.ptp(lls), 0, atol=1e-8)
 
@@ -94,6 +95,6 @@ def test_the_deprecated_estimation_settings_alias_is_still_honoured():
         estimation_settings=FAST, verbose=False, seed=1,
     )
 
-    succeeded = [m for m in res["models"].values() if isinstance(m, apollo.ApolloModel)]
+    succeeded = [m for m in res["models"].values() if isinstance(m, engine.Estimate)]
     assert len(succeeded) > 0
-    assert all(m.estimationRoutine == "bfgs" for m in succeeded)
+    assert all(m.routine == "bfgs" for m in succeeded)

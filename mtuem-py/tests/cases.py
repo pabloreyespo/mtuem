@@ -1,7 +1,10 @@
 """The eight README models, built exactly as tests/reference/make_reference.R builds them in R."""
 
+from pathlib import Path
+
 import mtuem
-from mtuem import apollo
+from mtuem import _engine as engine
+from mtuem.config import Control
 
 CASES = ["eq1", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky", "lc_cholesky", "lc_profiled", "lc_shared"]
 CHK = ["chk11", "chk21", "chk22", "chk31", "chk32", "chk33"]
@@ -43,7 +46,7 @@ def start_values(case: str) -> tuple[dict, list[str]]:
 
 
 def build(case: str, autodiff: bool = False):
-    """Return (apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs).
+    """Return (beta, fixed, probabilities, inputs).
 
     With ``autodiff=True`` the same model is written with ``mtuem.autodiff`` (log-likelihoods,
     exact derivatives). The profiled latent class model has no autodiff version.
@@ -53,14 +56,14 @@ def build(case: str, autodiff: bool = False):
 
         loglik, alloc, mix = ad.mtuem_loglik, ad.class_alloc, ad.lc
     else:
-        loglik, alloc, mix = mtuem.mtuem_likelihood, apollo.class_alloc, apollo.lc
+        loglik, alloc, mix = mtuem.mtuem_likelihood, engine.class_alloc, engine.lc
     beta, fixed = start_values(case)
     lc = case.startswith("lc")
-    control = {"modelName": case, "modelDescr": case, "indivID": "PeID", "outputDirectory": "output"}
+    control = Control(model_name=case, description=case, indiv_id="PeID", output_dir=Path("output"))
 
     if not lc:
-        def apollo_probabilities(apollo_beta, apollo_inputs, functionality="estimate"):
-            b = apollo_inputs.attach(apollo_beta)
+        def probabilities(params, inputs, functionality="estimate"):
+            b = inputs.attach(params)
             s = {
                 "work_times": ["Tw"],
                 "work_elasticities": {"Theta": b.Theta, "Phi": b.Phi, "thw": b.thw},
@@ -75,13 +78,13 @@ def build(case: str, autodiff: bool = False):
                 s["rho"] = {"rho_12": b.rho_12, "rho_13": b.rho_13, "rho_23": b.rho_23}
             if case == "eq3_cholesky":
                 s["cholesky"] = {k: getattr(b, k) for k in CHK}
-            P = {"model": loglik(s, functionality, apollo_inputs)}
-            return apollo.prepare_prob(P, apollo_inputs, functionality)
+            P = {"model": loglik(s, functionality, inputs)}
+            return P
 
-        inputs = apollo.validate_inputs(database(), beta, fixed, control, silent=True, autodiff=autodiff)
-        return beta, fixed, apollo_probabilities, inputs
+        inputs = engine.make_inputs(database(), beta, fixed, control, autodiff=autodiff)
+        return beta, fixed, probabilities, inputs
 
-    def apollo_lcPars(b, apollo_inputs):
+    def lc_pars(b, inputs):
         lcpars = {p: [getattr(b, f"{p}_1"), getattr(b, f"{p}_2")] for p in ("Theta", "Phi", "thw", "th1", "ph1")}
         if case == "lc_cholesky":
             lcpars |= {p: [getattr(b, f"{p}_1"), getattr(b, f"{p}_2")] for p in CHK}
@@ -92,8 +95,8 @@ def build(case: str, autodiff: bool = False):
         lcpars["pi_values"] = alloc({"classes": {"class_1": 1, "class_2": 2}, "utilities": V})
         return lcpars
 
-    def apollo_probabilities(apollo_beta, apollo_inputs, functionality="estimate"):
-        b = apollo_inputs.attach(apollo_beta)
+    def probabilities(params, inputs, functionality="estimate"):
+        b = inputs.attach(params)
         P, class_settings = {}, []
         for s in range(len(b.pi_values)):
             st = {
@@ -109,16 +112,16 @@ def build(case: str, autodiff: bool = False):
             if case == "lc_profiled":
                 class_settings.append(st)
             else:
-                P[f"class_{s + 1}"] = loglik(st, functionality, apollo_inputs)
+                P[f"class_{s + 1}"] = loglik(st, functionality, inputs)
         if case == "lc_profiled":
             P["model"] = mtuem.mtuem_lc_profiled_likelihood(
-                {"class_settings": class_settings, "classProb": b.pi_values}, functionality, apollo_inputs
+                {"class_settings": class_settings, "classProb": b.pi_values}, functionality, inputs
             )
         else:
-            P["model"] = mix({"inClassProb": P, "classProb": b.pi_values}, apollo_inputs, functionality)
-        return apollo.prepare_prob(P, apollo_inputs, functionality)
+            P["model"] = mix({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
+        return P
 
     if autodiff and case == "lc_profiled":
         raise NotImplementedError("mtuem_lc_profiled_likelihood has no autodiff version")
-    inputs = apollo.validate_inputs(database(), beta, fixed, control, apollo_lcPars, silent=True, autodiff=autodiff)
-    return beta, fixed, apollo_probabilities, inputs
+    inputs = engine.make_inputs(database(), beta, fixed, control, lc_pars, autodiff=autodiff)
+    return beta, fixed, probabilities, inputs

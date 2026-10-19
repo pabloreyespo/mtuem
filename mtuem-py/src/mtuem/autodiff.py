@@ -2,9 +2,8 @@
 
 These functions return LOG-likelihoods written with ``jax.numpy``, so the estimation engine
 can take exact gradients, individual scores and Hessians instead of numerical ones. Use them
-inside ``apollo_probabilities`` and create the inputs with
-``apollo.validate_inputs(..., autodiff=True)``; ``apollo.estimate`` then switches to exact
-derivatives on its own.
+inside the probabilities function and create the inputs with
+``make_inputs(..., autodiff=True)``; ``estimate`` then switches to exact derivatives on its own.
 
 Install the optional dependency with ``uv sync --extra jax`` (or ``pip install mtuem[jax]``).
 
@@ -27,8 +26,8 @@ try:
 except ImportError as err:  # pragma: no cover
     raise ImportError("mtuem.autodiff needs JAX: install it with `uv sync --extra jax`") from err
 
-from . import apollo, likelihood
-from .apollo import ClassProbs
+from . import _engine, likelihood
+from ._engine import ClassProbs
 from .utils import as_names
 
 ESTIMATE_LIKE = ("estimate", "conditionals", "raw", "components", "output", "report")
@@ -151,7 +150,7 @@ def mtuem_loglik(mtuem_settings: Mapping, functionality: str = "estimate", apoll
 
 
 def class_alloc(classAlloc_settings: Mapping) -> ClassProbs:
-    """Class allocation probabilities (multinomial logit), the JAX counterpart of ``apollo.class_alloc``."""
+    """Class allocation probabilities (multinomial logit), the JAX counterpart of the engine's ``class_alloc``."""
     utilities = classAlloc_settings["utilities"]
     V = list(utilities.values()) if isinstance(utilities, Mapping) else list(utilities)
     V = jnp.broadcast_arrays(*[jnp.atleast_1d(jnp.asarray(v, dtype=float)) for v in V])
@@ -181,7 +180,7 @@ def lc(lc_settings: Mapping, apollo_inputs, functionality: str = "estimate"):
     log_pis = getattr(class_prob, "log", None) or [_safe_log(p) for p in pis]
     if functionality in ("prediction", "preprocess"):
         converted = {"inClassProb": [np.asarray(c) for c in comps], "classProb": [np.asarray(p) for p in pis]}
-        return apollo.lc(converted, apollo_inputs, functionality)
+        return _engine.lc(converted, apollo_inputs, functionality)
     n_ind = apollo_inputs.nIndivs
     idx = jnp.asarray(apollo_inputs.indiv_index)
     first = jnp.asarray(apollo_inputs.first_rows)

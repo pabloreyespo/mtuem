@@ -59,7 +59,7 @@ def _with_defaults(settings: Mapping, extra: Mapping | None = None) -> dict:
 
 
 def works_in_logs(apollo_inputs) -> bool:
-    """True when the model works in logs (``apollo_control$workInLogs``, default in mtuem-py).
+    """True when the model works in logs (always the case for inputs made by the engine).
 
     Then likelihood functions return log-likelihoods, which never underflow. Inputs without
     the flag (for example a bare namespace with a ``database``) get densities, as in R.
@@ -170,8 +170,8 @@ def mtuem_likelihood(mtuem_settings: Mapping, functionality: str = "estimate", a
     ``thw``. The error structure is profiled (no ``sig``/``rho``), uses explicit ``sig`` with
     profiled correlations, explicit ``sig`` and ``rho``, or a ``cholesky`` factor.
 
-    When the model works in logs (``workInLogs``, the default for inputs created by
-    ``apollo.validate_inputs``) the estimation functionalities return log-likelihoods; otherwise
+    When the model works in logs (always the case for inputs created by the engine's
+    ``make_inputs``) the estimation functionalities return log-likelihoods; otherwise
     densities, as in R. The same holds for ``mtuem_ab_likelihood`` and
     ``additive_quadratic_mtuem_likelihood``.
     """

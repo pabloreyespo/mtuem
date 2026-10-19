@@ -1,10 +1,8 @@
 """mtuem: Microeconomic Time-Use-Expenditure Models in Python.
 
-A Python port of the R package mtuem, with a small Apollo-like estimation engine in
-``mtuem.apollo``.
+A Python port of the R package mtuem, with a private estimation engine in ``mtuem._engine``.
 """
 
-from . import apollo
 from .data import DATASETS, load_dataset, maed
 from .lc_profiled import mtuem_get_profiled_sigma, mtuem_lc_profiled_likelihood, mtuem_profile_ic
 from .likelihood import (
@@ -40,7 +38,6 @@ from .utils import (
 __all__ = [
     "DATASETS",
     "additive_quadratic_mtuem_likelihood",
-    "apollo",
     "cholesky_to_cov",
     "customMultiStart",
     "get_additive_quadratic_essentials",
