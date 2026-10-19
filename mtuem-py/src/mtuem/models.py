@@ -97,12 +97,21 @@ class MTUEM(_Strict):
                 f"elasticity_covariates names unknown elasticities: {', '.join(unknown)}; "
                 f"this model has {', '.join(elasticities)}"
             )
+        fixed = [k for k in self.elasticity_covariates if self._base_defaults()[k][1]]
+        if fixed:
+            raise ValueError(
+                f"elasticity_covariates on {', '.join(fixed)}: it is fixed to normalise the model, "
+                "so it takes no covariate terms"
+            )
         for k, covs in self.elasticity_covariates.items():
             if len(set(covs)) != len(covs):
                 raise ValueError(f"elasticity_covariates['{k}'] names a covariate more than once")
-        names = list(self._defaults())
-        if len(set(names)) != len(names):
-            raise ValueError(f"the specification gives repeated parameter names: {', '.join(names)}")
+            digits = [c for c in covs if c.isdigit()]
+            if digits:
+                raise ValueError(
+                    f"elasticity_covariates['{k}'] names covariates made only of digits ({', '.join(digits)}): "
+                    f"{k}_{digits[0]} would read as the class suffix of {k}; rename the column"
+                )
         return self
 
     # ------------------------------------------------------------------------------------------
@@ -283,6 +292,8 @@ class MTUEM(_Strict):
             missing.append(control.indiv_id)
         if missing:
             raise ValueError(f"the data lack the columns: {', '.join(missing)}")
+        if control is not None and control.indiv_id and data[control.indiv_id].isna().any():
+            raise ValueError(f"the individual id column {control.indiv_id} has missing values")
         non_numeric = [
             c for c in cols
             if not (pd.api.types.is_numeric_dtype(data[c]) or pd.api.types.is_bool_dtype(data[c]))

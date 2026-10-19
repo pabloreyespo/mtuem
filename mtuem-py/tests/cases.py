@@ -126,7 +126,8 @@ def build(case: str, autodiff: bool = False):
 
 # Declarative versions of the single-class README models (mtuem.MTUEM). The R scripts name the
 # parameters theta_1, phi_1, sig_1, rho_12; the declarative model names them th1, ph1, sig1, rho12.
-SINGLE = ["eq1", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky"]
+# eq1_bounded is eq1 estimated with a bound; its fixed-point log-likelihoods are plain eq1 ones.
+SINGLE = ["eq1", "eq1_bounded", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky"]
 RENAME = {
     "theta_1": "th1", "phi_1": "ph1",
     "sig_1": "sig1", "sig_2": "sig2", "sig_3": "sig3",
@@ -139,7 +140,7 @@ def declarative(case: str):
     """The single-class README model ``case`` as an ``mtuem.MTUEM``."""
     from mtuem.models import MTUEM
 
-    if case == "eq1":
+    if case in ("eq1", "eq1_bounded"):
         return MTUEM(work_times=["Tw"], Tc="Tc", Ec="EcI", w="w")
     return MTUEM(
         work_times=["Tw"], free_times=["Tf1"], free_goods=["Ef1"], goods_cost={"Ef1": 1},

@@ -158,6 +158,8 @@ def test_model_round_trips_through_json():
         ({"bogus": 1}, "bogus"),
         ({"extra": {"omitted_times": ["Tf1"]}}, "additive_quadratic"),
         ({"elasticity_covariates": {"Phi": ["female", "female"]}}, "more than once"),
+        ({"elasticity_covariates": {"Phi": ["1"]}}, "Phi_1 would read as the class suffix"),
+        ({"elasticity_covariates": {"Theta": ["female"]}}, "Theta: it is fixed to normalise"),
     ],
 )
 def test_invalid_specifications_are_rejected(kwargs, message):
@@ -331,7 +333,7 @@ def test_fit_rejects_nan_column():
     data = database()
     data.loc[3, "Tf1"] = np.nan
     data.loc[5, "w"] = np.inf
-    with pytest.raises(ValueError, match="Tf1.*w|w.*Tf1"):
+    with pytest.raises(ValueError, match=r"^columns with NaN or infinite values: Tf1, w$"):
         eq3()._validate_data(data)
     with pytest.raises(ValueError, match="Tf1"):
         eq3().fit(data, eq3().beta(), CONTROL)
@@ -339,7 +341,7 @@ def test_fit_rejects_nan_column():
 
 def test_fit_rejects_missing_column():
     data = database().drop(columns=["Ef1", "EcI"])
-    with pytest.raises(ValueError, match="Ef1.*EcI|EcI.*Ef1"):
+    with pytest.raises(ValueError, match=r"^the data lack the columns: Ef1, EcI$"):
         eq3()._validate_data(data)
     with pytest.raises(ValueError, match="Ef1"):
         eq3().fit(data, eq3().beta(), CONTROL)
@@ -355,6 +357,14 @@ def test_fit_rejects_missing_indiv_id():
     data = database().drop(columns=["PeID"])
     with pytest.raises(ValueError, match="PeID"):
         eq3()._validate_data(data, CONTROL)
+
+
+def test_fit_rejects_missing_indiv_id_values():
+    data = database()
+    data.loc[2, "PeID"] = np.nan
+    with pytest.raises(ValueError, match="PeID has missing values"):
+        eq3()._validate_data(data, CONTROL)
+    eq3()._validate_data(data)  # without a control the id column is not read
 
 
 def test_validate_accepts_boolean_covariates():
