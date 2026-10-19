@@ -1,3 +1,8 @@
+NOTE (mtuem test reference): this is the Apollo output of the bgw run with thw fixed at its
+binding lower bound (0.312128219369042), i.e. the constrained maximum. eq1_bounded_ref.json holds
+the standard errors of both free parameters (Phi, thw) from the full unpenalised covariance at
+that point, and the Apollo bfgs + constraints (maxLik barrier) result under "barrier".
+
 Model run by pablo using Apollo 0.3.9 on R 4.4.3 for Windows.
 Please acknowledge the use of Apollo by citing Hess & Palma (2019)
   DOI 10.1016/j.jocm.2019.100170

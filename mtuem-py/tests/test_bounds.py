@@ -70,6 +70,7 @@ def test_start_on_bound_raises():
         engine.estimate(beta, fixed, pf, inputs, bounds={"Phi": (2.0, 0.0)}, silent=True)
 
 
+@pytest.mark.slow
 def test_em_respects_bounds():
     beta, fixed, pf, inputs = small_lc(n=150)
     # From Phi_1 = 0.5 the unbounded EM takes Phi_1 to about 0.27; a lower bound of 0.45 binds.
@@ -85,6 +86,10 @@ def test_em_respects_bounds():
     full = engine.lc_em(em_only.estimate.to_dict(), fixed, pf, inputs, max_iterations=1, bounds=bounds,
                         estimate_kwargs={"silent": True, "max_iterations": 3, "hessian": "none"})
     assert full.estimate["Phi_1"] >= lower
+
+
+def test_em_rejects_a_start_outside_the_bounds():
+    beta, fixed, pf, inputs = small_lc(n=50)
     with pytest.raises(ValueError, match="Phi_1"):
         engine.lc_em(beta, fixed, pf, inputs, bounds={"Phi_1": (0.6, None)}, estimate_kwargs={"silent": True})
 
@@ -107,3 +112,37 @@ def test_maximise_bounded_on_a_quadratic():
 
     with pytest.raises(ValueError):
         maximise_bounded(f, np.array([1.0, 0.0]), np.array([-np.inf, -0.5]), np.array([1.0, np.inf]))
+
+
+def coupled(x):
+    # f = -(x0 - 2)^2 - 10 (x0 x1 - 1)^2 - (x1 + 1)^2; with x0 < 1 and x1 > -0.5 the maximum is
+    # at x0 = 1, x1 = 9/11, f = -51/11 (the x0 bound binds).
+    return np.array([-(x[0] - 2.0) ** 2, -10.0 * (x[0] * x[1] - 1.0) ** 2, -(x[1] + 1.0) ** 2])
+
+
+COUPLED_BOUNDS = (np.array([-np.inf, -0.5]), np.array([1.0, np.inf]))
+
+
+def test_barrier_converges_on_a_coupled_problem():
+    res = maximise_bounded(coupled, np.zeros(2), *COUPLED_BOUNDS)
+    assert res.code == 0 and res.message == "successful convergence"
+    assert res.iterations <= 500
+    assert res.x[0] < 1.0
+    np.testing.assert_allclose(res.x, [1.0, 9 / 11], atol=1e-5)
+    assert res.f == pytest.approx(-51 / 11, abs=1e-7)
+
+
+def test_exhausted_budget_inside_the_barrier_reports_the_iteration_limit():
+    # The free run takes 16 iterations, so the barrier runs out of the 33 available.
+    res = maximise_bounded(coupled, np.zeros(2), *COUPLED_BOUNDS, max_iterations=33)
+    assert res.code == 10 and res.message == "iteration limit reached without convergence"
+    assert res.iterations <= 33
+    # A budget used up by the free run leaves none for the barrier.
+    res = maximise_bounded(coupled, np.zeros(2), *COUPLED_BOUNDS, max_iterations=16)
+    assert res.code == 10 and res.iterations <= 16
+
+
+def test_result_is_kept_strictly_inside_the_bounds():
+    res = maximise_bounded(coupled, np.array([1.0 - 1e-15, 0.0]), *COUPLED_BOUNDS)
+    assert res.code == 0
+    assert 1.0 - res.x[0] >= 1e-12

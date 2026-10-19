@@ -155,6 +155,16 @@ def _maximise(
     return _OptResult(x, fx, code, MESSAGES[code], it, evals)
 
 
+def _inside(x: np.ndarray, lower: np.ndarray, upper: np.ndarray, rel: float) -> np.ndarray:
+    """``x`` moved at least ``rel * max(1, |bound|)`` (at most a quarter of the width) inside its bounds."""
+    width = upper - lower
+    with np.errstate(invalid="ignore"):
+        d_lo = np.minimum(rel * np.maximum(1.0, np.abs(lower)), 0.25 * width)
+        d_hi = np.minimum(rel * np.maximum(1.0, np.abs(upper)), 0.25 * width)
+    x = np.where(np.isfinite(lower), np.maximum(x, lower + np.where(np.isfinite(lower), d_lo, 0.0)), x)
+    return np.where(np.isfinite(upper), np.minimum(x, upper - np.where(np.isfinite(upper), d_hi, 0.0)), x)
+
+
 def maximise_bounded(
     fun_vec: Callable[[np.ndarray], np.ndarray],
     x0: np.ndarray,
@@ -178,13 +188,20 @@ def maximise_bounded(
     from ``x_k`` with ``_maximise``. The barrier gradient ``mu * A'(g(x_k) / g(x) - 1)`` vanishes
     at ``x_k``, so the penalty fades as the iterates settle and the limit is the constrained
     maximum, also when it lies on a bound. The loop stops when an outer iteration improves R
-    by less than ``outer_eps * (|R| + outer_eps)``. The returned ``f`` is the unpenalised
-    objective. The barrier is used only when the unconstrained maximum (from ``x0``) is not
-    strictly inside the bounds; otherwise that maximum is returned as is. The barrier enters
-    ``_maximise`` as one extra individual whose score is exact; the scores of ``fun_vec`` are
+    by less than ``tol = outer_eps * (|R| + outer_eps)``, or when the gain still available by
+    closing the gaps to the bounds, ``mu * sum|g(x_k) - g(x_{k+1})|``, is below ``tol``. The
+    returned ``f`` is the unpenalised objective, and ``x`` is kept at least 1e-12 (relative)
+    inside the bounds.
+
+    The barrier is used only when the unconstrained maximum (from ``x0``) is not strictly
+    inside the bounds; otherwise that maximum is returned as is. The barrier enters
+    ``_maximise`` as one extra individual whose value and gradient are exact; its curvature
+    ``A' diag(mu g(x_k) / g^2) A`` is added to the BHHH seed. The scores of ``fun_vec`` are
     central differences (with steps kept inside the bounds) unless ``exact_grad_and_scores`` is
-    given. ``max_iterations`` applies to the unconstrained run and, as a total, to the inner runs
-    of the barrier.
+    given. ``max_iterations`` is shared by the unconstrained run and the inner barrier runs.
+    The code is that of the last inner run: an inner run that does not converge (false
+    convergence, or the iteration or evaluation limit) ends the loop with its code, and a budget
+    used up before a barrier run gives code 10.
     """
     x = np.asarray(x0, dtype=float).copy()
     lower = np.broadcast_to(np.asarray(lower, dtype=float), x.shape)
@@ -194,7 +211,9 @@ def maximise_bounded(
         raise ValueError("The starting values must lie strictly inside the bounds")
     # An unconstrained maximum strictly inside the bounds is the constrained maximum: bounds that
     # do not bind leave the optimiser's path, and so its result, exactly as without bounds.
-    free = _maximise(fun_vec, x, exact_grad_and_scores=exact_grad_and_scores, **maximise_kwargs)
+    max_iterations = int(maximise_kwargs.pop("max_iterations", 500))
+    free = _maximise(fun_vec, x, max_iterations=max_iterations, exact_grad_and_scores=exact_grad_and_scores,
+                     **maximise_kwargs)
     if not (lo.any() or hi.any()) or (free.code == 0 and np.all(free.x > lower) and np.all(free.x < upper)):
         return free
     eye = np.eye(x.size)
@@ -233,26 +252,42 @@ def maximise_bounded(
             if grad is None:
                 return None, None
             db = mu * (A.T @ (g_old / gz - 1.0))
-            return grad + db, np.vstack([S, db])
+            # The rows only seed the curvature model (BHHH); the barrier's own rows make it carry
+            # the barrier Hessian A' diag(mu g_old / g^2) A, which dominates next to a bound.
+            return grad + db, np.vstack([S, (np.sqrt(mu * g_old) / gz)[:, None] * A])
 
         return barrier, r_vec, r_grad_and_scores
 
-    max_iterations = int(maximise_kwargs.pop("max_iterations", 500))
-    used, evals = 0, free.function_evals
+    used, evals = free.iterations, free.function_evals
+    # Start at least a small distance inside each bound. From a point next to a bound (e.g. the
+    # previous EM step) the first barrier would be centred within rounding error of the bound,
+    # where the inner BFGS cannot converge.
+    if used < max_iterations:
+        x = _inside(x, lower, upper, 1e-4)
     code = 10
-    for k in range(int(outer_iterations)):
-        barrier, r_vec, r_grad = penalised(g(x))
+    for _ in range(int(outer_iterations)):
+        if used >= max_iterations:
+            code = 10
+            break
+        g_old = g(x)
+        barrier, r_vec, r_grad = penalised(g_old)
         r_old = float(np.sum(fun_vec(x))) + barrier(x)
         res = _maximise(r_vec, x, max_iterations=max_iterations - used, exact_grad_and_scores=r_grad,
                         **maximise_kwargs)
         used += res.iterations
         evals += res.function_evals
         x = res.x
-        if k > 0 and res.code != 0 and res.code != 9:
-            # Later outer iterations start next to the solution; an inner run that stalls there
-            # has reached the rounding error of x close to a bound. Keep the converged status.
-            break
         code = res.code
-        if code != 0 or abs(res.f - r_old) < outer_eps * (abs(r_old) + outer_eps):
+        if code != 0:
             break
-    return _OptResult(x, float(np.sum(fun_vec(x))), code, MESSAGES[code], free.iterations + used, evals)
+        tol = outer_eps * (abs(r_old) + outer_eps)
+        # At the inner maximum the multiplier of bound j is mu * (g_old_j / g_j - 1), so closing
+        # the remaining gaps g_j gains about mu * sum |g_old - g|. Once that is below the
+        # tolerance a further outer iteration cannot improve R by more than the tolerance either,
+        # and it would only push x into the rounding error next to an active bound.
+        if abs(res.f - r_old) < tol or mu * float(np.sum(np.abs(g_old - g(x)))) < tol:
+            break
+    # Keep x strictly inside by a margin far below any tolerance, so that rescaling it (the next
+    # EM step, the final estimation) cannot round it onto a bound.
+    x = _inside(x, lower, upper, 1e-12)
+    return _OptResult(x, float(np.sum(fun_vec(x))), code, MESSAGES[code], used, evals)
