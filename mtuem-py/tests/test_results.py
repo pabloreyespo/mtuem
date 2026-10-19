@@ -221,21 +221,97 @@ def test_load_round_trip(fitted, saved):
     loaded = mtuem.load(saved["model"], data=database())
     assert loaded.model == fitted.model
     assert loaded.beta == fitted.beta
-    assert loaded.control == fitted.control
+    # The output folder is where the json was read from, not a path of the saving machine.
+    assert loaded.control == fitted.control.model_copy(update={"output_dir": saved["model"].parent})
     assert loaded.settings == fitted.settings
-    pd.testing.assert_series_equal(loaded.estimates, fitted.estimates)
-    pd.testing.assert_series_equal(loaded.se, fitted.se)
-    pd.testing.assert_series_equal(loaded.robse, fitted.robse)
-    pd.testing.assert_frame_equal(loaded.varcov, fitted.varcov)
-    pd.testing.assert_frame_equal(loaded.robvarcov, fitted.robvarcov)
+    pd.testing.assert_series_equal(loaded.estimates, fitted.estimates, check_exact=True)
+    pd.testing.assert_series_equal(loaded.se, fitted.se, check_exact=True)
+    pd.testing.assert_series_equal(loaded.robse, fitted.robse, check_exact=True)
+    pd.testing.assert_frame_equal(loaded.varcov, fitted.varcov, check_exact=True)
+    pd.testing.assert_frame_equal(loaded.robvarcov, fitted.robvarcov, check_exact=True)
     assert loaded.loglik == fitted.loglik and loaded.loglik_start == fitted.loglik_start
     assert loaded.converged == fitted.converged
     assert (loaded.n_obs, loaded.n_indivs, loaded.n_free) == (fitted.n_obs, fitted.n_indivs, fitted.n_free)
     assert loaded.aic == pytest.approx(fitted.aic) and loaded.bic == pytest.approx(fitted.bic)
-    pd.testing.assert_frame_equal(loaded.to_frame(), fitted.to_frame())
+    pd.testing.assert_frame_equal(loaded.to_frame(), fitted.to_frame(), check_exact=True)
     vot, again = fitted.values_of_time(), loaded.values_of_time()
-    pd.testing.assert_frame_equal(again["summary"], vot["summary"])
-    pd.testing.assert_frame_equal(loaded.predict(), fitted.predict())
+    pd.testing.assert_frame_equal(again["summary"], vot["summary"], check_exact=True)
+    pd.testing.assert_frame_equal(loaded.predict(), fitted.predict(), check_exact=True)
+
+
+def _numbers_and_lists(obj, numbers, lists):
+    if isinstance(obj, dict):
+        for v in obj.values():
+            _numbers_and_lists(v, numbers, lists)
+    elif isinstance(obj, list):
+        lists.append(len(obj))
+        for v in obj:
+            _numbers_and_lists(v, numbers, lists)
+    elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+        numbers.add(float(obj))
+
+
+def test_saved_json_holds_no_machine_path_and_no_data(fitted, saved):
+    text = saved["model"].read_text(encoding="utf-8")
+    folder = fitted.control.output_dir
+    assert str(folder) not in text and json.dumps(str(folder))[1:-1] not in text
+    assert folder.name not in text
+    saved_json = json.loads(text)
+    assert saved_json["control"]["output_dir"] == "."
+    numbers, lists = set(), []
+    _numbers_and_lists(saved_json, numbers, lists)
+    assert max(lists) < fitted.n_obs
+    data = database()[declarative("eq1").columns()].to_numpy(dtype=float).ravel()
+    data = {float(v) for v in data if v != round(v)}
+    assert not numbers & data
+
+
+def test_loaded_result_saves_next_to_its_json(saved, tmp_path):
+    folder = tmp_path / "moved"
+    folder.mkdir()
+    path = folder / "eq1_model.json"
+    path.write_text(saved["model"].read_text(encoding="utf-8"), encoding="utf-8")
+    loaded = mtuem.load(path)
+    assert loaded.control.output_dir == folder
+    assert loaded.save()["output"] == folder / "eq1_output.txt"
+
+
+def test_result_keeps_its_own_copy_of_the_model():
+    model = declarative("eq1")
+    result = model.fit(database(), model.beta(), Control(indiv_id="PeID"), NUMPY)
+    model.tau = 100
+    assert result.model.tau == 168
+
+
+def test_save_writes_infinite_bounds_as_no_bound(tmp_path):
+    model = declarative("eq1")
+    beta = model.beta().lower("Phi", -np.inf).upper("Phi", np.inf)
+    result = model.fit(database(), beta, Control(indiv_id="PeID", output_dir=tmp_path), NUMPY)
+    loaded = mtuem.load(result.save()["model"])
+    assert loaded.beta["Phi"].lower is None and loaded.beta["Phi"].upper is None
+
+
+@pytest.mark.parametrize("kwargs", [{"tau": np.inf}, {"extra": {"scale": np.inf}}, {"extra": {"s": [1.0, np.nan]}}])
+def test_save_rejects_other_infinite_values(tmp_path, kwargs):
+    model = MTUEM(work_times=["Tw"], Tc="Tc", Ec="EcI", w="w", **kwargs)
+    result = Result(model, model.beta(), Control(output_dir=tmp_path), NUMPY, _fake_estimate(model))
+    with pytest.raises(ValueError, match="model.*not finite"):
+        result.save()
+
+
+def _fake_estimate(model):
+    from mtuem import _engine as engine
+    est = pd.Series(model.beta().values(), dtype=float)
+    free = model.beta().free_names
+    vc = pd.DataFrame(np.eye(len(free)), index=free, columns=free)
+    return engine.Estimate(estimate=est, beta_start=est, fixed=model.beta().fixed_names, control=Control(),
+                           maximum=-1.0, LLStart=-2.0, se=est * 0, robse=est * 0, varcov=vc, robvarcov=vc,
+                           corrmat=vc, robcorrmat=vc, nObs=1, nIndivs=1, nFreeParams=len(free))
+
+
+def test_load_rejects_a_class_that_is_not_a_model(saved):
+    with pytest.raises(TypeError, match="MTUEM"):
+        mtuem.load(saved["model"], model_class=dict)
 
 
 def test_loaded_summary_matches_the_fitted_one(fitted, saved):
@@ -287,7 +363,12 @@ def test_load_rejects_a_model_that_does_not_match_the_estimates(saved, tmp_path)
     data["model"]["free_times"] = ["Tf1"]
     path = tmp_path / "eq1_model.json"
     path.write_text(json.dumps(data), encoding="utf-8")
-    with pytest.raises(ValueError, match="th1"):
+    with pytest.raises(ValueError, match=r"th1.*estimates"):
+        mtuem.load(path)
+    data = json.loads(saved["model"].read_text(encoding="utf-8"))
+    data["beta"]["params"]["gamma"] = {"value": 0.0}
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match=r"saved beta.*gamma"):
         mtuem.load(path)
 
 
@@ -303,3 +384,11 @@ def test_values_of_time_with_constant_budgets(fitted, saved, tmp_path):
         fitted._estimate, SimpleNamespace(database=database().assign(Tc=60.0)), Ec="EcI", silent=True
     )
     pd.testing.assert_frame_equal(vot["summary"], expected["summary"])
+
+
+def test_save_rejects_an_infinite_beta_value(tmp_path):
+    model = declarative("eq1")
+    beta = model.beta().set(Phi=np.inf)
+    result = Result(model, beta, Control(output_dir=tmp_path), NUMPY, _fake_estimate(model))
+    with pytest.raises(ValueError, match="beta.*not finite"):
+        result.save()

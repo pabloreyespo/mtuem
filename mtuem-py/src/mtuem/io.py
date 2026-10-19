@@ -15,6 +15,7 @@ from . import _engine as engine
 from ._engine.estimate import _corr
 from .beta import Beta
 from .config import Control, EstimationSettings
+from .models import MTUEM
 from .results import Result
 
 
@@ -28,15 +29,19 @@ def load(path: Path, data: pd.DataFrame | None = None, model_class: type | None 
     path = _model_file(Path(path))
     saved = json.loads(path.read_text(encoding="utf-8"))
     cls = model_class if model_class is not None else _import_class(saved["model_class"], path)
+    if not (isinstance(cls, type) and issubclass(cls, MTUEM)):
+        raise TypeError(f"the model class must be a subclass of mtuem.MTUEM, not {cls!r}")
     model = cls.model_validate(saved["model"])
     beta = Beta.model_validate(saved["beta"])
     names = model.beta().names
-    if sorted(names) != sorted(saved["estimates"]) or sorted(names) != sorted(beta.names):
-        raise ValueError(
-            f"the saved model has the parameters {', '.join(names)}, "
-            f"but the saved estimates are of {', '.join(saved['estimates'])}"
-        )
-    control = Control.model_validate(saved["control"])
+    for what, saved_names in (("saved estimates", list(saved["estimates"])), ("saved beta", beta.names)):
+        if sorted(names) != sorted(saved_names):
+            raise ValueError(
+                f"the saved model has the parameters {', '.join(names)}, "
+                f"but the {what} are of {', '.join(saved_names)}"
+            )
+    # Files of a loaded result go next to its json, not to the folder of the machine that saved it.
+    control = Control.model_validate(saved["control"] | {"output_dir": path.parent})
     settings = EstimationSettings.model_validate(saved["settings"])
     estimate = _estimate(saved, beta, control)
     inputs = prob_fn = None

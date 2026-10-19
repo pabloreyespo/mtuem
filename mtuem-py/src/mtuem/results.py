@@ -40,7 +40,8 @@ class Result:
         prob_fn: Callable | None = None,
         starts: list[Result] | None = None,
     ):
-        self.model = model
+        # The result keeps its own copy, so later edits of the model do not change it.
+        self.model = model.model_copy(deep=True)
         self.beta = beta
         self.control = control
         self.settings = settings
@@ -203,13 +204,32 @@ class Result:
         est = self._estimate
         cls = type(self.model)
         eig = est.hessianEigenValue
+        beta = self.beta.model_dump(mode="json")
+        for param in beta["params"].values():
+            # An infinite bound is no bound.
+            for side in ("lower", "upper"):
+                if param[side] is not None and not math.isfinite(param[side]):
+                    param[side] = None
+        # The output folder is a path of this machine: a loaded result saves next to its json.
+        control = self.control.model_dump(mode="json") | {"output_dir": "."}
+        parts = {
+            "model": self.model.model_dump(mode="json"),
+            "beta": beta,
+            "control": control,
+            "settings": self.settings.model_dump(mode="json"),
+        }
+        # JSON has no infinity or NaN, and pydantic writes them as null inside untyped fields:
+        # check the Python values so nothing is lost silently.
+        sources = {"model": self.model, "control": self.control, "settings": self.settings}
+        for key, obj in sources.items():
+            if not _finite(obj.model_dump()):
+                raise ValueError(f"cannot save the result: the {key} holds a number that is not finite")
+        if not _finite([p.value for p in self.beta.params.values()]):
+            raise ValueError("cannot save the result: the beta holds a number that is not finite")
         return {
             "mtuem_version": __version__,
             "model_class": f"{cls.__module__}:{cls.__qualname__}",
-            "model": self.model.model_dump(mode="json"),
-            "beta": self.beta.model_dump(mode="json"),
-            "control": self.control.model_dump(mode="json"),
-            "settings": self.settings.model_dump(mode="json"),
+            **parts,
             "estimates": _series(self.estimates),
             "se": _series(self.se),
             "robse": _series(self.robse),
@@ -244,6 +264,19 @@ class Result:
 def _num(x) -> float | None:
     x = float(x)
     return x if math.isfinite(x) else None
+
+
+def _finite(obj) -> bool:
+    """False when a float anywhere in nested dicts, lists or arrays is infinite or NaN."""
+    if isinstance(obj, dict):
+        return all(_finite(v) for v in obj.values())
+    if isinstance(obj, (list, tuple, set)):
+        return all(_finite(v) for v in obj)
+    if isinstance(obj, np.ndarray):
+        return obj.dtype.kind not in "fc" or bool(np.all(np.isfinite(obj)))
+    if isinstance(obj, (float, np.floating)):
+        return math.isfinite(obj)
+    return True
 
 
 def _series(s: pd.Series) -> dict:
