@@ -179,26 +179,74 @@ def _inside(x: np.ndarray, lower: np.ndarray, upper: np.ndarray, rel: float) -> 
     return np.where(np.isfinite(upper), np.minimum(x, upper - np.where(np.isfinite(upper), d_hi, 0.0)), x)
 
 
-def _no_gain_left(fun_vec: Callable[[np.ndarray], np.ndarray], x: np.ndarray) -> bool:
-    """Whether a diagonal Newton model predicts a negligible gain at ``x``.
+def _sided_column(fn: Callable[[np.ndarray], np.ndarray | None], x: np.ndarray, i: int, h: float,
+                  room_lo: float, room_hi: float, floor: float, f0: np.ndarray | None = None):
+    """Derivative of the vector ``fn`` in coordinate ``i`` by a difference of step ``h``.
 
-    ``_maximise`` reports false convergence (8) when no step improves f and its own model, BHHH
-    after a restart, still predicts a gain. With few individuals BHHH is degenerate at an exact
-    maximum (every score is near zero), so this applies the same test, predicted gain below
-    1e-7 * max(|f|, 1), with central second differences on the diagonal instead.
+    Central with step ``h`` when both bounds are at least ``10 h`` away. Nearer a bound the step
+    is a tenth of the distance to it, so that f singular at the bound (a log, say) still gets
+    its local derivative; below ``floor``, the step at which roundoff would show, it is the
+    second-order one-sided difference away from the bound with step ``floor``. Both are exact
+    for a quadratic, so an optimum closer to the bound than the step keeps the right sign. None
+    if a value is not finite.
     """
-    f0 = float(np.sum(fun_vec(x)))
-    gain = 0.0
+    e = np.zeros(x.size)
+    near, far = min(room_lo, room_hi), max(room_lo, room_hi)
+    if 0.1 * near >= max(h, floor):
+        e[i] = min(h, 0.1 * near)
+        up, down = fn(x + e), fn(x - e)
+        return None if up is None or down is None else (up - down) / (2 * e[i])
+    e[i] = (1.0 if room_hi >= room_lo else -1.0) * min(floor, 0.4 * far)
+    f0 = fn(x) if f0 is None else f0
+    f1, f2 = fn(x + e), fn(x + 2 * e)
+    if f0 is None or f1 is None or f2 is None:
+        return None
+    return (-3 * f0 + 4 * f1 - f2) / (2 * e[i])
+
+
+def _roundoff_floor(f0: np.ndarray, x: np.ndarray) -> np.ndarray:
+    """Difference steps ``1e-10 max(1, sum|f0|) max(1, |x|)``, at which roundoff in a sum of the size
+    of ``f0`` stays below 1e-5 of a difference."""
+    return 1e-10 * max(1.0, float(np.sum(np.abs(f0)))) * np.maximum(1.0, np.abs(x))
+
+
+def _sided_scores(fn: Callable[[np.ndarray], np.ndarray | None], x: np.ndarray, steps: np.ndarray,
+                  room_lo: np.ndarray, room_hi: np.ndarray, floor: np.ndarray | None = None):
+    """Like ``_central_scores`` but with the steps of ``_sided_column`` next to a bound.
+
+    ``floor`` defaults to ``_roundoff_floor`` for the values of ``fn`` at ``x``.
+    """
+    S = None
+    f0 = fn(x)
+    if f0 is None:
+        return None, None
+    if floor is None:
+        floor = _roundoff_floor(f0, x)
     for i in range(x.size):
-        h = 1e-5 * max(1.0, abs(x[i]))
-        e = np.zeros(x.size)
-        e[i] = h
-        fp, fm = float(np.sum(fun_vec(x + e))), float(np.sum(fun_vec(x - e)))
-        g, H = (fp - fm) / (2 * h), (fp - 2 * f0 + fm) / h**2
-        if not (np.isfinite(g) and np.isfinite(H)) or H >= 0:
-            return False
-        gain += 0.5 * g * g / -H
-    return gain < 1e-7 * max(abs(f0), 1.0)
+        col = _sided_column(fn, x, i, steps[i], room_lo[i], room_hi[i], floor[i], f0)
+        if col is None:
+            return None, None
+        if S is None:
+            S = np.zeros((col.size, x.size))
+        S[:, i] = col
+    return S.sum(axis=0), S
+
+
+def _curvature_root(H: np.ndarray) -> np.ndarray:
+    """``S`` with ``S'S`` the Hessian of -f made positive definite (eigenvalues made positive)."""
+    w, V = np.linalg.eigh(-0.5 * (H + H.T))
+    w = np.maximum(np.abs(w), 1e-6 * max(float(np.max(np.abs(w))), 1e-300))
+    return np.sqrt(w)[:, None] * V.T
+
+
+def _at_maximum(f: float, g: np.ndarray, H: np.ndarray) -> bool:
+    """The test ``_maximise`` applies when no step improves f, with a Newton model: the Hessian
+    is negative definite and the gain it predicts is below 1e-7 * max(|f|, 1)."""
+    try:
+        np.linalg.cholesky(-H)
+    except np.linalg.LinAlgError:
+        return False
+    return 0.5 * float(g @ np.linalg.solve(-H, g)) < 1e-7 * max(abs(f), 1.0)
 
 
 def maximise_bounded(
@@ -244,12 +292,17 @@ def maximise_bounded(
 
     Code 0 means that the last run of step 3 converged and the KKT conditions hold; a run that
     does not converge ends the search with its code (8, 9 or 10), and an active set that does
-    not settle within ``2 n + 2`` rounds gives code 8. ``max_iterations`` is shared by all
-    runs, and a budget used up gives code 10. Gradients with respect to the parameters at a
-    bound are one-sided, from inside. The scores of ``fun_vec`` in the barrier runs are central
-    differences with steps kept inside the bounds unless ``exact_grad_and_scores`` is given.
-    The returned ``f`` is the unpenalised objective, and ``x`` is kept at least 1e-12
-    (relative) inside the bounds, so that rescaling it cannot round it onto a bound.
+    not settle within ``2 n + 2`` rounds gives code 8. A false convergence (8) of a step 3 run
+    is accepted only if a Newton model from a finite-difference Hessian predicts no gain, and
+    is otherwise retried once with that Hessian as the curvature seed. ``max_iterations`` is
+    shared by all runs, and a budget used up gives code 10. Without ``exact_grad_and_scores``
+    the derivatives of step 3 are the differences of ``_sided_column``: central, with steps
+    shrunk next to a bound and one-sided (second order) at it, so that an optimum closer to a
+    bound than the usual step is still seen; the barrier runs use central differences with
+    steps kept inside the bounds. Where f is not finite on a bound itself, the parameters
+    fixed there sit 1e-12 inside it. The returned ``f`` is the unpenalised objective, and
+    ``x`` is kept at least 1e-12 (relative) inside the bounds, so that rescaling it cannot
+    round it onto a bound.
     """
     x = np.asarray(x0, dtype=float).copy()
     lower = np.broadcast_to(np.asarray(lower, dtype=float), x.shape)
@@ -341,56 +394,111 @@ def maximise_bounded(
     at_lo = lo & (x - lower <= active_tol * bound_scale)
     at_hi = hi & ~at_lo & (upper - x <= active_tol * bound_scale)
 
-    def outward_gradient(z, fixed_lo, fixed_hi):
-        """One-sided derivatives (from inside) at the fixed parameters; NaN elsewhere."""
-        f0 = fvec(z)
+    def bound_gradient(z, fixed):
+        """Derivatives of f at the fixed parameters, taken from inside the bounds; NaN elsewhere."""
         d = np.full(n, np.nan)
+        if exact_grad_and_scores is not None:
+            grad, _ = exact_grad_and_scores(z)
+            if grad is not None:
+                d[fixed] = grad[fixed]
+            return d
+        f0 = fvec(z)
         if f0 is None:
             return d
-        for i in np.flatnonzero(fixed_lo | fixed_hi):
-            h = 1e-6 * max(1.0, abs(z[i]))
-            if lo[i] and hi[i]:
-                h = min(h, 0.5 * (upper[i] - lower[i]))
-            e = np.zeros(n)
-            e[i] = h if fixed_lo[i] else -h
-            f1 = fvec(z + e)
-            if f1 is not None:
-                d[i] = (f1.sum() - f0.sum()) / e[i]
+        floor = _roundoff_floor(f0, z)
+        for i in np.flatnonzero(fixed):
+            col = _sided_column(fvec, z, i, 1e-5 * max(1.0, abs(z[i])), z[i] - lower[i], upper[i] - z[i],
+                                floor[i], f0)
+            if col is not None:
+                d[i] = col.sum()
         return d
+
+    def polish(z, idx, budget):
+        """Maximise f over the parameters ``idx`` with the others held at ``z``.
+
+        f is taken less its value at the start, spread over the individuals: the tolerances of
+        _maximise, relative to max(|f|, 1), then bound the gain still available in absolute
+        terms, as a constrained maximum next to a bound needs whatever the level of f. A false
+        convergence (8) is checked with a Newton model from a finite-difference Hessian: either
+        the point passes the convergence tests of _maximise with that model, or _maximise is run
+        again from it with the finite-difference Hessian as its curvature seed. With few
+        individuals BHHH is degenerate at a maximum, and far from one it can be so poor that no
+        step along its direction improves f.
+        """
+        v0 = fvec(z)
+        shift = float(v0.sum()) / v0.size if v0 is not None else 0.0
+
+        def full(y):
+            w = z.copy()
+            w[idx] = y
+            return w
+
+        def sub_vec(y):
+            return np.asarray(fun_vec(full(y)), dtype=float) - shift
+
+        def sub_fvec(y):
+            v = sub_vec(y)
+            return v if np.all(np.isfinite(v)) else None
+
+        def sub_grad(y):
+            if exact_grad_and_scores is not None:
+                grad, S = exact_grad_and_scores(full(y))
+                return (None, None) if grad is None else (grad[idx], S[:, idx])
+            return _sided_scores(sub_fvec, y, 1e-5 * np.maximum(1.0, np.abs(y)), y - lower[idx], upper[idx] - y)
+
+        def grad_and_hessian(y):
+            g0, _ = sub_grad(y)
+            if g0 is None:
+                return None, None
+            steps = 1e-4 * np.maximum(1.0, np.abs(y))
+            _, H = _sided_scores(lambda w: sub_grad(w)[0], y, steps, y - lower[idx], upper[idx] - y, steps)
+            return g0, None if H is None else 0.5 * (H + H.T)
+
+        res = _maximise(sub_vec, z[idx], max_iterations=budget, exact_grad_and_scores=sub_grad, **maximise_kwargs)
+        if res.code != 8:
+            return res
+        g0, H = grad_and_hessian(res.x)
+        if H is None:
+            return res
+        if _at_maximum(res.f, g0, H):
+            res.code, res.message = 0, MESSAGES[0]
+            return res
+        if res.iterations >= budget:
+            res.code, res.message = 10, MESSAGES[10]
+            return res
+        root = _curvature_root(H)
+
+        def seeded(y):
+            grad, _ = sub_grad(y)
+            return (None, None) if grad is None else (grad, root)
+
+        again = _maximise(sub_vec, res.x, max_iterations=budget - res.iterations, exact_grad_and_scores=seeded,
+                          **maximise_kwargs)
+        again.iterations += res.iterations
+        again.function_evals += res.function_evals
+        if again.code == 8:
+            g0, H = grad_and_hessian(again.x)
+            if H is not None and _at_maximum(again.f, g0, H):
+                again.code, again.message = 0, MESSAGES[0]
+        return again
 
     for _ in range(2 * n + 2):
         if used >= max_iterations:
             return result(x, 10)
         fixed = at_lo | at_hi
         z = np.where(at_lo, lower, np.where(at_hi, upper, x))
+        if fvec(z) is None:
+            # f is not defined on the bound itself (a log, say): the fixed parameters sit 1e-12
+            # inside it, where the returned x is clipped to anyway.
+            z = np.where(fixed, _inside(z, lower, upper, 1e-12), z)
+            if fvec(z) is None:
+                return result(x, 8)
         if not fixed.all():
             idx = np.flatnonzero(~fixed)
-            # f less its value at the start, spread over the individuals: the tolerances of
-            # _maximise, relative to max(|f|, 1), then bound the gain still available in absolute
-            # terms, as a constrained maximum next to a bound needs whatever the level of f.
-            v0 = np.asarray(fun_vec(z), dtype=float)
-            shift = float(v0.sum()) / v0.size if np.all(np.isfinite(v0)) else 0.0
-
-            def sub_vec(y, z=z, idx=idx, shift=shift):
-                full = z.copy()
-                full[idx] = y
-                return np.asarray(fun_vec(full), dtype=float) - shift
-
-            sub_grad = None
-            if exact_grad_and_scores is not None:
-                def sub_grad(y, z=z, idx=idx):
-                    full = z.copy()
-                    full[idx] = y
-                    grad, S = exact_grad_and_scores(full)
-                    return (None, None) if grad is None else (grad[idx], S[:, idx])
-
-            res = _maximise(sub_vec, z[idx], max_iterations=max_iterations - used,
-                            exact_grad_and_scores=sub_grad, **maximise_kwargs)
+            res = polish(z, idx, max_iterations - used)
             used += res.iterations
             evals += res.function_evals
             z[idx] = res.x
-            if res.code == 8 and _no_gain_left(sub_vec, res.x):
-                res.code = 0
             if res.code != 0:
                 return result(z, res.code)
         out_lo, out_hi = lo & ~fixed & (z <= lower), hi & ~fixed & (z >= upper)
@@ -400,10 +508,12 @@ def maximise_bounded(
             x = np.clip(z, lower, upper)
             continue
         x = z
-        grad = outward_gradient(z, at_lo, at_hi)
+        grad = bound_gradient(z, fixed)
+        if not np.all(np.isfinite(grad[fixed])):
+            return result(z, 8)
         # The gradient test of _maximise on the shifted f (|f| <= 1): an absolute threshold.
         size = np.abs(grad) * np.maximum(np.abs(z), 1.0)
-        inward = fixed & np.isfinite(grad) & (size >= 1e-4) & np.where(at_lo, grad > 0, grad < 0)
+        inward = fixed & (size >= 1e-4) & np.where(at_lo, grad > 0, grad < 0)
         if not inward.any():
             return result(z, 0)
         # Release the fixed parameters whose gradient points into the feasible region.

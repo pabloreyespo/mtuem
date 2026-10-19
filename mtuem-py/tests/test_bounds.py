@@ -185,3 +185,64 @@ def test_interior_parameter_next_to_a_bound_stays_interior(level, d, c):
     assert abs(res.x[0] - d) <= 1e-2 * d
     assert 0.0 < 1.0 - res.x[2] < 1e-7
     assert res.f == pytest.approx(-level - 1.0, abs=1e-9 * level + 1e-9)
+
+
+@pytest.mark.parametrize("B, d, c", [(5.0, 1e-6, 1e6), (5.0, 2e-6, 1e8), (0.0, 4e-7, 1e6), (100.0, 4e-7, 1e4)])
+def test_interior_optimum_closer_to_the_bound_than_the_difference_step_is_released(B, d, c):
+    # At x2 = 1 the maximum in x0 is B + d, closer to the bound x0 > B than a one-sided difference
+    # step: a first-order difference at the bound has the wrong sign there and would keep x0 fixed.
+    def f(x):
+        w = x[0] - B - d - 0.3 * (x[2] - 1.0)
+        return np.array([-c * w * w, -(x[1] - 1.0) ** 2, -(x[2] - 2.0) ** 2])
+
+    with np.errstate(over="ignore", invalid="ignore"):
+        res = maximise_bounded(f, np.array([B + 0.5, 0.0, 0.0]), np.array([B, -np.inf, -np.inf]),
+                               np.array([np.inf, np.inf, 1.0]))
+    assert res.code == 0
+    assert res.x[0] - B == pytest.approx(d, rel=0.1)
+    assert 0.0 < 1.0 - res.x[2] < 1e-7
+    assert res.f == pytest.approx(-1.0, abs=1e-9)
+
+
+def test_false_convergence_of_the_polish_is_not_taken_for_a_maximum():
+    # A concave quadratic with correlated parameters, x > 0, whose free maximum m has m[1] on the
+    # bound. The polish from x2 = 1e-8 fails its first line search (BHHH is degenerate there); a
+    # diagonal gain test would call that converged with x2 far from its optimum.
+    L = np.array([[1.9989358159004798, 0.0, 0.0],
+                  [3.1073471867640725, 0.690009903284147, 0.0],
+                  [1.91466845064067, 0.02089930296344277, 0.14299330155756845]])
+    m = np.array([0.02598142121357327, 0.0, 0.01436559451088065])
+    x0 = np.array([0.8148753941127377, 0.5977744520510274, 1e-9])
+
+    def f(x):
+        r = L.T @ (x - m)
+        return -0.5 * r * r
+
+    with np.errstate(all="ignore"):
+        res = maximise_bounded(f, x0, np.zeros(3), np.full(3, np.inf), outer_iterations=1)
+    assert res.code == 0
+    assert res.f == pytest.approx(0.0, abs=1e-9)
+    np.testing.assert_allclose(res.x, m, atol=1e-5)
+
+
+def test_bound_where_f_is_not_defined_is_still_checked():
+    # f = -x0 + eps log(x0) with x0 > 0 has its maximum at x0 = eps and is -inf on the bound.
+    def run(eps):
+        def f(x):
+            with np.errstate(all="ignore"):
+                return np.array([-x[0] + eps * np.log(x[0]), -(x[1] - 2.0) ** 2])
+
+        res = maximise_bounded(f, np.array([0.5, 0.0]), np.array([0.0, -np.inf]), np.array([np.inf, 1.0]))
+        assert 0.0 < 1.0 - res.x[1] < 1e-7
+        return res
+
+    for eps in (1e-7, 1e-5):
+        res = run(eps)
+        assert res.code == 0, eps
+        assert res.x[0] == pytest.approx(eps, rel=1e-2)
+        assert res.f == pytest.approx(-1.0 - eps + eps * np.log(eps), abs=1e-9)
+    # An optimum 1e-9 from the singularity is at the resolution of the differences (steps of
+    # 1e-10): the point is found but convergence may not be certified, never a false code 0.
+    res = run(1e-9)
+    assert res.x[0] == pytest.approx(1e-9, rel=1e-2)
+    assert res.code != 0 or res.f == pytest.approx(-1.0 - 1e-9 + 1e-9 * np.log(1e-9), abs=1e-11)
