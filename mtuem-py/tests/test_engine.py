@@ -198,8 +198,8 @@ def test_invalid_inputs_are_rejected():
 
     with pytest.raises(ValueError, match="hessian"):
         engine.estimate(beta, fixed, pf, inputs, hessian="foo", silent=True)
-    with pytest.raises(NotImplementedError):
-        engine.estimate(beta, fixed, pf, inputs, bounds={"Phi": (0.0, 2.0)}, silent=True)
+    with pytest.raises(ValueError, match="thw"):
+        engine.estimate(beta, fixed, pf, inputs, bounds={"thw": (0.0, 2.0)}, silent=True)  # start on the bound
 
     def zero_pf(params, inputs, functionality="estimate"):
         return {"model": np.full(inputs.nObs, -np.inf)}  # zero likelihood, in logs

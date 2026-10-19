@@ -23,6 +23,24 @@ class _OptResult:
     function_evals: int
 
 
+def _central_scores(fvec: Callable[[np.ndarray], np.ndarray | None], x: np.ndarray, steps: np.ndarray):
+    """Gradient and individual scores by central differences; (None, None) if a value is not finite."""
+    n = x.size
+    S = None
+    for i in range(n):
+        h = steps[i]
+        e = np.zeros(n)
+        e[i] = h
+        up, down = fvec(x + e), fvec(x - e)
+        if up is None or down is None:
+            return None, None
+        col = (up - down) / (2 * h)
+        if S is None:
+            S = np.zeros((col.size, n))
+        S[:, i] = col
+    return S.sum(axis=0), S
+
+
 def _maximise(
     fun_vec: Callable[[np.ndarray], np.ndarray],
     x0: np.ndarray,
@@ -55,20 +73,7 @@ def _maximise(
         return float(v.sum()) if v is not None else -np.inf
 
     def grad_and_scores(x):
-        n = x.size
-        S = None
-        for i in range(n):
-            h = 1e-5 * max(1.0, abs(x[i]))
-            e = np.zeros(n)
-            e[i] = h
-            up, down = fvec(x + e), fvec(x - e)
-            if up is None or down is None:
-                return None, None
-            col = (up - down) / (2 * h)
-            if S is None:
-                S = np.zeros((col.size, n))
-            S[:, i] = col
-        return S.sum(axis=0), S
+        return _central_scores(fvec, x, 1e-5 * np.maximum(1.0, np.abs(x)))
 
     if exact_grad_and_scores is not None:
         grad_and_scores = exact_grad_and_scores  # noqa: F811  (autodiff replaces finite differences)
@@ -148,3 +153,106 @@ def _maximise(
             code = 9
             break
     return _OptResult(x, fx, code, MESSAGES[code], it, evals)
+
+
+def maximise_bounded(
+    fun_vec: Callable[[np.ndarray], np.ndarray],
+    x0: np.ndarray,
+    lower: np.ndarray,
+    upper: np.ndarray,
+    *,
+    exact_grad_and_scores: Callable | None = None,
+    mu: float = 1e-4,
+    outer_eps: float = 1e-5,
+    outer_iterations: int = 100,
+    **maximise_kwargs,
+) -> _OptResult:
+    """Maximise ``sum(fun_vec(x))`` subject to ``lower < x < upper`` (infinite entries are no bound).
+
+    The adaptive logarithmic barrier of R's ``constrOptim``, which maxLik uses for Apollo's
+    inequality constraints. With ``g(x)`` the stacked distances ``x - lower`` and ``upper - x``
+    for the finite bounds and ``A = dg/dx``, each outer iteration maximises
+
+        R(x) = f(x) + mu * sum(g(x_k) * log g(x) - A x)
+
+    from ``x_k`` with ``_maximise``. The barrier gradient ``mu * A'(g(x_k) / g(x) - 1)`` vanishes
+    at ``x_k``, so the penalty fades as the iterates settle and the limit is the constrained
+    maximum, also when it lies on a bound. The loop stops when an outer iteration improves R
+    by less than ``outer_eps * (|R| + outer_eps)``. The returned ``f`` is the unpenalised
+    objective. The barrier is used only when the unconstrained maximum (from ``x0``) is not
+    strictly inside the bounds; otherwise that maximum is returned as is. The barrier enters
+    ``_maximise`` as one extra individual whose score is exact; the scores of ``fun_vec`` are
+    central differences (with steps kept inside the bounds) unless ``exact_grad_and_scores`` is
+    given. ``max_iterations`` applies to the unconstrained run and, as a total, to the inner runs
+    of the barrier.
+    """
+    x = np.asarray(x0, dtype=float).copy()
+    lower = np.broadcast_to(np.asarray(lower, dtype=float), x.shape)
+    upper = np.broadcast_to(np.asarray(upper, dtype=float), x.shape)
+    lo, hi = np.isfinite(lower), np.isfinite(upper)
+    if not (np.all(x > lower) and np.all(x < upper)):
+        raise ValueError("The starting values must lie strictly inside the bounds")
+    # An unconstrained maximum strictly inside the bounds is the constrained maximum: bounds that
+    # do not bind leave the optimiser's path, and so its result, exactly as without bounds.
+    free = _maximise(fun_vec, x, exact_grad_and_scores=exact_grad_and_scores, **maximise_kwargs)
+    if not (lo.any() or hi.any()) or (free.code == 0 and np.all(free.x > lower) and np.all(free.x < upper)):
+        return free
+    eye = np.eye(x.size)
+    A = np.vstack([eye[lo], -eye[hi]])
+    b = np.concatenate([-lower[lo], upper[hi]])
+
+    def g(z):
+        return A @ z + b
+
+    def fvec(z):
+        v = np.asarray(fun_vec(z), dtype=float)
+        return v if np.all(np.isfinite(v)) else None
+
+    def f_grad_and_scores(z):
+        if exact_grad_and_scores is not None:
+            return exact_grad_and_scores(z)
+        # Central differences, with each step kept within half the distance to the bounds.
+        dist = np.minimum(np.where(lo, z - lower, np.inf), np.where(hi, upper - z, np.inf))
+        return _central_scores(fvec, z, np.minimum(1e-5 * np.maximum(1.0, np.abs(z)), 0.5 * dist))
+
+    def penalised(g_old):
+        def barrier(z):
+            gz = g(z)
+            if np.any(gz <= 0):
+                return -np.inf
+            return mu * float(np.sum(g_old * np.log(gz)) - np.sum(A @ z))
+
+        def r_vec(z):
+            return np.append(np.asarray(fun_vec(z), dtype=float), barrier(z))
+
+        def r_grad_and_scores(z):
+            gz = g(z)
+            if np.any(gz <= 0):
+                return None, None
+            grad, S = f_grad_and_scores(z)
+            if grad is None:
+                return None, None
+            db = mu * (A.T @ (g_old / gz - 1.0))
+            return grad + db, np.vstack([S, db])
+
+        return barrier, r_vec, r_grad_and_scores
+
+    max_iterations = int(maximise_kwargs.pop("max_iterations", 500))
+    used, evals = 0, free.function_evals
+    code = 10
+    for k in range(int(outer_iterations)):
+        barrier, r_vec, r_grad = penalised(g(x))
+        r_old = float(np.sum(fun_vec(x))) + barrier(x)
+        res = _maximise(r_vec, x, max_iterations=max_iterations - used, exact_grad_and_scores=r_grad,
+                        **maximise_kwargs)
+        used += res.iterations
+        evals += res.function_evals
+        x = res.x
+        if k > 0 and res.code != 0 and res.code != 9:
+            # Later outer iterations start next to the solution; an inner run that stalls there
+            # has reached the rounding error of x close to a bound. Keep the converged status.
+            break
+        code = res.code
+        if code != 0 or abs(res.f - r_old) < outer_eps * (abs(r_old) + outer_eps):
+            break
+    return _OptResult(x, float(np.sum(fun_vec(x))), code, MESSAGES[code], free.iterations + used, evals)

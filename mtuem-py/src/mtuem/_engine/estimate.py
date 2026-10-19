@@ -13,7 +13,7 @@ from ..config import Control
 from .inputs import Inputs
 from .latent import ProbFn, _first_row, _loglik_per_indiv
 from .loglike import _LogLike, _model_component
-from .optimize import _maximise
+from .optimize import _maximise, maximise_bounded
 
 
 @dataclass
@@ -70,6 +70,34 @@ def resolve_hessian(hessian: str | None, inputs: Inputs) -> str:
     if hessian == "analytic" and not inputs.autodiff:
         raise ValueError("hessian='analytic' requires autodiff inputs")
     return hessian
+
+
+def _bound_arrays(
+    bounds: Mapping[str, tuple[float | None, float | None]] | None, beta: pd.Series, free: list[str]
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Lower and upper bounds of the free parameters (+-inf where unbounded), or None if no bound applies.
+
+    Bounds on fixed parameters are ignored. A free parameter whose starting value is not strictly
+    inside its bounds raises ValueError.
+    """
+    if not bounds:
+        return None
+    unknown = [n for n in bounds if n not in beta.index]
+    if unknown:
+        raise ValueError(f"Bounds given for parameters not in beta: {', '.join(unknown)}")
+    lower = np.full(len(free), -np.inf)
+    upper = np.full(len(free), np.inf)
+    for i, n in enumerate(free):
+        lo, hi = bounds.get(n, (None, None))
+        lower[i] = -np.inf if lo is None else float(lo)
+        upper[i] = np.inf if hi is None else float(hi)
+        if not lower[i] < upper[i]:
+            raise ValueError(f"The lower bound of {n} is not below its upper bound")
+        if not lower[i] < beta[n] < upper[i]:
+            raise ValueError(f"The starting value of {n} ({beta[n]}) is not strictly inside its bounds")
+    if not (np.isfinite(lower).any() or np.isfinite(upper).any()):
+        return None
+    return lower, upper
 
 
 def _covariances(loglike: _LogLike, x: np.ndarray, hessian: str, H: np.ndarray | None = None):
@@ -207,21 +235,25 @@ def estimate(
     hessian: str | None = None,
     saddle_escapes: int = 3,
     silent: bool = False,
-    bounds: Mapping[str, tuple[float, float]] | None = None,
+    bounds: Mapping[str, tuple[float | None, float | None]] | None = None,
 ) -> Estimate:
     """Maximum likelihood estimation with a BFGS line-search optimiser.
 
     ``hessian`` is ``"analytic"`` (exact, autodiff inputs only), ``"numeric"`` (numDeriv), or
     ``"none"``; by default the exact Hessian is used with autodiff inputs and numDeriv otherwise.
     A converged run reports code 0 and the message "successful convergence".
+
+    ``bounds`` maps parameter names to ``(lower, upper)``, None for no bound. When a bound applies
+    to a free parameter the optimiser is the adaptive barrier of ``maximise_bounded`` (R's
+    ``constrOptim``, as maxLik uses for Apollo constraints). The covariance matrix is computed
+    from the Hessian of the log-likelihood itself, without the barrier, also at a binding bound.
     """
-    if bounds is not None:
-        raise NotImplementedError("bounds are not supported yet")
     t0 = time.perf_counter()
     start_time = datetime.now()
     beta = pd.Series(beta, dtype=float)
     fixed = list(fixed or [])
     free = [n for n in beta.index if n not in fixed]
+    limits = _bound_arrays(bounds, beta, free)
     hessian = resolve_hessian(hessian, inputs)
     # Parameters are scaled by |start|; flooring at 1 keeps near-zero starts (e.g. after EM)
     # from shrinking the optimiser steps to nothing.
@@ -239,20 +271,31 @@ def estimate(
     x_start = x0 / scale
     iterations = 0
     H = None
+    feasible = None
+    if limits is not None:
+        lower, upper = limits
+
+        def feasible(x):
+            return bool(np.all(x > lower) and np.all(x < upper))
+
     for attempt in range(escapes + 1):
-        res = _maximise(
-            lambda z: loglike.per_indiv(z, scaled=True),
-            x_start,
+        opt_kwargs = dict(
             max_iterations=int(max_iterations),
             max_function_evals=int(max_function_evals),
             silent=True,
             exact_grad_and_scores=loglike.grad_and_scores_scaled if loglike.autodiff else None,
         )
+        if limits is None:
+            res = _maximise(lambda z: loglike.per_indiv(z, scaled=True), x_start, **opt_kwargs)
+        else:
+            res = maximise_bounded(
+                lambda z: loglike.per_indiv(z, scaled=True), x_start, lower / scale, upper / scale, **opt_kwargs
+            )
         iterations += res.iterations
         if attempt == escapes or res.code != 0:
             break
         H = loglike.hessian(res.x * scale, hessian)
-        x_escape = _escape_saddle(loglike, res.x * scale, res.f, H)
+        x_escape = _escape_saddle(loglike, res.x * scale, res.f, H, feasible)
         if x_escape is None:
             break
         if not silent:
@@ -283,12 +326,13 @@ def estimate(
     )
 
 
-def _escape_saddle(loglike: _LogLike, x: np.ndarray, f: float, H: np.ndarray) -> np.ndarray | None:
+def _escape_saddle(loglike: _LogLike, x: np.ndarray, f: float, H: np.ndarray, feasible=None) -> np.ndarray | None:
     """A point with a higher likelihood along the most positive-curvature direction, if any.
 
     BFGS stops wherever the gradient vanishes, including saddle points such as the symmetric
     solution of a latent class model started from identical classes. Numerical noise usually
-    drifts off such points; this does it deliberately.
+    drifts off such points; this does it deliberately. With ``feasible`` only points it accepts
+    (strictly inside the bounds) are candidates.
     """
     if not np.all(np.isfinite(H)):
         return None
@@ -300,6 +344,8 @@ def _escape_saddle(loglike: _LogLike, x: np.ndarray, f: float, H: np.ndarray) ->
     for t in (0.1, 0.03, 0.01, 0.003, 0.001, 0.0003):
         for sign in (1.0, -1.0):
             xn = x + sign * t * size * v
+            if feasible is not None and not feasible(xn):
+                continue
             if loglike.total(xn) > f + 1e-6:
                 return xn
     return None

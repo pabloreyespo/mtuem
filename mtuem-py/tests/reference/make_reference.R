@@ -8,10 +8,21 @@ if (lc) { apollo_control$noValidation <- TRUE; apollo_control$noDiagnostics <- T
 est_set <- list(writeIter = FALSE, maxIterations = 500, estimationRoutine = "bgw", hessianRoutine = "numDeriv")
 if (lc) { est_set$scaleHessian <- FALSE; est_set$scaleAfterConvergence <- FALSE; est_set$silent <- FALSE }
 if (case == "lc_cholesky") est_set$estimationRoutine <- NULL
+eq1like <- case %in% c("eq1", "eq1_bounded")
+if (case == "eq1_bounded") {
+  # A lower bound on thw that binds: the unconstrained eq1 estimate plus 10% of its absolute value,
+  # imposed with maxLik's adaptive barrier (constrOptim) through Apollo's BFGS routine.
+  thw_free <- fromJSON("eq1_ref.json")$estimate$thw
+  thw_lower <- as.numeric(sprintf("%.15g", thw_free + 0.1 * abs(thw_free)))
+  est_set$estimationRoutine <- "bfgs"
+  est_set$constraints <- sprintf("thw > %.15g", thw_lower)
+}
 database <- mtuem::maed; database <- database[database$EcI > 0, ]
 
 if (case == "eq1") {
   apollo_beta <- c(Theta = 1, Phi = 1, thw = 0)
+} else if (case == "eq1_bounded") {
+  apollo_beta <- c(Theta = 1, Phi = 1, thw = 0.5)
 } else if (case == "eq3_profiled") {
   apollo_beta <- c(Theta = 1, Phi = 1, thw = 0, theta_1 = 0.5, phi_1 = 0.5)
 } else if (case == "eq3_sig") {
@@ -28,7 +39,7 @@ if (!lc) {
     on.exit(apollo_detach(apollo_beta, apollo_inputs))
     P <- list()
     s <- list(work_times = "Tw", work_elasticities = list(Theta = Theta, Phi = Phi, thw = thw), Tc = Tc, Ec = EcI, w = w, tau = 168)
-    if (case != "eq1") {
+    if (!eq1like) {
       s$free_times <- "Tf1"; s$free_goods <- "Ef1"; s$goods_cost <- list(Ef1 = 1)
       s$times_elasticities <- list(theta_1 = theta_1); s$goods_elasticities <- list(phi_1 = phi_1)
     }
@@ -118,12 +129,46 @@ if (case == "lc_cholesky") {
 } else {
   model <- apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs, estimate_settings = est_set)
 }
+if (case == "eq1_bounded") {
+  # maxLik's barrier (Apollo's bfgs with constraints) stops short here: constrOptim2 leaves after one
+  # outer iteration when maximising, and optim's BFGS stalls against the barrier before Phi has
+  # converged (restarting from its estimate does not move Phi). Its result is kept for reference.
+  # The bound binds, so the constrained maximum is the maximum with thw fixed at the bound (bgw);
+  # the covariance matrix is then that of the unpenalised log-likelihood over all free parameters
+  # at that point (numDeriv Hessian and BHHH sandwich), as maxLik and Apollo report it after constrOptim.
+  out$barrier <- list(estimate = as.list(model$estimate), se = as.list(model$se), robse = as.list(model$robse),
+                      maximum = model$maximum, ll_at_estimate = llf(model$estimate))
+  est_kkt <- est_set; est_kkt$estimationRoutine <- "bgw"; est_kkt$constraints <- NULL
+  fixed_free <- apollo_fixed
+  apollo_beta["thw"] <- thw_lower; apollo_fixed <- c(fixed_free, "thw")
+  apollo_inputs <- apollo_validateInputs()
+  kkt <- apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs, estimate_settings = est_kkt)
+  model <- kkt
+  free <- setdiff(names(model$estimate), fixed_free)
+  lli <- function(bf) {
+    b <- model$estimate; b[free] <- bf
+    p <- apollo_probabilities(b, apollo_inputs, "estimate"); if (is.list(p)) p <- p[["model"]]; log(p)
+  }
+  H <- numDeriv::hessian(function(bf) sum(lli(bf)), model$estimate[free])
+  S <- numDeriv::jacobian(lli, model$estimate[free])
+  vc <- solve(-H); rvc <- vc %*% crossprod(S) %*% vc
+  dimnames(H) <- dimnames(vc) <- dimnames(rvc) <- list(free, free)
+}
 out$seconds <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
 apollo_modelOutput(model)
 apollo_saveOutput(model, saveOutput_settings = list(printCovar = TRUE, printCorr = TRUE))
+if (case == "eq1_bounded") {
+  apollo_beta <- model$estimate; apollo_fixed <- fixed_free
+  apollo_inputs <- apollo_validateInputs()
+  model$apollo_fixed <- fixed_free; model$hessian <- H; model$eigValue <- max(eigen(H)$values)
+  model$varcov <- vc; model$robvarcov <- rvc
+  model$se <- model$robse <- setNames(rep(NA_real_, length(model$estimate)), names(model$estimate))
+  model$se[free] <- sqrt(diag(vc)); model$robse[free] <- sqrt(diag(rvc))
+}
 out$estimate <- as.list(model$estimate); out$se <- as.list(model$se); out$robse <- as.list(model$robse)
 out$maximum <- model$maximum; out$eigValue <- model$eigValue; out$code <- model$code
 out$ll_at_estimate <- llf(model$estimate)
+if (case == "eq1_bounded") out$bounds <- list(thw = list(lower = thw_lower))
 
 if (lc) {
   vot <- mtuem_values_of_time(model, apollo_inputs, apollo_probabilities, nClass = 2, Ec = "EcI")
@@ -134,7 +179,7 @@ out$vot <- vot$summary
 if (!lc) {
   pred <- apollo_prediction(model, apollo_probabilities, apollo_inputs, prediction_settings = list(silent = TRUE))
   out$pred_head <- head(pred, 10)
-  if (case != "eq1") {
+  if (!eq1like) {
     cr <- mtuem_get_corr(model, apollo_probabilities, apollo_inputs)
     out$corr <- list(covar = cr$covar, corr = cr$corr, sigma = as.list(cr$sigma))
   }

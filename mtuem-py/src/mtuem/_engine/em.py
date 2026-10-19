@@ -7,11 +7,11 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from .estimate import Estimate, _finalise, estimate, resolve_hessian
+from .estimate import Estimate, _bound_arrays, _finalise, estimate, resolve_hessian
 from .inputs import Inputs
 from .latent import ProbFn, _class_parts, _log_posterior
 from .loglike import _LogLike
-from .optimize import MESSAGES, _maximise
+from .optimize import MESSAGES, _maximise, maximise_bounded
 
 
 def _autodiff_em_objective(base: pd.Series, free: list[str], prob_fn: ProbFn, inputs: Inputs):
@@ -53,7 +53,7 @@ def lc_em(
     tolerance: float = 1e-5,
     post_em: int = 2,
     estimate_kwargs: Mapping | None = None,
-    bounds: Mapping[str, tuple[float, float]] | None = None,
+    bounds: Mapping[str, tuple[float | None, float | None]] | None = None,
 ) -> Estimate:
     """Expectation-Maximisation for latent class models (follows ``apollo_lcEM``).
 
@@ -62,16 +62,23 @@ def lc_em(
     across classes are allowed. ``post_em`` controls what follows the EM iterations: 0 returns
     the EM estimates without covariance, 1 adds the covariance matrix at the EM estimates and 2
     (default) runs a full ``estimate`` from them, with ``estimate_kwargs``.
+
+    ``bounds`` (as in ``estimate``) are imposed in every M step with ``maximise_bounded`` and are
+    passed on to the final ``estimate``.
     """
-    if bounds is not None:
-        raise NotImplementedError("bounds are not supported yet")
     t0 = time.perf_counter()
     start_time = datetime.now()
     est_kwargs = dict(estimate_kwargs or {})
     beta = pd.Series(beta, dtype=float)
     fixed = list(fixed or [])
     free = [n for n in beta.index if n not in fixed]
+    limits = _bound_arrays(bounds, beta, free)
     silent = bool(est_kwargs.get("silent", False))
+
+    def m_step(fun_vec, z0, scale, **kwargs):
+        if limits is None:
+            return _maximise(fun_vec, z0, **kwargs)
+        return maximise_bounded(fun_vec, z0, limits[0] / scale, limits[1] / scale, **kwargs)
 
     def full_ll(b: dict) -> float:
         return float(np.sum(_log_posterior(*_class_parts(b, prob_fn, inputs, "estimate"))[1]))
@@ -105,9 +112,10 @@ def lc_em(
                 S = np.asarray(q_jac(z * sc, h)) * sc
                 return (S.sum(axis=0), S) if np.all(np.isfinite(S)) else (None, None)
 
-            res = _maximise(q_vec, current[free].to_numpy() / scale, max_iterations=200, exact_grad_and_scores=q_grad)
+            res = m_step(q_vec, current[free].to_numpy() / scale, scale, max_iterations=200,
+                         exact_grad_and_scores=q_grad)
         else:
-            res = _maximise(lambda z, sc=scale: q(z * sc), current[free].to_numpy() / scale, max_iterations=200)
+            res = m_step(lambda z, sc=scale: q(z * sc), current[free].to_numpy() / scale, scale, max_iterations=200)
         current[free] = res.x * scale
         new_ll = full_ll(current.to_dict())
         change = new_ll - ll
@@ -121,7 +129,7 @@ def lc_em(
         print(f"EM algorithm stopped after {em_iter} iterations, LL = {ll:.2f}")
 
     if post_em == 2:
-        est = estimate(current.to_dict(), fixed, prob_fn, inputs, **est_kwargs)
+        est = estimate(current.to_dict(), fixed, prob_fn, inputs, bounds=bounds, **est_kwargs)
         routine = est.routine
         est.routine = f"EM algorithm ({routine}) -> Maximum likelihood ({routine})"
         est.nIter = f"{em_iter} (EM) & {est.nIter} ({routine})"
