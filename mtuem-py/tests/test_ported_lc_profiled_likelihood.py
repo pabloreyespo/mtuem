@@ -45,17 +45,17 @@ def lc_fixture(n=400, seed=1):
          "Tc": Tc, "Ec": Ec, "w": w, "tau": tau},
     ]
     return SimpleNamespace(
-        apollo_inputs=inputs_of(database), database=database, n=n,
+        inputs=inputs_of(database), database=database, n=n,
         lc_settings={"class_settings": class_settings, "classProb": [np.full(n, pi1), np.full(n, 1 - pi1)]},
         class_settings=class_settings, pi1=pi1, Sigma_true=[S1, S2],
     )
 
 
-def test_the_profiled_likelihood_handles_the_apollo_bookkeeping_functionalities():
+def test_the_profiled_likelihood_handles_the_bookkeeping_functionalities():
     fx = lc_fixture(n=60, seed=71)
     named = dict(fx.lc_settings, componentName="lc_component")
     f = mtuem.mtuem_lc_profiled_likelihood
-    inp = fx.apollo_inputs
+    inp = fx.inputs
 
     assert_allclose(f(fx.lc_settings, "validate", inp), np.ones(60))
     assert np.all(np.isnan(f(fx.lc_settings, "zero_LL", inp)))
@@ -68,11 +68,11 @@ def test_the_profiled_likelihood_handles_the_apollo_bookkeeping_functionalities(
 def test_the_profiled_likelihood_is_a_proper_mixture_of_the_class_densities():
     fx = lc_fixture(n=300, seed=72)
 
-    P = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
+    P = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
     prof = mtuem.mtuem_get_profiled_sigma()
 
-    E1 = mtuem.likelihood.residuals(fx.class_settings[0], fx.apollo_inputs)
-    E2 = mtuem.likelihood.residuals(fx.class_settings[1], fx.apollo_inputs)
+    E1 = mtuem.likelihood.residuals(fx.class_settings[0], fx.inputs)
+    E2 = mtuem.likelihood.residuals(fx.class_settings[1], fx.inputs)
     P_ref = fx.pi1 * mtuem_dmvnorm_ref(E1, prof["Sigma"][0]) + (1 - fx.pi1) * mtuem_dmvnorm_ref(E2, prof["Sigma"][1])
 
     assert_allclose(P, P_ref, rtol=1e-8)
@@ -84,9 +84,9 @@ def test_the_profiled_likelihood_is_path_independent_across_repeated_calls():
     # every time, otherwise numerical gradients would be evaluated on a moving objective.
     fx = lc_fixture(n=200, seed=73)
 
-    P_first = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
-    mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
-    P_third = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
+    P_first = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
+    mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
+    P_third = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
 
     assert_array_equal(P_first, P_third)
 
@@ -94,11 +94,11 @@ def test_the_profiled_likelihood_is_path_independent_across_repeated_calls():
 def test_the_fixed_point_converges_on_a_stationary_covariance():
     fx = lc_fixture(n=300, seed=74)
 
-    mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
+    mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
     prof = mtuem.mtuem_get_profiled_sigma()
 
     # One more weighted second-moment update leaves Sigma unchanged.
-    E = [mtuem.likelihood.residuals(cs, fx.apollo_inputs) for cs in fx.class_settings]
+    E = [mtuem.likelihood.residuals(cs, fx.inputs) for cs in fx.class_settings]
     W = prof["posterior"]
     for s in range(2):
         ws = W[:, s]
@@ -110,7 +110,7 @@ def test_the_fixed_point_converges_on_a_stationary_covariance():
 def test_mtuem_get_profiled_sigma_reports_sigmas_correlations_posteriors_and_shares():
     fx = lc_fixture(n=300, seed=75)
 
-    mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
+    mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
     prof = mtuem.mtuem_get_profiled_sigma()
 
     for s in range(2):
@@ -126,11 +126,11 @@ def test_a_single_class_specification_reduces_to_the_plain_multivariate_normal()
     fx = lc_fixture(n=200, seed=76)
     one_class = {"class_settings": fx.class_settings[:1], "classProb": [np.ones(200)]}
 
-    P = mtuem.mtuem_lc_profiled_likelihood(one_class, "estimate", fx.apollo_inputs)
+    P = mtuem.mtuem_lc_profiled_likelihood(one_class, "estimate", fx.inputs)
 
     # With a single class the posterior weights are all one, so the profiled covariance
     # is the (uncentred) residual second moment.
-    E = mtuem.likelihood.residuals(fx.class_settings[0], fx.apollo_inputs)
+    E = mtuem.likelihood.residuals(fx.class_settings[0], fx.inputs)
     Sigma = E.T @ E / E.shape[0]
     assert_allclose(P, mtuem_dmvnorm_ref(E, Sigma), rtol=1e-8)
 
@@ -138,7 +138,7 @@ def test_a_single_class_specification_reduces_to_the_plain_multivariate_normal()
 def test_prediction_returns_per_class_allocations_and_posterior_weights():
     fx = lc_fixture(n=100, seed=77)
 
-    pred = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "prediction", fx.apollo_inputs)
+    pred = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "prediction", fx.inputs)
 
     assert len(pred) == 100
     assert {"post_class1", "post_class2"} <= set(pred.columns)
@@ -150,9 +150,9 @@ def test_output_matches_estimate_and_report_prints_per_class_values_of_time(caps
     fx = lc_fixture(n=80, seed=78)
     f = mtuem.mtuem_lc_profiled_likelihood
 
-    assert_allclose(f(fx.lc_settings, "output", fx.apollo_inputs), f(fx.lc_settings, "estimate", fx.apollo_inputs))
+    assert_allclose(f(fx.lc_settings, "output", fx.inputs), f(fx.lc_settings, "estimate", fx.inputs))
     capsys.readouterr()
-    f(fx.lc_settings, "report", fx.apollo_inputs)
+    f(fx.lc_settings, "report", fx.inputs)
     assert "Class 2 VoL" in capsys.readouterr().out
 
 
@@ -160,8 +160,8 @@ def test_em_settings_control_the_fixed_point_and_change_the_answer_when_truncate
     fx = lc_fixture(n=200, seed=79)
     truncated = dict(fx.lc_settings, em_settings={"maxIterations": 1, "tol": 0})
 
-    P_conv = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
-    P_trunc = mtuem.mtuem_lc_profiled_likelihood(truncated, "estimate", fx.apollo_inputs)
+    P_conv = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.inputs)
+    P_trunc = mtuem.mtuem_lc_profiled_likelihood(truncated, "estimate", fx.inputs)
 
     assert np.all(np.isfinite(P_trunc))
     assert not np.allclose(P_conv, P_trunc, rtol=1.5e-8, atol=0)

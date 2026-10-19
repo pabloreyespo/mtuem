@@ -322,16 +322,16 @@ def test_additive_quadratic_jax_checks_omitted_categories(maed_inputs):
 
 
 def test_ported_forms_and_the_fallback_warning(monkeypatch):
-    assert lj.PORTED == frozenset({"theta_phi", "alpha_beta", "additive_quadratic"})
+    assert lj.PORTED == frozenset({"theta_phi", "alpha_beta", "additive_quadratic", "lc_profiled"})
     assert issubclass(FallbackWarning, UserWarning)
     monkeypatch.setattr(lj, "_warned", set())
     for form in lj.PORTED:
         assert lj.require_jax_form(form) is True
-    with pytest.warns(FallbackWarning, match="lc_profiled"):
-        assert lj.require_jax_form("lc_profiled") is False
+    with pytest.warns(FallbackWarning, match="numpy_only"):
+        assert lj.require_jax_form("numpy_only") is False
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        assert lj.require_jax_form("lc_profiled") is False  # warned once only
+        assert lj.require_jax_form("numpy_only") is False  # warned once only
 
 
 def test_cholesky_length_is_checked_before_any_functionality(maed_inputs):

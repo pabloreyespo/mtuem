@@ -7,10 +7,9 @@ them inside the probabilities function and create the inputs with
 
 Covered (``PORTED``): ``theta_phi``, ``alpha_beta`` and ``additive_quadratic`` (profiled,
 ``sig``, ``sig`` + ``rho`` or ``cholesky`` errors; the additive quadratic form also with
-``omitted_times`` / ``omitted_goods`` and ``optimal_tw=False``), plus ``class_alloc`` and ``lc``.
-Not covered: the profiled latent class likelihood (``lc_profiled``), whose inner fixed point is
-not differentiable as written. ``require_jax_form`` tells a model which forms must fall back to
-NumPy and warns (``FallbackWarning``) when they do.
+``omitted_times`` / ``omitted_goods`` and ``optimal_tw=False``), the profiled latent class
+Theta-Phi likelihood ``lc_profiled``, plus ``class_alloc`` and ``lc``. ``require_jax_form``
+tells a model which forms must fall back to NumPy and warns (``FallbackWarning``) when they do.
 """
 
 import warnings
@@ -34,7 +33,7 @@ from .utils import as_names
 
 ESTIMATE_LIKE = ("estimate", "conditionals", "raw", "components", "output", "report")
 
-PORTED: frozenset[str] = frozenset({"theta_phi", "alpha_beta", "additive_quadratic"})
+PORTED: frozenset[str] = frozenset({"theta_phi", "alpha_beta", "additive_quadratic", "lc_profiled"})
 
 _warned: set[str] = set()
 
@@ -404,3 +403,129 @@ def lc(lc_settings: Mapping, inputs, functionality: str = "estimate"):
             log_pi = jnp.broadcast_to(jnp.asarray(log_pi, dtype=float), (inputs.nObs,))[first]
         terms.append(log_pi + ll)
     return logsumexp(jnp.stack(terms, axis=1), axis=1)
+
+
+# ----------------------------------------------------------------------------------------------
+# Profiled latent classes
+# ----------------------------------------------------------------------------------------------
+def _profiled_logdensity(E, Sigma):
+    """(zero-mean normal log density, usable) as ``lc_profiled._mvn_logdensity``.
+
+    ``usable`` is False where numpy returns None (no Cholesky factor, or a pivot <= 1e-8). The
+    factor is then taken of the identity instead, so the discarded value keeps finite
+    derivatives.
+    """
+    M = E.shape[1]
+    dg = jnp.diag(jnp.linalg.cholesky(jax.lax.stop_gradient(Sigma)))
+    usable = jnp.all(jnp.isfinite(dg)) & jnp.all(dg > 1e-8)
+    return _mvn_logpdf_chol(E, jnp.linalg.cholesky(jnp.where(usable, Sigma, jnp.eye(M)))), usable
+
+
+def _profiled_posterior(log_num):
+    """Posterior weights and log mixture density as ``lc_profiled._posterior``, NaN-free."""
+    m = jax.lax.stop_gradient(jnp.max(log_num, axis=1, keepdims=True))
+    m = jnp.where(jnp.isfinite(m), m, 0.0)
+    e = jnp.exp(log_num - m)
+    tot = e.sum(axis=1, keepdims=True)
+    positive = tot > 0
+    tot = jnp.where(positive, tot, 1.0)
+    return e / tot, jnp.where(positive, m + jnp.log(tot), -jnp.inf).ravel()
+
+
+def _profile_core(E, log_Pi, em: Mapping) -> dict:
+    """The fixed point of ``lc_profiled._profile_core`` in JAX, with exact derivatives.
+
+    ``E`` stacks the class residuals (S x N x M), ``log_Pi`` the log class probabilities
+    (N x S). The covariances start at the unweighted sample covariance and are updated
+    at most ``maxIterations`` times, stopping once a step moved no entry by ``tol`` or more:
+    the same iterates and stopping rule as numpy, so the values agree. The loop is a
+    fixed-length ``lax.scan`` whose later steps leave converged covariances unchanged; a scan
+    has forward and reverse derivatives (a ``while_loop`` has no reverse derivative, and the
+    engine's Hessian needs both). The derivatives are the exact derivatives of the iterates
+    computed, so they are consistent with the value the optimiser sees, also when the loop
+    stops at ``maxIterations`` before converging.
+    ``bad`` marks the points numpy rejects (non-finite residuals, a covariance without a
+    Cholesky factor, a non-finite mixture density or a class weight below ``minWeight``);
+    their log-likelihood is -inf with finite derivatives.
+    """
+    S, N, M = E.shape
+    min_weight = em.get("minWeight")
+    if min_weight is None:
+        min_weight = 2 * M
+    row_bad = ~jnp.all(jnp.isfinite(jax.lax.stop_gradient(E)), axis=(0, 2))
+    E = jnp.where(row_bad[None, :, None], 0.0, E)
+    centred = E - E.mean(axis=1, keepdims=True)
+    Sigma0 = jnp.einsum("snm,snk->smk", centred, centred) / (N - 1)
+
+    def mixture(Sigma):
+        dens = [_profiled_logdensity(E[s], Sigma[s]) for s in range(S)]
+        W, logP = _profiled_posterior(log_Pi + jnp.stack([d[0] for d in dens], axis=1))
+        usable = jnp.all(jnp.stack([d[1] for d in dens])) & jnp.all(jnp.isfinite(jax.lax.stop_gradient(logP)))
+        return W, logP, usable
+
+    def step(carry, _):
+        Sigma, done, bad = carry
+        active = ~(done | bad)
+        W, _, usable = mixture(Sigma)
+        weight = W.sum(axis=0)
+        usable = usable & jnp.all(jax.lax.stop_gradient(weight) >= min_weight)
+        weight = jnp.where(weight > 0, weight, 1.0)
+        Sigma_new = jnp.einsum("snm,ns,snk->smk", E, W, E) / weight[:, None, None]
+        delta = jnp.max(jnp.abs(jax.lax.stop_gradient(Sigma_new - Sigma)))
+        update = active & usable
+        Sigma = jnp.where(update, Sigma_new, Sigma)
+        return (Sigma, done | (update & (delta < em["tol"])), bad | (active & ~usable)), None
+
+    start = (Sigma0, jnp.array(False), jnp.any(row_bad))
+    (Sigma, _, bad), _ = jax.lax.scan(step, start, None, length=int(em["maxIterations"]))
+    W, logP, usable = mixture(Sigma)
+    bad = bad | ~usable
+    return {"logP": jnp.where(bad, -jnp.inf, logP), "Sigma": Sigma, "W": W, "bad": bad}
+
+
+def _profiled_numpy_settings(lc_settings: Mapping) -> dict:
+    """Concrete numpy copy of profiled latent class settings, class log-probabilities kept."""
+    s = dict(lc_settings)
+    s["class_settings"] = [_to_numpy_settings(c) for c in lc_settings["class_settings"]]
+    probs = lc_settings["classProb"]
+    pis = [np.asarray(p, dtype=float) for p in probs]
+    logs = getattr(probs, "log", None)
+    s["classProb"] = ClassProbs(pis, [np.asarray(lp, dtype=float) for lp in logs]) if logs is not None else pis
+    return s
+
+
+def lc_profiled(lc_settings: Mapping, functionality: str = "estimate", inputs=None):
+    """Per-row log-likelihood of the profiled latent class Theta-Phi MTUEM, the JAX
+    counterpart of ``mtuem_lc_profiled_likelihood``.
+
+    Takes the same settings: ``class_settings`` (one Theta-Phi settings dict per class, without
+    an error structure), ``classProb`` (from ``class_alloc``) and optionally ``em_settings``
+    (``tol`` 1e-10, ``maxIterations`` 50, ``minWeight`` 2 * M). The result is already the class
+    mixture, so do not pass it through ``lc``. ``preprocess``, ``prediction`` and ``report``
+    are answered by the numpy code. An evaluation outside a JAX transformation also stores the
+    covariances for ``mtuem_get_profiled_sigma``.
+    """
+    from . import lc_profiled as numpy_profiled
+
+    em = {"tol": 1e-10, "maxIterations": 50, "minWeight": None}
+    em.update(lc_settings.get("em_settings") or {})
+    if functionality in ("preprocess", "prediction", "report"):
+        return numpy_profiled.mtuem_lc_profiled_likelihood(_profiled_numpy_settings(lc_settings), functionality, inputs)
+    out = _other_functionality(None, lc_settings, functionality, inputs, ())
+    if out is not None:
+        return out
+
+    N = len(inputs.database)
+    class_settings = [dict(c) for c in lc_settings["class_settings"]]
+    probs = lc_settings["classProb"]
+    logs = getattr(probs, "log", None) or [_safe_log(p) for p in probs]
+    log_Pi = jnp.column_stack([jnp.broadcast_to(jnp.asarray(lp, dtype=float), (N,)) for lp in logs])
+    E = jnp.stack([_theta_phi_residuals(c, inputs) for c in class_settings])
+    core = _profile_core(E, log_Pi, em)
+    if not isinstance(core["logP"], jax.core.Tracer) and not bool(core["bad"]):
+        numpy_profiled._stash({
+            "Sigma": [np.asarray(core["Sigma"][s]) for s in range(len(class_settings))],
+            "W": np.asarray(core["W"]),
+            "Pi": np.column_stack([np.broadcast_to(np.asarray(pi, dtype=float), (N,)) for pi in probs]),
+        })
+    return core["logP"]

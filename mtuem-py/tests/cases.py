@@ -49,11 +49,11 @@ def build(case: str, autodiff: bool = False):
     """Return (beta, fixed, probabilities, inputs).
 
     With ``autodiff=True`` the same model is written with ``mtuem.likelihood_jax`` (log-likelihoods,
-    exact derivatives). The profiled latent class model has no autodiff version.
+    exact derivatives).
     """
-    if autodiff:
-        from mtuem import likelihood_jax as lj
+    from mtuem import likelihood_jax as lj
 
+    if autodiff:
         loglik, alloc, mix = lj.theta_phi, lj.class_alloc, lj.lc
     else:
         loglik, alloc, mix = mtuem.likelihood.theta_phi, engine.class_alloc, engine.lc
@@ -114,14 +114,11 @@ def build(case: str, autodiff: bool = False):
             else:
                 P[f"class_{s + 1}"] = loglik(st, functionality, inputs)
         if case == "lc_profiled":
-            P["model"] = mtuem.mtuem_lc_profiled_likelihood(
-                {"class_settings": class_settings, "classProb": b.pi_values}, functionality, inputs
-            )
+            profiled = lj.lc_profiled if autodiff else mtuem.mtuem_lc_profiled_likelihood
+            P["model"] = profiled({"class_settings": class_settings, "classProb": b.pi_values}, functionality, inputs)
         else:
             P["model"] = mix({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
         return P
 
-    if autodiff and case == "lc_profiled":
-        raise NotImplementedError("mtuem_lc_profiled_likelihood has no autodiff version")
     inputs = engine.make_inputs(database(), beta, fixed, control, lc_pars, autodiff=autodiff)
     return beta, fixed, probabilities, inputs

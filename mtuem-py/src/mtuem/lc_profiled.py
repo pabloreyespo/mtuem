@@ -168,12 +168,12 @@ def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "est
 def mtuem_get_profiled_sigma() -> dict:
     """Covariances, sds, correlations, posteriors and shares from the LAST profiled evaluation.
 
-    Re-evaluate ``apollo_probabilities`` at ``model.estimate`` first to read them at the optimum.
+    Re-evaluate the probabilities function at ``model.estimate`` first to read them at the optimum.
     """
     if "Sigma" not in _PROFILE_STASH:
         raise RuntimeError(
-            "No profiled covariance is available yet. Call apollo_probabilities (which in turn calls "
-            "mtuem_lc_profiled_likelihood) at least once before calling mtuem_get_profiled_sigma()."
+            "No profiled covariance is available yet. Evaluate the probabilities function (which in turn "
+            "calls mtuem_lc_profiled_likelihood) at least once before calling mtuem_get_profiled_sigma()."
         )
     Sigma = _PROFILE_STASH["Sigma"]
     sig, rho = zip(*(cov_to_sig_rho(s) for s in Sigma))
