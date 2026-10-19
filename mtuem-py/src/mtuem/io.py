@@ -33,9 +33,17 @@ def load(
     path = _model_file(Path(path))
     saved = json.loads(path.read_text(encoding="utf-8"))
     beta = Beta.model_validate(saved["beta"])
+    if model_class is not None and saved["model"] is None:
+        raise ValueError("model_class does not apply to a custom model result, which saves no model; pass model=")
     if model is not None:
         if not (hasattr(model, "_compile") and hasattr(model, "_validate_data")):
             raise TypeError(f"model must be a model instance (MTUEM or CustomModel), not {model!r}")
+        if isinstance(model, CustomModel) != (saved["model"] is None):
+            raise ValueError(
+                "the model passed does not match the saved result: "
+                + ("a declarative model was saved, not a CustomModel" if saved["model"] is not None
+                   else "a CustomModel was saved, not a declarative model")
+            )
     elif saved["model"] is None:
         model = _DetachedModel()
     else:

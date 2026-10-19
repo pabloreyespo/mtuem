@@ -724,6 +724,10 @@ class CustomModel:
     ):
         if backend not in ("jax", "numpy"):
             raise ValueError(f"backend must be 'jax' or 'numpy', not {backend!r}")
+        if not callable(probabilities):
+            raise TypeError(f"probabilities must be a function, not {probabilities!r}")
+        if lc_pars is not None and not callable(lc_pars):
+            raise TypeError(f"lc_pars must be a function or None, not {lc_pars!r}")
         self._probabilities = probabilities
         self._lc_pars = lc_pars
         self.backend = backend
@@ -758,10 +762,13 @@ class CustomModel:
         _check_data(data, self._columns, control)
 
     def _check_beta(self, beta: Beta) -> None:
-        # There is no generator of parameter names: any set of names is accepted.
-        unknown = [n for n in beta.fixed_names if n not in beta]
+        # There is no generator of parameter names: any set of names is accepted, but the
+        # normalization groups must name parameters of beta.
+        if not beta.names:
+            raise ValueError("beta holds no parameters")
+        unknown = sorted({n for names in self._groups.values() for n in names if n not in beta})
         if unknown:
-            raise ValueError(f"fixed parameters not in beta: {', '.join(unknown)}")
+            raise ValueError(f"normalization_groups name parameters that beta lacks: {', '.join(unknown)}")
 
     def fit(
         self,

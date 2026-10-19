@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 import mtuem
-from cases import build, database, declarative, renamed
+from cases import build, database, declarative, latent_class, renamed
 from mtuem import CustomModel
 from mtuem.beta import Beta
 from mtuem.config import Control, EstimationSettings, MultiStart
@@ -39,16 +39,21 @@ def test_custom_model_reproduces_declarative_eq3(tmp_path):
     assert custom.converged and ref.converged
     np.testing.assert_allclose(custom.loglik, ref.loglik, rtol=1e-8)
     renamed_est = custom.estimates.rename({"theta_1": "th1", "phi_1": "ph1"})
-    np.testing.assert_allclose(renamed_est[ref.estimates.index], ref.estimates, rtol=1e-8, atol=1e-8)
+    np.testing.assert_allclose(renamed_est[ref.estimates.index], ref.estimates, rtol=1e-8)
 
 
 def test_custom_latent_class_with_lc_pars():
     model, beta = lc_model()
     beta = beta.set(**REF["estimate"])
-    result = model.fit(database(), beta, Control(model_name="lc", indiv_id="PeID"), NUMPY)
+    control = Control(model_name="lc", indiv_id="PeID")
+    result = model.fit(database(), beta, control, NUMPY)
     assert result.loglik == pytest.approx(REF["maximum"], abs=1e-3)
     assert result.class_shares().sum() == pytest.approx(1)
     assert result.posterior().shape[1] == 3
+    decl = latent_class("lc_cholesky")
+    ref = decl.fit(database(), decl.beta().set(**REF["estimate"]), control, NUMPY)
+    np.testing.assert_allclose(result.loglik, ref.loglik, rtol=1e-6)
+    np.testing.assert_allclose(result.estimates[ref.estimates.index], ref.estimates, rtol=1e-6)
 
 
 def test_custom_backend_mismatch_raises():
@@ -184,3 +189,46 @@ def test_declarative_model_json_unchanged(tmp_path):
     )
     saved = json.loads(result.save()["model"].read_text("utf-8"))
     assert saved["model_class"] == "mtuem.models:MTUEM" and saved["model"]["Tc"] == "Tc"
+
+
+def test_custom_beta_checks():
+    model, beta = eq3_model()
+    control = Control(model_name="eq3", indiv_id="PeID")
+    with pytest.raises(ValueError, match="no parameters"):
+        model.fit(database(), Beta(params={}), control, NUMPY)
+    bad = CustomModel(model._probabilities, normalization_groups={"cholesky": ["chk99"]})
+    with pytest.raises(ValueError, match="chk99"):
+        bad.fit(database(), beta, control, NUMPY)
+
+
+def test_constructor_checks_callables():
+    with pytest.raises(TypeError, match="probabilities"):
+        CustomModel("not a function")
+    with pytest.raises(TypeError, match="lc_pars"):
+        CustomModel(lambda p, i, f: {}, lc_pars=3)
+
+
+def test_custom_values_of_time_checks_columns_and_classes(tmp_path):
+    model, beta = eq3_model()
+    result = model.fit(database(), beta, Control(model_name="eq3", indiv_id="PeID"), NUMPY)
+    with pytest.raises(ValueError, match="nope"):
+        result.values_of_time(Tc="Tc", Ec="nope", w="w")
+    lc, lbeta = lc_model()
+    lresult = lc.fit(database(), lbeta.set(**REF["estimate"]), Control(model_name="lc", indiv_id="PeID"), NUMPY)
+    with pytest.raises(ValueError, match="latent class"):
+        lresult.values_of_time(Tc="Tc", Ec="EcI", w="w")
+
+
+def test_load_model_mismatches(tmp_path):
+    model, beta = eq3_model()
+    control = Control(model_name="eq3", output_dir=tmp_path / "c")
+    custom_path = model.fit(database(), beta, control, NUMPY).save()["model"]
+    with pytest.raises(ValueError, match="model_class"):
+        mtuem.load(custom_path, model_class=MTUEM)
+    decl = declarative("eq1")
+    dcontrol = Control(model_name="eq1", output_dir=tmp_path / "d")
+    decl_path = decl.fit(database(), decl.beta(), dcontrol, NUMPY).save()["model"]
+    with pytest.raises(ValueError, match="does not match"):
+        mtuem.load(decl_path, model=model)
+    with pytest.raises(ValueError, match="does not match"):
+        mtuem.load(custom_path, model=decl)

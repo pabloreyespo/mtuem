@@ -171,7 +171,15 @@ class Result:
                     "values_of_time of a custom model needs the column names Tc, Ec and w as keyword "
                     "arguments (the model does not say which columns they are)"
                 )
+            if self._n_classes():
+                raise ValueError(
+                    "values_of_time is not available for a custom latent class result; call "
+                    "mtuem.values_of_time with the class weights instead"
+                )
             inputs = self._require_data("values_of_time")
+            absent = [kwargs[k] for k in ("Tc", "Ec", "w") if kwargs[k] not in inputs.database.columns]
+            if absent:
+                raise ValueError(f"values_of_time: the data lack the columns {', '.join(absent)}")
             return values_of_time(self._estimate, inputs, self._prob_fn, **({"silent": True} | kwargs))
         if getattr(self.model, "utility", None) != "theta_phi":
             raise ValueError("values_of_time needs a model with utility='theta_phi'")
