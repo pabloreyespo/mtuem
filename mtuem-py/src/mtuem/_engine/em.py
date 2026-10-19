@@ -55,7 +55,7 @@ def lc_em(
     estimate_kwargs: Mapping | None = None,
     bounds: Mapping[str, tuple[float | None, float | None]] | None = None,
 ) -> Estimate:
-    """Expectation-Maximisation for latent class models (follows ``apollo_lcEM``).
+    """Expectation-Maximisation for latent class models (follows the EM of Apollo).
 
     Each M step maximises the expected complete-data log-likelihood
     ``sum_n sum_s h_ns [log P_s(n) + log pi_s(n)]`` over all free parameters. Parameters shared

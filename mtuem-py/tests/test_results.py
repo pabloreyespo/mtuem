@@ -168,6 +168,25 @@ def test_correlations_need_a_cholesky_model(fitted):
         fitted.correlations()
 
 
+def test_residual_covariance_is_get_corr_at_the_estimates(fitted):
+    got = fitted.residual_covariance()
+    want = mtuem.postestimation.get_corr(fitted._estimate, fitted._prob_fn, fitted._inputs)
+    assert set(got) == {"covar", "corr", "sigma"}
+    for key in got:
+        pd.testing.assert_frame_equal(pd.DataFrame(got[key]), pd.DataFrame(want[key]))
+    assert list(got["sigma"].index) == ["Tw"]
+
+
+def test_residual_covariance_needs_data_and_a_single_class_model(saved):
+    with pytest.raises(ValueError, match="estimation data"):
+        mtuem.load(saved["model"]).residual_covariance()
+
+
+def test_profiled_covariance_needs_a_profiled_latent_class_model(fitted):
+    with pytest.raises(ValueError, match="profiled"):
+        fitted.profiled_covariance()
+
+
 # ----------------------------------------------------------------------------------------------
 # Saving and loading
 # ----------------------------------------------------------------------------------------------
@@ -367,7 +386,7 @@ def test_values_of_time_with_constant_budgets(fitted, saved, tmp_path):
     path.write_text(json.dumps(data), encoding="utf-8")
     loaded = mtuem.load(path, data=database())
     vot = loaded.values_of_time()
-    expected = mtuem.values_of_time(
+    expected = mtuem.postestimation.values_of_time(
         fitted._estimate, SimpleNamespace(database=database().assign(Tc=60.0)), Ec="EcI", silent=True
     )
     pd.testing.assert_frame_equal(vot["summary"], expected["summary"])

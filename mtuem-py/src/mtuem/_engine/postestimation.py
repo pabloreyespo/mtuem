@@ -14,7 +14,7 @@ from .latent import ProbFn
 def delta_method(
     est: Estimate, expressions: Mapping[str, Callable], varcov: str = "robust", silent: bool = False
 ) -> pd.DataFrame:
-    """Delta method standard errors for functions of the estimates (follows ``apollo_deltaMethod``).
+    """Delta method standard errors for functions of the estimates (as in Apollo).
 
     ``expressions`` maps a label to a callable that receives the full parameter vector as a dict
     (fixed parameters included) and returns a number. ``varcov`` is ``"robust"`` (default) or

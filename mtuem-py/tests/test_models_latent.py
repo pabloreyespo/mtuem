@@ -328,6 +328,7 @@ def test_profiled_rejects_a_class_loglik_override():
 # ----------------------------------------------------------------------------------------------
 # Estimation
 # ----------------------------------------------------------------------------------------------
+@pytest.mark.slow
 def test_lc_cholesky_matches_r_at_r_optimum():
     ref = load_ref("lc_cholesky")
     model = latent_class("lc_cholesky")
@@ -341,6 +342,7 @@ def test_lc_cholesky_matches_r_at_r_optimum():
     assert result.class_shares().sum() == pytest.approx(1)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("case", ["lc_profiled", "lc_shared"])
 def test_lc_reaches_at_least_r_likelihood(case):
     ref = load_ref(case)
@@ -351,6 +353,7 @@ def test_lc_reaches_at_least_r_likelihood(case):
     assert result.loglik >= ref["maximum"] - 1e-3
 
 
+@pytest.mark.slow
 def test_class_without_free_activities_fits():
     model = LatentClassMTUEM(
         work_times=["Tw"], free_times=["Tf1"], Tc="Tc", Ec="EcI", w="w", covariance="cholesky",
@@ -419,10 +422,39 @@ def test_posterior_of_profiled_model():
     assert list(post.columns) == ["ID", "class_1", "class_2"] and len(post) == len(database())
     _, _, pf, inputs = build("lc_profiled")
     pf(ref["estimate"], inputs, "estimate")
-    expected = mtuem.mtuem_get_profiled_sigma()["posterior"]
+    expected = mtuem.lc_profiled.get_profiled_sigma()["posterior"]
     np.testing.assert_allclose(post[["class_1", "class_2"]].to_numpy(), expected, rtol=1e-10)
     np.testing.assert_array_equal(post["ID"], database()["PeID"])
     np.testing.assert_allclose(result.class_shares().to_numpy(), ref["profiled"]["shares"], rtol=1e-10)
+
+
+def test_profiled_covariance_matches_r():
+    ref = load_ref("lc_profiled")
+    result = result_at(latent_class("lc_profiled"), ref["estimate"])
+    prof = result.profiled_covariance()
+    eqs = ["Tw", "Tf1", "Ef1"]
+    for s in range(2):
+        assert list(prof["Sigma"][s].index) == eqs and list(prof["Sigma"][s].columns) == eqs
+        np.testing.assert_allclose(prof["Sigma"][s].to_numpy(), np.array(ref["profiled"]["Sigma"][s]), rtol=1e-8)
+        sigma = np.array(ref["profiled"]["Sigma"][s])
+        sd = np.sqrt(np.diag(sigma))
+        np.testing.assert_allclose(prof["sig"][s].to_numpy(), sd, rtol=1e-8)
+        np.testing.assert_allclose(prof["rho"][s].to_numpy(), sigma / np.outer(sd, sd), rtol=1e-8)
+    assert list(prof["shares"].index) == ["class_1", "class_2"]
+    np.testing.assert_allclose(prof["shares"].to_numpy(), ref["profiled"]["shares"], rtol=1e-10)
+    # Information criteria counting the profiled-out covariance terms, 2 * 3 * 4 / 2 of them.
+    assert prof["k"] == ref["ic"]["k"]
+    assert prof["AIC"] == pytest.approx(ref["ic"]["AIC"], rel=1e-8)
+    assert prof["BIC"] == pytest.approx(ref["ic"]["BIC"], rel=1e-8)
+
+
+def test_profiled_covariance_needs_covariance_profiled():
+    ref = load_ref("lc_cholesky")
+    result = result_at(latent_class("lc_cholesky"), ref["estimate"])
+    with pytest.raises(ValueError, match="profiled"):
+        result.profiled_covariance()
+    with pytest.raises(ValueError, match="single-class"):
+        result.residual_covariance()
 
 
 def test_posterior_of_a_degenerate_profiled_model_raises():

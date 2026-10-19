@@ -516,21 +516,21 @@ def _profiled_numpy_settings(lc_settings: Mapping) -> dict:
 
 def lc_profiled(lc_settings: Mapping, functionality: str = "estimate", inputs=None):
     """Per-row log-likelihood of the profiled latent class Theta-Phi MTUEM, the JAX
-    counterpart of ``mtuem_lc_profiled_likelihood``.
+    counterpart of ``mtuem.lc_profiled.lc_profiled``.
 
     Takes the same settings: ``class_settings`` (one Theta-Phi settings dict per class, without
     an error structure), ``classProb`` (from ``class_alloc``) and optionally ``em_settings``
     (``tol`` 1e-10, ``maxIterations`` 50, ``minWeight`` 2 * M). The result is already the class
     mixture, so do not pass it through ``lc``. ``preprocess``, ``prediction`` and ``report``
     are answered by the numpy code. An evaluation outside a JAX transformation also stores the
-    covariances for ``mtuem_get_profiled_sigma``.
+    covariances for ``mtuem.lc_profiled.get_profiled_sigma``.
     """
     from . import lc_profiled as numpy_profiled
 
     em = {"tol": 1e-10, "maxIterations": 50, "minWeight": None}
     em.update(lc_settings.get("em_settings") or {})
     if functionality in ("preprocess", "prediction", "report"):
-        return numpy_profiled.mtuem_lc_profiled_likelihood(_profiled_numpy_settings(lc_settings), functionality, inputs)
+        return numpy_profiled.lc_profiled(_profiled_numpy_settings(lc_settings), functionality, inputs)
     out = _other_functionality(None, lc_settings, functionality, inputs, ())
     if out is not None:
         return out

@@ -14,7 +14,7 @@ from . import _engine as engine
 from . import likelihood, likelihood_jax
 from .beta import Beta
 from .config import Control, EstimationSettings, _Strict
-from .lc_profiled import mtuem_lc_profiled_likelihood
+from .lc_profiled import lc_profiled
 from .multistart import estimate_once, run_multistart
 from .results import Result
 
@@ -614,6 +614,8 @@ class LatentClassMTUEM(MTUEM):
 
         Override it to customize a class likelihood. On the JAX backend it runs under
         ``jax.jit``: compute with ``data.xp`` and no Python branching on parameter values.
+        An override drives estimation, EM, the posteriors and the values of time, but not
+        ``Result.predict``: predicted allocations always come from the standard likelihood.
         """
         settings = self._likelihood_settings(vars(params), data.inputs, self._active_times(s))
         loglik = getattr(likelihood if data.xp is np else likelihood_jax, self.utility)
@@ -638,7 +640,7 @@ class LatentClassMTUEM(MTUEM):
             alloc, mix, mix_profiled = likelihood_jax.class_alloc, likelihood_jax.lc, likelihood_jax.lc_profiled
         else:
             xp = np
-            alloc, mix, mix_profiled = engine.class_alloc, engine.lc, mtuem_lc_profiled_likelihood
+            alloc, mix, mix_profiled = engine.class_alloc, engine.lc, lc_profiled
         loglik = getattr(likelihood_jax if autodiff else likelihood, self.utility)
         classes = list(self._classes())
 
@@ -694,7 +696,7 @@ class LatentClassMTUEM(MTUEM):
 
 class CustomModel:
     """A model with a hand-written likelihood, the escape hatch for what the declarative models
-    cannot express (the successor of Apollo's ``apollo_probabilities``).
+    cannot express (the successor of the probabilities function of an Apollo script).
 
     ``probabilities(params, inputs, functionality)`` returns a dict with ``"model"``, the
     per-row (or per-individual) log-likelihood, and for a latent class model the class

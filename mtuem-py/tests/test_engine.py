@@ -66,6 +66,7 @@ def eq1_model():
     return engine.estimate(beta, fixed, pf, inputs, silent=True), pf, inputs
 
 
+@pytest.mark.slow
 def test_em_never_decreases_the_likelihood_and_hands_over_to_ml():
     beta, fixed, pf, inputs = small_lc()
     em_only = engine.lc_em(beta, fixed, pf, inputs, max_iterations=3, post_em=0, estimate_kwargs={"silent": True})
@@ -232,6 +233,7 @@ def test_saddle_escape_steps_off_a_stationary_saddle():
     assert _escape_saddle(Toy, origin, 0.0, np.diag([-2.0, -2.0])) is None
 
 
+@pytest.mark.slow
 def test_multistart_with_em_warm_start():
     values, _, _, inputs = small_lc(n=150)
     model = LatentClassMTUEM(

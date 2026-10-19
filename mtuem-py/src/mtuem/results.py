@@ -17,8 +17,8 @@ from ._engine.latent import _first_row
 from ._engine.output import __version__, _estimates_table
 from .beta import Beta
 from .config import Control, EstimationSettings
-from .lc_profiled import _PROFILE_STASH
-from .postestimation import cholesky_delta_method, values_of_time
+from .lc_profiled import _PROFILE_STASH, get_profiled_sigma, profile_ic
+from .postestimation import cholesky_delta_method, get_corr, values_of_time
 
 _NO_DATA = "{what} needs the estimation data: pass data= to mtuem.load"
 
@@ -161,7 +161,7 @@ class Result:
         """Values of leisure and of time assigned to work (Theta-Phi models).
 
         The budgets and the wage come from the model; keyword arguments go to
-        ``mtuem.values_of_time`` (for example ``conf_level`` or ``weights``).
+        ``mtuem.postestimation.values_of_time`` (for example ``conf_level`` or ``weights``).
         """
         if getattr(self.model, "is_custom", False):
             # No model to take the budgets from: the caller names the columns.
@@ -174,7 +174,7 @@ class Result:
             if self._n_classes():
                 raise ValueError(
                     "values_of_time is not available for a custom latent class result; call "
-                    "mtuem.values_of_time with the class weights instead"
+                    "mtuem.postestimation.values_of_time with the class weights instead"
                 )
             inputs = self._require_data("values_of_time")
             absent = [kwargs[k] for k in ("Tc", "Ec", "w") if kwargs[k] not in inputs.database.columns]
@@ -213,7 +213,11 @@ class Result:
         return values_of_time(self._estimate, inputs, self._prob_fn, **(args | kwargs))
 
     def predict(self) -> pd.DataFrame:
-        """Predicted allocations at the estimates, one row per observation."""
+        """Predicted allocations at the estimates, one row per observation.
+
+        The predictions come from the standard likelihood of the model's utility form, also for
+        a ``LatentClassMTUEM`` subclass that overrides ``class_loglik``.
+        """
         inputs = self._require_data("predict")
         return engine.prediction(self._estimate, self._prob_fn, inputs, silent=True)
 
@@ -238,6 +242,47 @@ class Result:
             frame.insert(0, "class", s)
             frames.append(frame)
         return pd.concat(frames, ignore_index=True)
+
+    def residual_covariance(self) -> dict:
+        """Covariance (``covar``), correlations (``corr``) and standard deviations (``sigma``) of
+        the observed minus the predicted allocations at the estimates, for a single-class model.
+
+        The empirical error covariance, whatever ``covariance`` the model estimated: with
+        ``"profiled"`` it is the covariance the likelihood concentrates out.
+        """
+        if self._n_classes():
+            raise ValueError("residual_covariance needs a single-class model; see profiled_covariance")
+        inputs = self._require_data("residual_covariance")
+        return get_corr(self._estimate, self._prob_fn, inputs)
+
+    def profiled_covariance(self) -> dict:
+        """The class covariances a ``covariance="profiled"`` latent class model concentrates out.
+
+        Evaluated at the estimates: ``Sigma``, ``sig`` and ``rho`` (one per class, labelled by
+        equation), the class ``shares``, and ``k``, ``AIC`` and ``BIC`` counting the profiled-out
+        covariance terms (``n_classes * M * (M + 1) / 2`` for M equations) as free parameters.
+        """
+        n_classes = self._n_classes()
+        if not n_classes or getattr(self.model, "covariance", None) != "profiled":
+            raise ValueError("profiled_covariance needs a latent class model with covariance='profiled'")
+        self._profiled_stash(self._require_data("profiled_covariance"))
+        prof = get_profiled_sigma()
+        eqs = self.model._equations()
+        out = {
+            "Sigma": [pd.DataFrame(m, index=eqs, columns=eqs) for m in prof["Sigma"]],
+            "sig": [pd.Series(v, index=eqs) for v in prof["sig"]],
+            "rho": [pd.DataFrame(m, index=eqs, columns=eqs) for m in prof["rho"]],
+            "shares": pd.Series(prof["shares"], index=[f"class_{s}" for s in range(1, n_classes + 1)]),
+        }
+        return out | profile_ic(self._estimate, n_classes, len(eqs))
+
+    def _profiled_stash(self, inputs) -> None:
+        """Evaluate the profiled likelihood at the estimates, so its stash holds their covariances
+        and posteriors (it is left empty when the evaluation is degenerate)."""
+        _PROFILE_STASH.clear()
+        self._prob_fn(self.estimates.to_dict(), inputs, "estimate")
+        if "W" not in _PROFILE_STASH:
+            raise ValueError("the profiled likelihood is degenerate at the estimates: no posterior")
 
     # ------------------------------------------------------------------------------------------
     # Latent classes
@@ -268,10 +313,7 @@ class Result:
         if getattr(self.model, "covariance", None) == "profiled":
             # The profiled likelihood mixes row by row (fit rejects panel data for it) and stores
             # its posteriors when an evaluation succeeds.
-            _PROFILE_STASH.clear()
-            self._prob_fn(self.estimates.to_dict(), inputs, "estimate")
-            if "W" not in _PROFILE_STASH:
-                raise ValueError("the profiled likelihood is degenerate at the estimates: no posterior")
+            self._profiled_stash(inputs)
             post = _PROFILE_STASH["W"]
             out = pd.DataFrame(post, columns=columns)
             out.insert(0, "ID", inputs.ids)

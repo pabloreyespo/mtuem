@@ -109,12 +109,13 @@ def _stash(core: dict) -> None:
     _PROFILE_STASH.update(Sigma=core["Sigma"], W=core["W"], Pi=core["Pi"])
 
 
-def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "estimate", inputs=None):
+def lc_profiled(lc_settings: Mapping, functionality: str = "estimate", inputs=None):
     """Latent class Theta-Phi likelihood with the covariance concentrated out (inner fixed point).
 
-    ``lc_settings`` holds ``class_settings`` (one ``mtuem_settings`` per class, without ``sig``,
-    ``rho`` or ``cholesky``), ``classProb`` (from the engine's ``class_alloc``) and optionally
-    ``em_settings`` with ``tol`` (1e-10), ``maxIterations`` (50) and ``minWeight`` (2 * M).
+    ``lc_settings`` holds ``class_settings`` (one Theta-Phi likelihood settings dict per class,
+    without ``sig``, ``rho`` or ``cholesky``), ``classProb`` (from the engine's ``class_alloc``)
+    and optionally ``em_settings`` with ``tol`` (1e-10), ``maxIterations`` (50) and
+    ``minWeight`` (2 * M).
     The result is already the class mixture, so do not pass it through the engine's ``lc``.
     """
     em = {"tol": 1e-10, "maxIterations": 50, "minWeight": None}
@@ -140,7 +141,7 @@ def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "est
         return core["logP"] if logs else core["P"]
 
     if functionality in ("output", "report"):
-        ans = mtuem_lc_profiled_likelihood(lc_settings, "estimate", inputs)
+        ans = lc_profiled(lc_settings, "estimate", inputs)
         if functionality == "report":
             from .utils import get_tw_thph, get_values_of_time_thph
 
@@ -165,7 +166,7 @@ def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "est
     raise ValueError("Invalid value of argument 'functionality'")
 
 
-def mtuem_get_profiled_sigma() -> dict:
+def get_profiled_sigma() -> dict:
     """Covariances, sds, correlations, posteriors and shares from the LAST profiled evaluation.
 
     Re-evaluate the probabilities function at ``model.estimate`` first to read them at the optimum.
@@ -173,7 +174,7 @@ def mtuem_get_profiled_sigma() -> dict:
     if "Sigma" not in _PROFILE_STASH:
         raise RuntimeError(
             "No profiled covariance is available yet. Evaluate the probabilities function (which in turn "
-            "calls mtuem_lc_profiled_likelihood) at least once before calling mtuem_get_profiled_sigma()."
+            "calls lc_profiled) at least once before calling get_profiled_sigma()."
         )
     Sigma = _PROFILE_STASH["Sigma"]
     sig, rho = zip(*(cov_to_sig_rho(s) for s in Sigma))
@@ -186,7 +187,7 @@ def mtuem_get_profiled_sigma() -> dict:
     }
 
 
-def mtuem_profile_ic(model, nClass: int, nEq: int) -> dict:
+def profile_ic(model, nClass: int, nEq: int) -> dict:
     """AIC/BIC counting the profiled-out covariance parameters, nClass * nEq * (nEq + 1) / 2."""
     k = len(model.estimate) - len(model.fixed) + nClass * nEq * (nEq + 1) / 2
     ll = model.maximum

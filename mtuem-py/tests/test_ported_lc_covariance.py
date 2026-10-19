@@ -18,8 +18,8 @@ def test_mtuem_residuals_refactor_preserves_mtuem_likelihood_output_closed_form_
     we = {"Theta": 1, "Phi": 1, "thw": 0}
     te = {"th1": 0.3, "th2": 0.2}
 
-    tw_opt = mtuem.get_tw_thph(we, tau, Tc, Ec, w)
-    ti_opt = mtuem.get_ti_thph(te, we["Theta"], tw_opt, tau, Tc)
+    tw_opt = mtuem.utils.get_tw_thph(we, tau, Tc, Ec, w)
+    ti_opt = mtuem.utils.get_ti_thph(te, we["Theta"], tw_opt, tau, Tc)
 
     eps = np.random.default_rng(2).normal(0, 2, (n, 3))
     database = pd.DataFrame({
@@ -101,10 +101,10 @@ def test_profiled_likelihood_recovers_class_specific_sigma_and_matches_the_ordin
 
     we1, we2 = {"Theta": 1, "Phi": 1, "thw": 0}, {"Theta": 1, "Phi": 2.5, "thw": 0.5}
     te1, te2 = {"th1": 0.4}, {"th1": 0.15}
-    tw1 = mtuem.get_tw_thph(we1, tau, Tc, Ec, w)
-    tw2 = mtuem.get_tw_thph(we2, tau, Tc, Ec, w)
-    opt1 = np.column_stack([tw1, mtuem.get_ti_thph(te1, we1["Theta"], tw1, tau, Tc)])
-    opt2 = np.column_stack([tw2, mtuem.get_ti_thph(te2, we2["Theta"], tw2, tau, Tc)])
+    tw1 = mtuem.utils.get_tw_thph(we1, tau, Tc, Ec, w)
+    tw2 = mtuem.utils.get_tw_thph(we2, tau, Tc, Ec, w)
+    opt1 = np.column_stack([tw1, mtuem.utils.get_ti_thph(te1, we1["Theta"], tw1, tau, Tc)])
+    opt2 = np.column_stack([tw2, mtuem.utils.get_ti_thph(te2, we2["Theta"], tw2, tau, Tc)])
 
     S1_true = np.array([[4.0, 1.0], [1.0, 2.25]])
     S2_true = np.array([[9.0, -1.5], [-1.5, 3.24]])
@@ -118,12 +118,12 @@ def test_profiled_likelihood_recovers_class_specific_sigma_and_matches_the_ordin
     inputs = inputs_of(database)
     class_settings, lc_settings = _two_class_settings(N, tau, Tc, Ec, w, we1, we2, te1, te2, pi1)
 
-    P_profiled = mtuem.mtuem_lc_profiled_likelihood(lc_settings, "estimate", inputs)
+    P_profiled = mtuem.lc_profiled.lc_profiled(lc_settings, "estimate", inputs)
 
     assert np.all(np.isfinite(P_profiled))
     assert np.all(P_profiled > 0)
 
-    prof = mtuem.mtuem_get_profiled_sigma()
+    prof = mtuem.lc_profiled.get_profiled_sigma()
     S1_hat, S2_hat = prof["Sigma"]
     assert np.abs(S1_hat - S1_true).max() / np.abs(S1_true).max() < 0.2
     assert np.abs(S2_hat - S2_true).max() / np.abs(S2_true).max() < 0.2
@@ -145,7 +145,7 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_non_finite_res
     cs = {"work_times": "Tw", "work_elasticities": we, "Tc": Tc, "Ec": Ec, "w": w, "tau": tau}
     lc_settings = {"class_settings": [cs, cs], "classProb": [np.full(N, 0.5), np.full(N, 0.5)]}
 
-    P = mtuem.mtuem_lc_profiled_likelihood(lc_settings, "estimate", inputs_of(database))
+    P = mtuem.lc_profiled.lc_profiled(lc_settings, "estimate", inputs_of(database))
 
     assert_allclose(P, np.zeros(N))
 
@@ -157,8 +157,8 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_a_non_pd_start
     N, tau = 30, 168
     Tc, Ec, w = rng.uniform(40, 80, N), rng.uniform(50, 150, N), rng.uniform(10, 20, N)
     we, te = {"Theta": 1, "Phi": 1, "thw": 0}, {"th1": 0.3}
-    tw_opt = mtuem.get_tw_thph(we, tau, Tc, Ec, w)
-    ti_opt = mtuem.get_ti_thph(te, we["Theta"], tw_opt, tau, Tc)
+    tw_opt = mtuem.utils.get_tw_thph(we, tau, Tc, Ec, w)
+    ti_opt = mtuem.utils.get_ti_thph(te, we["Theta"], tw_opt, tau, Tc)
     noise = rng.normal(0, 3, N)
     database = pd.DataFrame({
         "PeID": np.arange(1, N + 1), "Tw": tw_opt.ravel() + noise, "Tf1": ti_opt.ravel() + noise,
@@ -168,7 +168,7 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_a_non_pd_start
           "Tc": Tc, "Ec": Ec, "w": w, "tau": tau}
     lc_settings = {"class_settings": [cs, cs], "classProb": [np.full(N, 0.5), np.full(N, 0.5)]}
 
-    P = mtuem.mtuem_lc_profiled_likelihood(lc_settings, "estimate", inputs_of(database))
+    P = mtuem.lc_profiled.lc_profiled(lc_settings, "estimate", inputs_of(database))
 
     assert_allclose(P, np.zeros(N))
 
@@ -180,7 +180,7 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_class_collapse
     N, tau = 40, 168
     Tc, Ec, w = rng.uniform(40, 80, N), rng.uniform(50, 150, N), rng.uniform(10, 20, N)
     we = {"Theta": 1, "Phi": 1, "thw": 0}
-    tw_opt = mtuem.get_tw_thph(we, tau, Tc, Ec, w)
+    tw_opt = mtuem.utils.get_tw_thph(we, tau, Tc, Ec, w)
     database = pd.DataFrame({
         "PeID": np.arange(1, N + 1), "Tw": tw_opt.ravel() + rng.normal(0, 2, N), "Tc": Tc, "EcI": Ec, "w": w,
     })
@@ -190,7 +190,7 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_class_collapse
         "em_settings": {"minWeight": 5},
     }
 
-    P = mtuem.mtuem_lc_profiled_likelihood(lc_settings, "estimate", inputs_of(database))
+    P = mtuem.lc_profiled.lc_profiled(lc_settings, "estimate", inputs_of(database))
 
     assert_allclose(P, np.zeros(N))
 

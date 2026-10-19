@@ -151,6 +151,7 @@ def test_lc_profiled_jax_hessian_gives_the_numpy_standard_errors_at_the_optimum(
     np.testing.assert_allclose(_se(H_exact), _se(H_num), rtol=2e-3)
 
 
+@pytest.mark.slow
 def test_lc_profiled_jax_hessian_matches_numerical_hessian_at_the_test_point(models):
     ref = load_ref()
     fixed, pf_np, inputs_np, pf_jax, inputs_jax = models
@@ -163,6 +164,7 @@ def test_lc_profiled_jax_hessian_matches_numerical_hessian_at_the_test_point(mod
     np.testing.assert_allclose(H_exact, H_num, rtol=1e-6, atol=1e-6 * np.abs(H_num).max())
 
 
+@pytest.mark.slow
 def test_lc_profiled_jax_estimation_reaches_the_r_likelihood(models):
     ref = load_ref()
     fixed, _, _, pf_jax, inputs_jax = models
@@ -178,10 +180,11 @@ def test_lc_profiled_jax_follows_the_em_settings_like_numpy(models):
             "classProb": [np.asarray(p) for p in s_jax["classProb"]]}
     for em in ({"maxIterations": 1, "tol": 0}, {"maxIterations": 7}, {"tol": 1e-3}):
         got = np.asarray(lj.lc_profiled(dict(s_jax, em_settings=em), "estimate", inputs_jax))
-        want = mtuem.mtuem_lc_profiled_likelihood(dict(s_np, em_settings=em), "estimate", inputs_np)
+        want = mtuem.lc_profiled.lc_profiled(dict(s_np, em_settings=em), "estimate", inputs_np)
         np.testing.assert_allclose(got, want, rtol=1e-10, atol=0)
 
 
+@pytest.mark.slow
 def test_lc_profiled_jax_degenerate_points_give_minus_infinity_with_finite_gradients(models):
     ref = load_ref()
     _, _, inputs_np, _, inputs_jax = models
@@ -191,7 +194,7 @@ def test_lc_profiled_jax_degenerate_points_give_minus_infinity_with_finite_gradi
     too_heavy = dict(s_jax, em_settings={"minWeight": N + 1})
     s_np = {"class_settings": [lj._to_numpy_settings(c) for c in s_jax["class_settings"]],
             "classProb": [np.asarray(p) for p in s_jax["classProb"]], "em_settings": {"minWeight": N + 1}}
-    assert np.all(np.isneginf(mtuem.mtuem_lc_profiled_likelihood(s_np, "estimate", inputs_np)))
+    assert np.all(np.isneginf(mtuem.lc_profiled.lc_profiled(s_np, "estimate", inputs_np)))
     assert np.all(np.isneginf(np.asarray(lj.lc_profiled(too_heavy, "estimate", inputs_jax))))
 
     # A negative discriminant in the optimal work time of class 2 for a few rows: numpy has
@@ -208,7 +211,7 @@ def test_lc_profiled_jax_degenerate_points_give_minus_infinity_with_finite_gradi
     s_bad = negative_discriminant(-0.1)
     s_bad_np = dict(s_np, em_settings={},
                     class_settings=[lj._to_numpy_settings(c) for c in s_bad["class_settings"]])
-    assert np.all(np.isneginf(mtuem.mtuem_lc_profiled_likelihood(s_bad_np, "estimate", inputs_np)))
+    assert np.all(np.isneginf(mtuem.lc_profiled.lc_profiled(s_bad_np, "estimate", inputs_np)))
     assert np.all(np.isneginf(np.asarray(lj.lc_profiled(s_bad, "estimate", inputs_jax))))
 
     for settings_of, phi in ((negative_discriminant, -0.1), (heavy, 1.1)):
@@ -245,9 +248,9 @@ def test_profiled_sigma_after_a_jax_evaluation_matches_numpy(models):
     ref = load_ref()
     _, pf_np, inputs_np, pf_jax, inputs_jax = models
     pf_np(ref["estimate"], inputs_np, "estimate")
-    want = mtuem.mtuem_get_profiled_sigma()
+    want = mtuem.lc_profiled.get_profiled_sigma()
     pf_jax(ref["estimate"], inputs_jax, "estimate")
-    got = mtuem.mtuem_get_profiled_sigma()
+    got = mtuem.lc_profiled.get_profiled_sigma()
     for s in range(2):
         np.testing.assert_allclose(got["Sigma"][s], want["Sigma"][s], rtol=1e-10)
         np.testing.assert_allclose(got["Sigma"][s], np.array(ref["profiled"]["Sigma"][s]), rtol=1e-8)

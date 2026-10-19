@@ -42,6 +42,7 @@ def test_custom_model_reproduces_declarative_eq3(tmp_path):
     np.testing.assert_allclose(renamed_est[ref.estimates.index], ref.estimates, rtol=1e-8)
 
 
+@pytest.mark.slow
 def test_custom_latent_class_with_lc_pars():
     model, beta = lc_model()
     beta = beta.set(**REF["estimate"])
@@ -208,6 +209,7 @@ def test_constructor_checks_callables():
         CustomModel(lambda p, i, f: {}, lc_pars=3)
 
 
+@pytest.mark.slow
 def test_custom_values_of_time_checks_columns_and_classes(tmp_path):
     model, beta = eq3_model()
     result = model.fit(database(), beta, Control(model_name="eq3", indiv_id="PeID"), NUMPY)

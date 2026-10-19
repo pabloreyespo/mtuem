@@ -7,7 +7,7 @@ import pandas as pd
 from scipy import stats
 
 from . import _engine as engine
-from .lc_profiled import mtuem_get_profiled_sigma
+from .lc_profiled import get_profiled_sigma
 from .utils import cov_complete, get_tw_thph
 
 
@@ -21,7 +21,8 @@ def get_corr(est, prob_fn, inputs) -> dict:
     engine inputs of the model.
     """
     pred = engine.prediction(est, prob_fn, inputs, silent=True)
-    drop = ["ID", "Observation", "Tfi", "Xfj", "VoL", "VTAW"]
+    # Leftover time and money (Tfi, Xfj, or T and X without free times or goods) are no equations.
+    drop = ["ID", "Observation", "Tfi", "Xfj", "T", "X", "VoL", "VTAW"]
     opt = pred.drop(columns=[c for c in drop if c in pred.columns])
     err = inputs.database[list(opt.columns)].to_numpy(dtype=float) - opt.to_numpy(dtype=float)
     cols = list(opt.columns)
@@ -128,7 +129,7 @@ def _vot_posterior(est, prob_fn, inputs, nClass: int) -> np.ndarray:
         try:
             if prob_fn is not None:
                 prob_fn(est.estimate.to_dict(), inputs, "estimate")
-            prof = mtuem_get_profiled_sigma()
+            prof = get_profiled_sigma()
             if prof["posterior"].shape[1] == nClass:
                 post = prof["posterior"]
         except RuntimeError:
@@ -171,9 +172,10 @@ def values_of_time(
 
     The leading fraction of each value of time is averaged over the sample (weighted by class
     membership in latent class models) and the delta method is applied to the parameter ratio,
-    exactly as ``mtuem::mtuem_values_of_time``. ``est`` is the engine estimate, ``inputs`` the
-    engine inputs (anything with a ``database``) and ``prob_fn`` the probabilities function, needed
-    for the posterior class weights of latent class models when ``weights`` is not given.
+    exactly as the R function ``mtuem::mtuem_values_of_time``. ``est`` is the engine estimate,
+    ``inputs`` the engine inputs (anything with a ``database``) and ``prob_fn`` the probabilities
+    function, needed for the posterior class weights of latent class models when ``weights`` is
+    not given.
     """
     db = inputs.database
     N = len(db)

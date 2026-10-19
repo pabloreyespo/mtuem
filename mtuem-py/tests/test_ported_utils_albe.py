@@ -13,7 +13,7 @@ def test_get_tw_albe_returns_the_root_of_the_alpha_beta_work_equation():
     w = np.array([14, 18, 21.0])
     we = {"alpha": 0.3, "beta": 0.25}
 
-    tw = mtuem.get_tw_albe(we, tau, Tc, Ec, w)
+    tw = mtuem.utils.get_tw_albe(we, tau, Tc, Ec, w)
 
     ec = Ec / (w * (tau - Tc))
     B = we["beta"] + we["alpha"] * ec
@@ -29,7 +29,7 @@ def test_get_tw_albe_returns_an_n_by_1_array_and_a_feasible_interior_allocation(
     w = rng.uniform(10, 28, 40)
     we = {"alpha": 0.3, "beta": 0.25}
 
-    tw = mtuem.get_tw_albe(we, tau, Tc, Ec, w)
+    tw = mtuem.utils.get_tw_albe(we, tau, Tc, Ec, w)
 
     assert tw.shape == (40, 1)
     assert np.all(tw > 0)
@@ -44,7 +44,7 @@ def test_get_ti_albe_splits_residual_time_by_elasticity_over_one_minus_two_beta(
     te = {"th1": 0.2, "th2": 0.1}
     Tw = np.array([[40.0], [38.0]])
 
-    ti = mtuem.get_ti_albe(te, beta, Tw, tau, Tc)
+    ti = mtuem.utils.get_ti_albe(te, beta, Tw, tau, Tc)
 
     assert ti.shape == (2, 2)
     assert_allclose(ti[:, 0], (0.2 / (1 - 2 * beta)) * (tau - Tw.ravel() - Tc), rtol=1e-12)
@@ -59,7 +59,7 @@ def test_get_xi_albe_splits_residual_income_by_elasticity_over_price_and_one_min
     Ec = np.array([100, 90.0])
     w = np.array([16, 19.0])
 
-    xj = mtuem.get_xi_albe(ge, gc, alpha, Tw, Ec, w)
+    xj = mtuem.utils.get_xi_albe(ge, gc, alpha, Tw, Ec, w)
 
     income = w * Tw.ravel() - Ec
     assert_allclose(xj[:, 0], (0.2 / 1 / (1 - alpha)) * income, rtol=1e-12)
@@ -72,9 +72,9 @@ def test_get_values_of_time_albe_satisfies_vol_equals_w_plus_vtaw_and_its_closed
     Ec = np.array([100, 130.0])
     w = np.array([15, 20.0])
     we = {"alpha": 0.3, "beta": 0.25}
-    tw = mtuem.get_tw_albe(we, tau, Tc, Ec, w)
+    tw = mtuem.utils.get_tw_albe(we, tau, Tc, Ec, w)
 
-    vot = mtuem.get_values_of_time_albe(tw, we, Tc, Ec, w)
+    vot = mtuem.utils.get_values_of_time_albe(tw, we, Tc, Ec, w)
 
     # The implementation hardcodes 168 in place of tau, as in R.
     expected = ((w * tw.ravel() - Ec) / (168 - tw.ravel() - Tc)) * (1 - 2 * we["beta"]) / (1 - 2 * we["alpha"])

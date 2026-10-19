@@ -32,7 +32,7 @@ def _r_num(x, digits: int = 7) -> str:
 
 
 def _format_column(values: np.ndarray, n_signif: int = 4, width: int = 11) -> list[str]:
-    """Port of the column formatting in ``apollo_print``."""
+    """Port of the column formatting of the Apollo report."""
     out, scie, ndec = [], [], []
     for v in values:
         if v is None or not np.isfinite(v):

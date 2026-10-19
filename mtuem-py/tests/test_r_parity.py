@@ -114,6 +114,7 @@ def test_fit_with_a_binding_bound_matches_r():
     check_fit("eq1_bounded", fit("eq1_bounded", "numpy"), 2e-3)
 
 
+@pytest.mark.slow
 def test_lc_standard_errors_match_r_at_the_r_optimum():
     ref = load_ref("lc_cholesky")
     model = latent_class("lc_cholesky")
@@ -126,6 +127,7 @@ def test_lc_standard_errors_match_r_at_the_r_optimum():
     np.testing.assert_allclose(result.robse[robse.index], robse, rtol=2e-3)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("case", ["lc_profiled", "lc_shared"])
 def test_lc_estimation_reaches_at_least_the_r_likelihood(case):
     # R stops early from the README starting values (false/singular convergence); the Python
@@ -166,7 +168,7 @@ def test_lc_values_of_time_means_match_r(case):
 def test_residual_correlation_matches_r(case, single_models):
     ref = load_ref(case)
     result = single_models[case]
-    cr = mtuem.get_corr(result._estimate, result._prob_fn, result._inputs)
+    cr = mtuem.postestimation.get_corr(result._estimate, result._prob_fn, result._inputs)
     np.testing.assert_allclose(cr["corr"].to_numpy(), np.array(ref["corr"]["corr"]), atol=2e-4)
     np.testing.assert_allclose(cr["sigma"].to_numpy(), num(ref["corr"]["sigma"]).to_numpy(), rtol=1e-4)
 
@@ -192,7 +194,7 @@ def test_profiled_covariance_matches_r():
     ref = load_ref("lc_profiled")
     _, pf, inputs = lc_compiled("lc_profiled")
     pf(ref["estimate"], inputs, "estimate")
-    prof = mtuem.mtuem_get_profiled_sigma()
+    prof = mtuem.lc_profiled.get_profiled_sigma()
     for s in range(2):
         np.testing.assert_allclose(prof["Sigma"][s], np.array(ref["profiled"]["Sigma"][s]), rtol=1e-8)
     np.testing.assert_allclose(prof["shares"], ref["profiled"]["shares"], rtol=1e-10)

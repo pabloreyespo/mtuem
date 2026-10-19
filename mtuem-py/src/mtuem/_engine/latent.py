@@ -61,7 +61,7 @@ def _class_components(in_class: Any) -> list:
 
 
 def lc(lc_settings: Mapping, inputs: Inputs, functionality: str = "estimate"):
-    """Latent class mixture of in-class log-likelihoods (follows ``apollo_lc``).
+    """Latent class mixture of in-class log-likelihoods (as in Apollo).
 
     ``lc_settings`` holds ``inClassProb`` (dict or list of class log-likelihoods) and
     ``classProb`` (list of class allocation probabilities). With panel data each class
@@ -116,7 +116,7 @@ def _class_parts(beta: Mapping, prob_fn: ProbFn, inputs: Inputs, functionality: 
     if len(comps) != len(pis):
         raise ValueError(
             "Could not find one component per class in the dict returned by the probabilities function. "
-            "Latent class models estimated with mtuem_lc_profiled_likelihood have no class components."
+            "Latent class models estimated with the profiled likelihood have no class components."
         )
     logPs = np.column_stack([_loglik_per_indiv(c, inputs) for c in comps])
     log_pis = np.column_stack([_first_row(lp, inputs) for lp in _log_class_probs(pis)])
@@ -134,7 +134,7 @@ def _log_posterior(logPs: np.ndarray, log_pis: np.ndarray) -> tuple[np.ndarray, 
 
 
 def lc_conditionals(est: Estimate, prob_fn: ProbFn, inputs: Inputs) -> pd.DataFrame:
-    """Posterior class membership probabilities (follows ``apollo_lcConditionals``)."""
+    """Posterior class membership probabilities (as in Apollo)."""
     post, _ = _log_posterior(*_class_parts(est.estimate.to_dict(), prob_fn, inputs))
     ids = inputs.ids[inputs.first_rows] if inputs.panel else inputs.ids
     out = pd.DataFrame(post, columns=[f"X{s + 1}" for s in range(post.shape[1])])

@@ -101,7 +101,7 @@ def _bound_arrays(
 
 
 def _covariances(loglike: _LogLike, x: np.ndarray, hessian: str, H: np.ndarray | None = None):
-    """Classical and robust covariance matrices, following ``apollo_varcov``."""
+    """Classical and robust covariance matrices, as Apollo computes them."""
     free = loglike.free
     k = len(free)
     nan = pd.DataFrame(np.full((k, k), np.nan), index=free, columns=free)

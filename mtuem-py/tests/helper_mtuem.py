@@ -11,7 +11,7 @@ from mtuem.config import Control
 
 
 def inputs_of(database: pd.DataFrame, **extra) -> SimpleNamespace:
-    """Minimal apollo_inputs: any object with a ``database`` (and optionally ``obs_matrix``)."""
+    """Minimal engine inputs: any object with a ``database`` (and optionally ``obs_matrix``)."""
     return SimpleNamespace(database=database, **extra)
 
 
@@ -33,15 +33,15 @@ def mtuem_fixture_thph(
     Ec = rng.uniform(50, 150, n)
     w = rng.uniform(10, 25, n)
 
-    tw_opt = mtuem.get_tw_thph(work_elasticities, tau, Tc, Ec, w)
+    tw_opt = mtuem.utils.get_tw_thph(work_elasticities, tau, Tc, Ec, w)
     opt = tw_opt
     nms = ["Tw"]
     if len(times_elasticities) > 0:
-        ti_opt = mtuem.get_ti_thph(times_elasticities, work_elasticities["Theta"], tw_opt, tau, Tc)
+        ti_opt = mtuem.utils.get_ti_thph(times_elasticities, work_elasticities["Theta"], tw_opt, tau, Tc)
         opt = np.column_stack([opt, ti_opt])
         nms += [f"Tf{i + 1}" for i in range(len(times_elasticities))]
     if len(goods_elasticities) > 0:
-        xj_opt = mtuem.get_xi_thph(goods_elasticities, 1, work_elasticities["Phi"], tw_opt, Ec, w)
+        xj_opt = mtuem.utils.get_xi_thph(goods_elasticities, 1, work_elasticities["Phi"], tw_opt, Ec, w)
         opt = np.column_stack([opt, xj_opt])
         nms += [f"Ef{i + 1}" for i in range(len(goods_elasticities))]
     M = opt.shape[1]
@@ -61,7 +61,7 @@ def mtuem_fixture_thph(
         "Tc": Tc, "Ec": Ec, "w": w, "tau": tau,
     }
     return SimpleNamespace(
-        database=database, apollo_inputs=inputs_of(database), mtuem_settings=settings,
+        database=database, inputs=inputs_of(database), mtuem_settings=settings,
         opt=opt, obs=obs, names=nms, Tc=Tc, Ec=Ec, w=w, tau=tau, n=n,
     )
 

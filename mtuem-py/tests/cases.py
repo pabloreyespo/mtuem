@@ -114,7 +114,7 @@ def build(case: str, autodiff: bool = False):
             else:
                 P[f"class_{s + 1}"] = loglik(st, functionality, inputs)
         if case == "lc_profiled":
-            profiled = lj.lc_profiled if autodiff else mtuem.mtuem_lc_profiled_likelihood
+            profiled = lj.lc_profiled if autodiff else mtuem.lc_profiled.lc_profiled
             P["model"] = profiled({"class_settings": class_settings, "classProb": b.pi_values}, functionality, inputs)
         else:
             P["model"] = mix({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)

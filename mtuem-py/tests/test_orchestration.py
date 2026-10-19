@@ -43,6 +43,7 @@ def multistart(**kw) -> EstimationSettings:
 # ----------------------------------------------------------------------------------------------
 # EM and fallback
 # ----------------------------------------------------------------------------------------------
+@pytest.mark.slow
 def test_em_then_bfgs_matches_direct_bfgs_optimum():
     model = latent_class("lc_cholesky")
     em = model.fit(database(), lc_start(model), CONTROL, EstimationSettings(method="em", verbose=False))

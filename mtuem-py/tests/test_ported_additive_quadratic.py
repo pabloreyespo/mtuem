@@ -17,7 +17,7 @@ def aq_params():
 
 
 def essentials(p, goods_cost=None):
-    return mtuem.get_additive_quadratic_essentials(
+    return mtuem.utils.get_additive_quadratic_essentials(
         p["times_elasticities"], p["times_satiations"], p["goods_elasticities"], p["goods_satiations"],
         p["goods_cost"] if goods_cost is None else goods_cost,
     )
@@ -57,7 +57,7 @@ def test_get_tw_additive_quadratic_matches_the_analytical_work_time_expression()
     theta_w, beta_w = 0, 10
     ess = essentials(p)
 
-    tw = mtuem.get_tw_additive_quadratic(theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w)
+    tw = mtuem.utils.get_tw_additive_quadratic(theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w)
 
     expected = (theta_w + w * (ess["Sph"] + Ec) / ess["H"] - (ess["Sth"] - (tau - Tc)) / ess["B"]) / (
         beta_w + w**2 / ess["H"] + 1 / ess["B"]
@@ -75,7 +75,7 @@ def test_optimal_work_time_zeroes_the_work_first_order_condition():
     theta_w, beta_w = 5, 10
     ess = essentials(p)
 
-    tw = mtuem.get_tw_additive_quadratic(
+    tw = mtuem.utils.get_tw_additive_quadratic(
         theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w
     ).ravel()
 
@@ -92,10 +92,10 @@ def test_optimal_times_and_goods_satisfy_the_time_and_money_budgets_exactly():
     w = np.array([12, 16.0])
     theta_w, beta_w = 0, 8
     ess = essentials(p)
-    tw = mtuem.get_tw_additive_quadratic(theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w)
+    tw = mtuem.utils.get_tw_additive_quadratic(theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w)
 
-    ti = mtuem.get_ti_additive_quadratic(p["times_elasticities"], p["times_satiations"], ess["Sth"], ess["B"], tau, tw, Tc)
-    xi = mtuem.get_xi_additive_quadratic(
+    ti = mtuem.utils.get_ti_additive_quadratic(p["times_elasticities"], p["times_satiations"], ess["Sth"], ess["B"], tau, tw, Tc)
+    xi = mtuem.utils.get_xi_additive_quadratic(
         p["goods_elasticities"], p["goods_satiations"], p["goods_cost"], ess["Sph"], ess["H"], tw, Ec, w
     )
 
@@ -109,8 +109,8 @@ def test_additive_quadratic_allocations_decrease_linearly_in_the_shadow_prices()
     ess = essentials(p)
     Tw = np.array([[40.0], [45.0]])
 
-    ti = mtuem.get_ti_additive_quadratic(p["times_elasticities"], p["times_satiations"], ess["Sth"], ess["B"], tau, Tw, Tc)
-    xi = mtuem.get_xi_additive_quadratic(
+    ti = mtuem.utils.get_ti_additive_quadratic(p["times_elasticities"], p["times_satiations"], ess["Sth"], ess["B"], tau, Tw, Tc)
+    xi = mtuem.utils.get_xi_additive_quadratic(
         p["goods_elasticities"], p["goods_satiations"], p["goods_cost"], ess["Sph"], ess["H"], Tw, Ec, w
     )
 
@@ -132,9 +132,9 @@ def test_values_of_time_equal_the_shadow_price_ratio_and_satisfy_vol_equals_w_pl
     w = np.array([14, 18.0])
     theta_w, beta_w = 0, 11
     ess = essentials(p)
-    tw = mtuem.get_tw_additive_quadratic(theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w)
+    tw = mtuem.utils.get_tw_additive_quadratic(theta_w, beta_w, ess["Sth"], ess["Sph"], ess["B"], ess["H"], tau, Tc, Ec, w)
 
-    vot = mtuem.get_values_of_time_additive_quadratic(ess["Sth"], ess["Sph"], ess["B"], ess["H"], tw, tau, Tc, Ec, w)
+    vot = mtuem.utils.get_values_of_time_additive_quadratic(ess["Sth"], ess["Sph"], ess["B"], ess["H"], tw, tau, Tc, Ec, w)
 
     mu = (ess["Sth"] - (tau - tw.ravel() - Tc)) / ess["B"]
     lam = (ess["Sph"] - (w * tw.ravel() - Ec)) / ess["H"]

@@ -99,12 +99,13 @@ def test_posteriors_prediction_and_values_of_time_match_numpy_backend():
         out[flag] = (
             engine.lc_conditionals(model, pf, inputs)[["X1", "X2"]].to_numpy(),
             engine.prediction(model, pf, inputs, silent=True).drop(columns=["ID", "Observation"]).to_numpy(),
-            mtuem.mtuem_values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)["summary"]["mean"].to_numpy(),
+            mtuem.postestimation.values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)["summary"]["mean"].to_numpy(),
         )
     for a, b in zip(out[False], out[True]):
         np.testing.assert_allclose(a, b, rtol=1e-9, atol=1e-12)
 
 
+@pytest.mark.slow
 def test_em_and_multistart_run_with_the_autodiff_backend():
     beta, fixed, pf, inputs = build("lc_cholesky", autodiff=True)
     em = engine.lc_em(beta, fixed, pf, inputs, max_iterations=2, post_em=0, estimate_kwargs={"silent": True})
@@ -422,8 +423,8 @@ def _collinear_inputs(c: float):
     db = database()
     p = AB_POINTS[0]
     we = {"alpha": p["alpha"], "beta": p["beta"]}
-    tw = mtuem.get_tw_albe(we, 168, db.Tc.to_numpy(), db.EcI.to_numpy(), db.w.to_numpy()).ravel()
-    ti = mtuem.get_ti_albe([p["th1"], p["th2"]], p["beta"], tw, 168, db.Tc.to_numpy())
+    tw = mtuem.utils.get_tw_albe(we, 168, db.Tc.to_numpy(), db.EcI.to_numpy(), db.w.to_numpy()).ravel()
+    ti = mtuem.utils.get_ti_albe([p["th1"], p["th2"]], p["beta"], tw, 168, db.Tc.to_numpy())
     combo = 0.5 * (db.Tw.to_numpy() - tw) - 0.3 * (db.Tf1.to_numpy() - ti[:, 0])
     noise = np.random.default_rng(7).normal(size=len(db))
     db["Tf2"] = ti[:, 1] + combo + c * noise
