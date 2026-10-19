@@ -12,11 +12,8 @@ dependencies = [
     "pandas>=3.0.6",
     "pyarrow>=26.0.0",
     "scipy>=1.18.1",
-]
-
-[project.optional-dependencies]
-jax = [
     "jax>=0.11.2",
+    "pydantic>=2.12",
 ]
 
 [build-system]
@@ -33,3 +30,4 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]
+markers = ["slow: slow test, needs --runslow"]
