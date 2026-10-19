@@ -35,6 +35,27 @@ def _col(x) -> np.ndarray:
     return np.asarray(x, dtype=float).reshape(-1, 1)
 
 
+def as_elasticities(x) -> np.ndarray:
+    """Elasticities (or prices) as a (K,) vector, or (N, K) when one of them varies by row.
+
+    A dict or list entry holding more than one value is a per-row value (an elasticity with
+    covariate terms, or a price column); a bare array is a vector of K values, as in
+    ``as_vector``.
+    """
+    if isinstance(x, Mapping):
+        x = list(x.values())
+    if isinstance(x, (list, tuple)):
+        vals = [np.asarray(v, dtype=float) for v in x]
+        if any(v.size > 1 for v in vals):
+            return np.column_stack(np.broadcast_arrays(*[v.ravel() if v.size > 1 else v.reshape(()) for v in vals]))
+    return as_vector(x)
+
+
+def _per_row(x):
+    """A work elasticity unchanged when it is a single value, else as an (N, 1) column."""
+    return np.asarray(x, dtype=float).reshape(-1, 1) if np.size(x) > 1 else x
+
+
 # ----------------------------------------------------------------------------------------------
 # Theta-Phi parameterisation
 # ----------------------------------------------------------------------------------------------
@@ -56,19 +77,19 @@ def get_tw_thph(work_elasticities: Mapping, tau, Tc, Ec, w) -> np.ndarray:
 
 def get_ti_thph(times_elasticities, Theta, Tw, tau, Tc) -> np.ndarray:
     """Optimal free times, Theta-Phi formulation. Returns an (N, K) array."""
-    th = as_vector(times_elasticities)
+    th = as_elasticities(times_elasticities)
     left = np.asarray(tau - np.asarray(Tw, dtype=float).ravel() - np.asarray(Tc, dtype=float), dtype=float)
-    return np.outer(left, th / Theta) if th.size else np.zeros((left.size, 0))
+    return left[:, None] * (th / _per_row(Theta)) if th.size else np.zeros((left.size, 0))
 
 
 def get_xi_thph(goods_elasticities, goods_cost, Phi, Tw, Ec, w) -> np.ndarray:
     """Optimal free expenditures, Theta-Phi formulation. Returns an (N, J) array."""
-    ph = as_vector(goods_elasticities)
+    ph = as_elasticities(goods_elasticities)
     if ph.size == 0:
         return np.zeros((np.asarray(Tw).size, 0))
-    cost = as_vector(goods_cost)
+    cost = as_elasticities(goods_cost)
     income = np.asarray(w, dtype=float) * np.asarray(Tw, dtype=float).ravel() - np.asarray(Ec, dtype=float)
-    return np.outer(income, (ph / cost) / Phi)
+    return income[:, None] * ((ph / cost) / _per_row(Phi))
 
 
 def get_values_of_time_thph(tw, work_elasticities: Mapping, Tc, Ec, w) -> np.ndarray:
@@ -100,18 +121,18 @@ def get_tw_albe(work_elasticities: Mapping, tau, Tc, Ec, w) -> np.ndarray:
 
 
 def get_ti_albe(times_elasticities, beta, Tw, tau, Tc) -> np.ndarray:
-    th = as_vector(times_elasticities)
+    th = as_elasticities(times_elasticities)
     left = np.asarray(tau - np.asarray(Tw, dtype=float).ravel() - np.asarray(Tc, dtype=float), dtype=float)
-    return np.outer(left, th / (1 - 2 * beta)) if th.size else np.zeros((left.size, 0))
+    return left[:, None] * (th / (1 - 2 * _per_row(beta))) if th.size else np.zeros((left.size, 0))
 
 
 def get_xi_albe(goods_elasticities, goods_cost, alpha, Tw, Ec, w) -> np.ndarray:
-    ph = as_vector(goods_elasticities)
+    ph = as_elasticities(goods_elasticities)
     if ph.size == 0:
         return np.zeros((np.asarray(Tw).size, 0))
-    cost = as_vector(goods_cost)
+    cost = as_elasticities(goods_cost)
     income = np.asarray(w, dtype=float) * np.asarray(Tw, dtype=float).ravel() - np.asarray(Ec, dtype=float)
-    return np.outer(income, (ph / cost) / (1 - alpha))
+    return income[:, None] * ((ph / cost) / (1 - _per_row(alpha)))
 
 
 def get_values_of_time_albe(tw, work_elasticities: Mapping, Tc, Ec, w) -> np.ndarray:

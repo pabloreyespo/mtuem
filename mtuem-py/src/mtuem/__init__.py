@@ -6,6 +6,7 @@ A Python port of the R package mtuem, with a private estimation engine in ``mtue
 from . import likelihood, likelihood_jax
 from .data import DATASETS, load_dataset, maed
 from .lc_profiled import mtuem_get_profiled_sigma, mtuem_lc_profiled_likelihood, mtuem_profile_ic
+from .models import MTUEM
 from .multistart import customMultiStart
 from .postestimation import (
     cholesky_to_cov,
@@ -39,6 +40,7 @@ mtuem_residuals = likelihood.residuals
 
 __all__ = [
     "DATASETS",
+    "MTUEM",
     "additive_quadratic_mtuem_likelihood",
     "cholesky_to_cov",
     "customMultiStart",

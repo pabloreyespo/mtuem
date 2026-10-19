@@ -66,6 +66,26 @@ def _vec(x) -> "jnp.ndarray":
     return jnp.atleast_1d(jnp.asarray(x, dtype=float))
 
 
+def _elast(x) -> "jnp.ndarray":
+    """Elasticities (or prices) as a (K,) vector, or (N, K) when one of them varies by row.
+
+    The JAX counterpart of ``utils.as_elasticities``: a dict or list entry holding more than
+    one value is a per-row value (an elasticity with covariate terms, or a price column).
+    """
+    if isinstance(x, Mapping):
+        x = list(x.values())
+    if isinstance(x, (list, tuple)):
+        vals = [jnp.asarray(v, dtype=float) for v in x]
+        if any(v.size > 1 for v in vals):
+            return jnp.column_stack(jnp.broadcast_arrays(*[v.ravel() if v.size > 1 else v.reshape(()) for v in vals]))
+    return _vec(x)
+
+
+def _per_row(x):
+    """A work elasticity unchanged when it is a single value, else as an (N, 1) column."""
+    return jnp.reshape(x, (-1, 1)) if jnp.size(x) > 1 else x
+
+
 def _to_numpy_settings(settings: Mapping) -> dict:
     """Concrete numpy copy of the settings, for the functionalities the numpy code handles."""
 
@@ -236,13 +256,13 @@ def _theta_phi_residuals(s: Mapping, inputs) -> "jnp.ndarray":
     free_goods = as_names(s.get("free_goods"))
     tw_used = tw_opt if s.get("optimal_tw", True) else jnp.asarray(inputs.matrix(work)[:, 0])
     cols = [tw_opt]
-    th = _vec(s.get("times_elasticities"))
+    th = _elast(s.get("times_elasticities"))
     if th.size:
-        cols.append(jnp.outer(tau - tw_used - Tc, th / Theta))
-    ph = _vec(s.get("goods_elasticities"))
+        cols.append((tau - tw_used - Tc)[:, None] * (th / _per_row(Theta)))
+    ph = _elast(s.get("goods_elasticities"))
     if ph.size:
-        cost = _vec(s.get("goods_cost", 1))
-        cols.append(jnp.outer(w * tw_used - Ec, (ph / cost) / Phi))
+        cost = _elast(s.get("goods_cost", 1))
+        cols.append((w * tw_used - Ec)[:, None] * ((ph / cost) / _per_row(Phi)))
     obs = jnp.asarray(inputs.matrix(work + free_times + free_goods))
     return _mark_rows(obs - _stack(cols), ok)
 
@@ -281,13 +301,13 @@ def _alpha_beta_residuals(s: Mapping, inputs) -> "jnp.ndarray":
     free_times = as_names(s.get("free_times"))
     free_goods = as_names(s.get("free_goods"))
     cols = [tw_opt]
-    th = _vec(s.get("times_elasticities"))
+    th = _elast(s.get("times_elasticities"))
     if th.size:
-        cols.append(jnp.outer(tau - tw_opt - Tc, th / (1 - 2 * beta)))
-    ph = _vec(s.get("goods_elasticities"))
+        cols.append((tau - tw_opt - Tc)[:, None] * (th / (1 - 2 * _per_row(beta))))
+    ph = _elast(s.get("goods_elasticities"))
     if ph.size:
-        cost = _vec(s.get("goods_cost", 1))
-        cols.append(jnp.outer(w * tw_opt - Ec, (ph / cost) / (1 - alpha)))
+        cost = _elast(s.get("goods_cost", 1))
+        cols.append((w * tw_opt - Ec)[:, None] * ((ph / cost) / (1 - _per_row(alpha))))
     obs = jnp.asarray(inputs.matrix(work + free_times + free_goods))
     return _mark_rows(obs - _stack(cols), ok)
 
