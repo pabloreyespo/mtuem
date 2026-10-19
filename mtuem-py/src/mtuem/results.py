@@ -28,7 +28,9 @@ class Result:
 
     ``beta`` is the start ``Beta`` (with its fixed flags, locks and bounds); ``estimates``,
     ``se`` and ``robse`` cover every parameter (fixed ones without standard errors) and
-    ``varcov`` and ``robvarcov`` the free ones. ``starts`` holds the multistart attempts, if any.
+    ``varcov`` and ``robvarcov`` the free ones. ``starts`` holds the multistart attempts, if any
+    (None for a candidate skipped or failed), and ``notes`` what the estimation did beyond the
+    plain run (an EM fallback, the multistart candidate kept).
     """
 
     def __init__(
@@ -40,7 +42,8 @@ class Result:
         estimate: engine.Estimate,
         inputs: engine.Inputs | None = None,
         prob_fn: Callable | None = None,
-        starts: list[Result] | None = None,
+        starts: list[Result | None] | None = None,
+        notes: list[str] | None = None,
     ):
         # The result keeps its own copy, so later edits of the model do not change it.
         self.model = model.model_copy(deep=True)
@@ -48,6 +51,7 @@ class Result:
         self.control = control
         self.settings = settings
         self.starts = starts
+        self.notes = list(notes or [])
         self._estimate = estimate
         self._inputs = inputs
         self._prob_fn = prob_fn
@@ -117,8 +121,11 @@ class Result:
     # Report and tables
     # ------------------------------------------------------------------------------------------
     def summary_text(self, print_covar: bool = False, print_corr: bool = False) -> str:
-        """The estimation report as text."""
-        return engine.output_text(self._estimate, print_covar, print_corr)
+        """The estimation report as text, followed by the notes of the estimation."""
+        text = engine.output_text(self._estimate, print_covar, print_corr)
+        if self.notes:
+            text += "\nNotes:\n" + "".join(f"- {note}\n" for note in self.notes)
+        return text
 
     def summary(self, print_covar: bool = False, print_corr: bool = False) -> None:
         """Print the estimation report."""
@@ -316,6 +323,7 @@ class Result:
             "converged": self.converged,
             "n_obs": self.n_obs,
             "n_indivs": self.n_indivs,
+            "notes": list(self.notes),
             # What the report needs beyond the estimates.
             "diagnostics": {
                 "code": int(est.code),

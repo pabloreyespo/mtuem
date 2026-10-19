@@ -6,8 +6,8 @@ from numpy.testing import assert_allclose
 
 import mtuem
 from helper_mtuem import cov2cor, inputs_of, mtuem_dmvnorm_ref
-from mtuem import _engine as engine
-from mtuem.config import Control
+from mtuem.config import Control, EstimationSettings, MultiStart
+from mtuem.models import LatentClassMTUEM
 
 
 def test_mtuem_residuals_refactor_preserves_mtuem_likelihood_output_closed_form_check():
@@ -195,59 +195,28 @@ def test_profiled_likelihood_returns_zeros_instead_of_erroring_on_class_collapse
     assert_allclose(P, np.zeros(N))
 
 
-def test_custom_multistart_normalizes_shared_unsuffixed_covariance_parameters_without_erroring():
+def test_multistart_normalizes_shared_unsuffixed_covariance_parameters_without_erroring():
     # A 2-class, 1-equation latent class model with one covariance parameter (chk11)
     # SHARED across both classes, i.e. not suffixed with _1/_2 in the start values.
     db = mtuem.maed()
     db = db[db["EcI"] > 0].iloc[:100].reset_index(drop=True)
-    beta = {
-        "Theta_1": 1, "Phi_1": 1, "thw_1": 0, "asc_1": 0, "x_female_1": 0, "x_older45_1": 0,
-        "Theta_2": 1, "Phi_2": 1, "thw_2": 0, "asc_2": 0, "x_female_2": 0, "x_older45_2": 0,
-        "chk11": 8,
-    }
-    fixed = ["Theta_1", "Theta_2", "asc_1", "x_female_1", "x_older45_1"]
-
-    def lc_pars(b, inputs):
-        V = {
-            "class_1": b.asc_1 + b.female * b.x_female_1 + b.older45 * b.x_older45_1,
-            "class_2": b.asc_2 + b.female * b.x_female_2 + b.older45 * b.x_older45_2,
-        }
-        return {
-            "Theta": [b.Theta_1, b.Theta_2], "Phi": [b.Phi_1, b.Phi_2], "thw": [b.thw_1, b.thw_2],
-            "pi_values": engine.class_alloc({"classes": {"class_1": 1, "class_2": 2}, "utilities": V}),
-        }
-
-    control = Control(model_name="test-shared-cov-normalize", indiv_id="PeID")
-    inputs = engine.make_inputs(db, beta, fixed, control, lc_pars)
-
-    def probabilities(params, inputs, functionality="estimate"):
-        b = inputs.attach(params)
-        P = {}
-        for s in range(len(b.pi_values)):
-            settings = {
-                "work_times": ["Tw"],
-                "work_elasticities": {"Theta": b.Theta[s], "Phi": b.Phi[s], "thw": b.thw[s]},
-                "cholesky": {"chk11": b.chk11},
-                "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168, "componentName": f"class_{s + 1}",
-            }
-            P[f"class_{s + 1}"] = mtuem.likelihood.theta_phi(settings, functionality, inputs)
-        P["model"] = engine.lc({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
-        return P
-
-    result = mtuem.customMultiStart(
-        beta, fixed, probabilities, inputs,
-        customMultistart_settings={"nCandidates": 2},
-        estimate_settings={"maxIterations": 1, "hessianRoutine": "none", "estimationRoutine": "bfgs"},
-        first_em=False,
-        verbose=False,
-        normalization={
-            "normalization": "theta_phi",
-            "work_elasticities": ["Theta", "Phi", "thw"],
-            "cholesky": ["chk11"],
-            "covs": ["asc", "x_female", "x_older45"],
-        },
-        nClass=2,
-        seed=1,
+    model = LatentClassMTUEM(
+        work_times=["Tw"], Tc="Tc", Ec="EcI", w="w", covariance="cholesky", n_classes=2,
+        allocation=["female", "older45"], shared=["chk11"],
+    )
+    beta = model.beta().set(Phi_1=1, Phi_2=1, thw_1=0, thw_2=0, chk11=8)
+    assert "chk11" in beta and "chk11" in model.normalization_groups()["cholesky"]
+    settings = EstimationSettings(
+        backend="numpy", max_iterations=1, hessian="none", verbose=False,
+        multistart=MultiStart(n=2, seed=1, normalization="theta_phi", non_saddle=False,
+                              lower={"chk11": -5.0}, upper={"chk11": 5.0}),
     )
 
-    assert set(result) == {"best_model", "best_ll", "models"}
+    try:
+        control = Control(model_name="test-shared-cov-normalize", indiv_id="PeID")
+        attempts = model.fit(db, beta, control, settings).starts
+    except RuntimeError as err:  # one iteration may converge nowhere
+        attempts = err.attempts
+    assert len(attempts) == 2 and all(a is not None for a in attempts)
+    # The shared diagonal term was drawn in [-5, 5] and normalized to be positive.
+    assert all(a.beta["chk11"].value > 0 for a in attempts)

@@ -15,6 +15,7 @@ from . import likelihood, likelihood_jax
 from .beta import Beta
 from .config import Control, EstimationSettings, _Strict
 from .lc_profiled import mtuem_lc_profiled_likelihood
+from .multistart import estimate_once, run_multistart
 from .results import Result
 
 ProbFn = Callable[[Mapping, Any, str], dict]
@@ -32,6 +33,32 @@ _OMITTED = ("omitted_times", "omitted_goods")
 def _numeric(v):
     """Plain numbers as float (as ``Inputs.attach`` does); traced or array values unchanged."""
     return float(v) if isinstance(v, (int, float, np.number)) else v
+
+
+def _fit(model, data: pd.DataFrame, beta: Beta, control: Control, settings: EstimationSettings | None) -> Result:
+    """Fit ``model``: check ``beta`` and ``data``, build the inputs once, then run the multistart
+    when ``settings.multistart`` is set, else one estimation by ``settings.method``."""
+    settings = EstimationSettings() if settings is None else settings
+    model._check_beta(beta)
+    model._validate_data(data, control)
+    prob_fn, lc_pars, autodiff = model._compile(settings.backend)
+    ms = settings.multistart
+    if lc_pars is None or getattr(model, "covariance", None) == "profiled":
+        # EM needs the class components; the profiled likelihood mixes the classes inside.
+        what = "a latent class model" if lc_pars is None else "class likelihoods, not covariance='profiled'"
+        if settings.method == "em":
+            raise ValueError(f"method='em' needs {what}")
+        if ms is not None and ms.first_em:
+            raise ValueError(f"MultiStart.first_em needs {what}")
+    beta = beta.model_copy(deep=True)
+    silent = not settings.verbose
+    inputs = engine.make_inputs(
+        data, beta.values(), beta.fixed_names, control, lc_pars, autodiff=autodiff, silent=silent
+    )
+    if ms is not None:
+        return run_multistart(model, beta, control, settings, inputs, prob_fn)
+    est, notes = estimate_once(beta.values(), beta, prob_fn, inputs, settings, silent)
+    return Result(model, beta, control, settings, est, inputs, prob_fn, notes=notes)
 
 
 class MTUEM(_Strict):
@@ -353,35 +380,12 @@ class MTUEM(_Strict):
         """Estimate the model on ``data`` from the start values ``beta``; returns a new ``Result``.
 
         ``beta`` must hold exactly the parameters of ``self.beta()``; its fixed flags and bounds
-        apply. ``settings`` defaults to ``EstimationSettings()``. The model and ``beta`` are not
-        changed, so the model can be fitted again (for example over a grid of start values).
+        apply. ``settings`` defaults to ``EstimationSettings()``: ``method="em"`` (latent class
+        models) runs EM then BFGS, with a BFGS fallback recorded in ``Result.notes``;
+        ``multistart`` estimates from random starts and keeps the best (``Result.starts``). The
+        model and ``beta`` are not changed, so the model can be fitted again.
         """
-        settings = EstimationSettings() if settings is None else settings
-        self._check_beta(beta)
-        if settings.method == "em":
-            raise NotImplementedError("method='em' is not available for this model yet")
-        if settings.multistart is not None:
-            raise NotImplementedError("multistart is not available for this model yet")
-        self._validate_data(data, control)
-        beta = beta.model_copy(deep=True)
-        silent = not settings.verbose
-        prob_fn, lc_pars, autodiff = self._compile(settings.backend)
-        inputs = engine.make_inputs(
-            data, beta.values(), beta.fixed_names, control, lc_pars, autodiff=autodiff, silent=silent
-        )
-        est = engine.estimate(
-            beta.values(),
-            beta.fixed_names,
-            prob_fn,
-            inputs,
-            max_iterations=settings.max_iterations,
-            max_function_evals=settings.max_function_evals,
-            hessian=settings.resolved_hessian(),
-            saddle_escapes=settings.saddle_escapes,
-            silent=silent,
-            bounds=beta.bounds(),
-        )
-        return Result(self, beta, control, settings, est, inputs, prob_fn)
+        return _fit(self, data, beta, control, settings)
 
     def _check_beta(self, beta: Beta) -> None:
         expected = self.beta().names

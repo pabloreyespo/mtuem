@@ -10,14 +10,14 @@ import pytest
 import mtuem
 from cases import database, declarative
 from mtuem.beta import Beta
-from mtuem.config import Control, EstimationSettings, MultiStart
+from mtuem.config import Control, EstimationSettings
 from mtuem.models import MTUEM
 from mtuem.results import Result
 
 NUMPY = EstimationSettings(backend="numpy", verbose=False)
 JSON_KEYS = {
     "mtuem_version", "model_class", "model", "beta", "control", "settings", "estimates", "se", "robse",
-    "varcov", "robvarcov", "loglik", "loglik_start", "converged", "n_obs", "n_indivs",
+    "varcov", "robvarcov", "loglik", "loglik_start", "converged", "n_obs", "n_indivs", "notes",
 }
 
 
@@ -74,19 +74,6 @@ def test_fit_rejects_beta_with_other_names():
     beta = Beta.from_dict({"Theta": 1, "Phi": 1, "gamma": 0}, fixed=["Theta"])
     with pytest.raises(ValueError, match=r"missing: thw.*extra: gamma"):
         model.fit(database(), beta, Control(indiv_id="PeID"), NUMPY)
-
-
-@pytest.mark.parametrize(
-    ("settings", "message"),
-    [
-        (EstimationSettings(method="em", verbose=False), "method='em' is not available"),
-        (EstimationSettings(multistart=MultiStart(n=5), verbose=False), "multistart is not available"),
-    ],
-)
-def test_fit_rejects_settings_not_available_yet(settings, message):
-    model = declarative("eq1")
-    with pytest.raises(NotImplementedError, match=message):
-        model.fit(database(), model.beta(), Control(indiv_id="PeID"), settings)
 
 
 def test_fit_applies_beta_bounds():

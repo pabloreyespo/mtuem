@@ -18,7 +18,8 @@ from mtuem import likelihood_jax as lj
 from mtuem import numderiv
 from mtuem._engine import FallbackWarning
 from mtuem._engine.loglike import _LogLike
-from mtuem.config import Control
+from mtuem.config import Control, EstimationSettings, MultiStart
+from mtuem.models import MTUEM
 
 REF = Path(__file__).parent / "reference"
 AD_CASES = ["eq1", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky", "lc_cholesky", "lc_shared"]
@@ -108,11 +109,12 @@ def test_em_and_multistart_run_with_the_autodiff_backend():
     beta, fixed, pf, inputs = build("lc_cholesky", autodiff=True)
     em = engine.lc_em(beta, fixed, pf, inputs, max_iterations=2, post_em=0, estimate_kwargs={"silent": True})
     assert em.maximum >= em.LLStart
-    beta, fixed, pf, inputs = build("eq1", autodiff=True)
-    res = mtuem.customMultiStart(beta, fixed, pf, inputs, {"nCandidates": 2}, {"maxIterations": 100}, seed=1,
-                                 normalization={"normalization": "theta_phi", "work_elasticities": ["Theta", "Phi", "thw"]})
-    assert res["best_model"] is not None
-    assert res["best_ll"] == pytest.approx(load_ref("eq1")["maximum"], abs=1e-3)
+    model = MTUEM(work_times=["Tw"], Tc="Tc", Ec="EcI", w="w")
+    settings = EstimationSettings(backend="jax", max_iterations=100, verbose=False,
+                                  multistart=MultiStart(n=2, seed=1, normalization="theta_phi"))
+    res = model.fit(database(), model.beta(), Control(indiv_id="PeID"), settings)
+    assert res._inputs.autodiff
+    assert res.loglik == pytest.approx(load_ref("eq1")["maximum"], abs=1e-3)
 
 
 def test_degenerate_error_structures_give_minus_infinity():

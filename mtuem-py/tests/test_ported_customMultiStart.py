@@ -1,101 +1,82 @@
-"""Port of tests/testthat/test_customMultiStart.R."""
+"""Port of tests/testthat/test_customMultiStart.R, on fit with EstimationSettings.multistart."""
 
 import numpy as np
-import pandas as pd
+import pytest
 from numpy.testing import assert_allclose
 
 import mtuem
-from mtuem import _engine as engine
-from mtuem.config import Control
+from mtuem.config import Control, EstimationSettings, MultiStart
+from mtuem.models import MTUEM
+from mtuem.results import Result
 
-FAST = {"maxIterations": 2, "hessianRoutine": "none", "estimationRoutine": "bfgs"}
+CONTROL = Control(model_name="test-cms", indiv_id="PeID")
 
 
 def cms_setup():
     """Single-class, single-equation model on a small maed subset."""
     db = mtuem.maed()
     db = db[db["EcI"] > 0].iloc[:120].reset_index(drop=True)
-    beta = {"Theta": 1, "Phi": 1, "thw": 0, "sig1": 8}
-    fixed = ["Theta"]
-    control = Control(model_name="test-cms", indiv_id="PeID")
-    inputs = engine.make_inputs(db, beta, fixed, control)
-
-    def probabilities(params, inputs, functionality="estimate"):
-        b = inputs.attach(params)
-        settings = {
-            "work_times": ["Tw"],
-            "work_elasticities": {"Theta": b.Theta, "Phi": b.Phi, "thw": b.thw},
-            "sig": {"sig1": b.sig1},
-            "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168,
-        }
-        P = {"model": mtuem.likelihood.theta_phi(settings, functionality, inputs)}
-        return P
-
-    return beta, fixed, probabilities, inputs
+    model = MTUEM(work_times=["Tw"], Tc="Tc", Ec="EcI", w="w", covariance="diagonal")
+    beta = model.beta().set(sig1=8)
+    return model, db, beta
 
 
-def test_custom_multistart_returns_the_best_model_its_log_likelihood_and_every_candidate():
-    beta, fixed, pf, inputs = cms_setup()
+def settings(**kw) -> EstimationSettings:
+    fit = {k: kw.pop(k) for k in ("max_iterations", "hessian", "verbose") if k in kw}
+    multistart = MultiStart(**({"seed": 1} | kw))
+    return EstimationSettings(backend="numpy", **({"verbose": False} | fit), multistart=multistart)
 
-    res = mtuem.customMultiStart(
-        beta, fixed, pf, inputs, customMultistart_settings={"nCandidates": 3}, estimate_settings=FAST,
-        verbose=False, seed=1,
-    )
 
-    assert set(res) == {"best_model", "best_ll", "models"}
-    # Unlike R, only candidates that pass the initial screening get an entry in models.
-    assert 0 < len(res["models"]) <= 3
-    succeeded = [m for m in res["models"].values() if isinstance(m, engine.Estimate)]
+def test_multistart_returns_the_best_model_its_log_likelihood_and_every_candidate():
+    model, db, beta = cms_setup()
+
+    res = model.fit(db, beta, CONTROL, settings(n=3))
+
+    assert len(res.starts) == 3
+    succeeded = [r for r in res.starts if isinstance(r, Result)]
     assert len(succeeded) > 0
-    if res["best_model"] is not None:
-        assert res["best_ll"] == res["best_model"].maximum
-        assert res["best_ll"] >= max(m.maximum for m in succeeded) - 1e-8
+    assert res.converged
+    assert res.loglik >= max(r.loglik for r in succeeded if r.converged) - 1e-8
+    assert any(r.loglik == res.loglik and r.beta == res.beta for r in succeeded)
 
 
-def test_custom_multistart_samples_candidates_inside_the_requested_box():
+def test_multistart_samples_candidates_inside_the_requested_box():
     # Pinning the box to a single point makes every candidate identical, so all of
     # them must reach the same log-likelihood.
-    beta, fixed, pf, inputs = cms_setup()
-    pinned = pd.Series(beta, dtype=float)
+    model, db, beta = cms_setup()
+    pinned = {n: beta[n].value for n in beta.free_names}
 
-    res = mtuem.customMultiStart(
-        beta, fixed, pf, inputs,
-        customMultistart_settings={"nCandidates": 2, "apolloBetaMin": pinned, "apolloBetaMax": pinned},
-        estimate_settings=FAST, verbose=False, seed=1,
-    )
+    res = model.fit(db, beta, CONTROL, settings(n=2, lower=pinned, upper=pinned))
 
-    lls = [m.maximum for m in res["models"].values() if isinstance(m, engine.Estimate)]
-    assert len(lls) > 0
+    lls = [r.loglik for r in res.starts if isinstance(r, Result)]
+    assert len(lls) == 2
     assert_allclose(np.ptp(lls), 0, atol=1e-8)
+    assert all(r.beta.values() == beta.values() for r in res.starts)
 
 
 def test_theta_phi_normalization_keeps_every_sampled_candidate_feasible(capsys):
     # A box wide enough to produce negative Phi and negative sigma. Without
     # normalization those candidates give a non-finite log-likelihood and get
     # discarded; with it, all of them must survive the initial screening.
-    beta, fixed, pf, inputs = cms_setup()
-    b = pd.Series(beta, dtype=float)
+    model, db, beta = cms_setup()
+    lower = {n: beta[n].value - 12 for n in beta.free_names}
+    upper = {n: beta[n].value + 12 for n in beta.free_names}
 
-    mtuem.customMultiStart(
-        beta, fixed, pf, inputs,
-        customMultistart_settings={"nCandidates": 5, "apolloBetaMin": b - 12, "apolloBetaMax": b + 12},
-        estimate_settings=FAST, verbose=False,
-        normalization={"normalization": "theta_phi", "work_elasticities": ["Theta", "Phi", "thw"], "sig": ["sig1"]},
-        seed=1,
-    )
+    with pytest.raises(RuntimeError) as info:
+        model.fit(db, beta, CONTROL, settings(n=5, lower=lower, upper=upper, normalization="theta_phi",
+                                              max_iterations=2, hessian="none", non_saddle=False, verbose=True))
 
     assert "5 candidates available" in capsys.readouterr().out
+    assert len(info.value.attempts) == 5
 
 
-def test_the_deprecated_estimation_settings_alias_is_still_honoured():
-    beta, fixed, pf, inputs = cms_setup()
+def test_estimation_settings_apply_to_every_candidate():
+    # max_iterations 2 and no Hessian: no candidate converges, every attempt is kept.
+    model, db, beta = cms_setup()
 
-    res = mtuem.customMultiStart(
-        beta, fixed, pf, inputs, customMultistart_settings={"nCandidates": 2},
-        estimation_settings=FAST, verbose=False, seed=1,
-    )
+    with pytest.raises(RuntimeError, match="no multistart candidate") as info:
+        model.fit(db, beta, CONTROL, settings(n=2, max_iterations=2, hessian="none", non_saddle=False))
 
-    succeeded = [m for m in res["models"].values() if isinstance(m, engine.Estimate)]
+    succeeded = [r for r in info.value.attempts if isinstance(r, Result)]
     assert len(succeeded) > 0
-    # FAST sets hessianRoutine "none" and maxIterations 2; the defaults would give a Hessian and more iterations.
-    assert all(m.hessian is None and int(m.nIter) <= 2 for m in succeeded)
+    assert all(r._estimate.hessian is None and int(r._estimate.nIter) <= 2 for r in succeeded)

@@ -51,7 +51,7 @@ def load(path: Path, data: pd.DataFrame | None = None, model_class: type | None 
         model._validate_data(data, control)
         prob_fn, lc_pars, autodiff = model._compile(settings.backend)
         inputs = engine.make_inputs(data, beta.values(), beta.fixed_names, control, lc_pars, autodiff=autodiff)
-    return Result(model, beta, control, settings, estimate, inputs, prob_fn)
+    return Result(model, beta, control, settings, estimate, inputs, prob_fn, notes=saved.get("notes", []))
 
 
 def _model_file(path: Path) -> Path:

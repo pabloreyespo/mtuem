@@ -1,8 +1,13 @@
-"""Multi-start estimation, a port of ``mtuem::customMultiStart``."""
+"""Estimation runs of ``fit``: one run (method and fallback) and the multistart.
 
-import contextlib
-import io
-from collections.abc import Mapping
+The multistart follows ``mtuem::customMultiStart`` (R): uniform draws around the start values,
+an optional short EM warm-up, the Theta-Phi and alpha-beta normalizations, and the best
+converged non-saddle optimum.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -10,30 +15,61 @@ import pandas as pd
 from . import _engine as engine
 from ._engine.latent import _loglik_per_indiv
 from ._engine.loglike import _model_component
+from .results import Result
 
-DEFAULT_ESTIMATE_SETTINGS = {
-    "writeIter": False,
-    "maxIterations": 500,
-    "hessianRoutine": "numDeriv",
-    "scaleHessian": False,
-    "scaleAfterConvergence": False,
-    "bgw_settings": {"maxFunctionEvals": 1000},
-}
+if TYPE_CHECKING:
+    from .beta import Beta
+    from .config import Control, EstimationSettings, MultiStart
 
-
-def _estimate_kwargs(est_set: Mapping, silent: bool | None = None) -> dict:
-    """Keyword arguments of ``engine.estimate`` from the settings dict of ``customMultiStart``."""
-    kwargs = {
-        "max_iterations": int(est_set["maxIterations"]),
-        "max_function_evals": int(dict(est_set.get("bgw_settings") or {}).get("maxFunctionEvals", 100000)),
-        "hessian": "none" if est_set.get("hessianRoutine") == "none" else None,
-        "silent": bool(est_set.get("silent", False)) if silent is None else silent,
-    }
-    if "saddleEscapes" in est_set:
-        kwargs["saddle_escapes"] = int(est_set["saddleEscapes"])
-    return kwargs
+# Errors that mean an estimation failed numerically (as R's tryCatch in customMultiStart).
+_FAILURES = (FloatingPointError, ValueError, np.linalg.LinAlgError, ZeroDivisionError)
+_NORMALIZATION_KEYS = ("work_elasticities", "times_elasticities", "goods_elasticities", "sig", "rho", "cholesky")
 
 
+def estimate_once(
+    start: dict, beta: Beta, prob_fn, inputs, settings: EstimationSettings, silent: bool
+) -> tuple[engine.Estimate, list[str]]:
+    """One estimation from ``start`` by ``settings.method``; returns the estimate and its notes.
+
+    ``beta`` gives the fixed parameters and the bounds. ``method="em"`` runs EM then BFGS. When
+    EM raises a numerical error or does not converge, ``fallback="bfgs"`` estimates by BFGS from
+    ``start`` and records why in a note; without a fallback the error propagates and a
+    non-converged result is returned with a note.
+    """
+    fixed, bounds = beta.fixed_names, beta.bounds()
+    kwargs = dict(
+        max_iterations=settings.max_iterations,
+        max_function_evals=settings.max_function_evals,
+        hessian=settings.resolved_hessian(),
+        saddle_escapes=settings.saddle_escapes,
+        silent=silent,
+    )
+    if settings.method == "bfgs":
+        return engine.estimate(start, fixed, prob_fn, inputs, bounds=bounds, **kwargs), []
+    try:
+        est = engine.lc_em(
+            start, fixed, prob_fn, inputs, max_iterations=settings.em_max_iterations,
+            tolerance=settings.em_tolerance, post_em=2, estimate_kwargs=kwargs, bounds=bounds,
+        )
+    except (FloatingPointError, ValueError, np.linalg.LinAlgError) as err:
+        if settings.fallback is None:
+            raise
+        reason = str(err) or type(err).__name__
+    else:
+        if est.successfulEstimation:
+            return est, []
+        if settings.fallback is None:
+            return est, [f"EM did not converge ({est.message}); no fallback"]
+        reason = f"not converged: {est.message}"
+    if not silent:
+        print(f"EM failed ({reason}); estimating by BFGS from the start values.")
+    est = engine.estimate(start, fixed, prob_fn, inputs, bounds=bounds, **kwargs)
+    return est, [f"EM failed ({reason}); estimated by BFGS from the start values"]
+
+
+# ----------------------------------------------------------------------------------------------
+# Multistart
+# ----------------------------------------------------------------------------------------------
 def _cholesky_split(cholesky: list[str]) -> tuple[list[str], list[str]]:
     """Diagonal and off-diagonal names of a row-wise lower-triangular Cholesky vector."""
     diag_idx, k, idx = [], 1, 1
@@ -89,103 +125,146 @@ def _normalize(beta_matrix: pd.DataFrame, rng, variables: list[str], norm: str, 
     return beta_matrix
 
 
-def customMultiStart(
-    apollo_beta: Mapping[str, float],
-    apollo_fixed: list[str],
-    apollo_probabilities,
-    apollo_inputs,
-    customMultistart_settings: Mapping | None = None,
-    estimate_settings: Mapping | None = None,
-    estimation_settings: Mapping | None = None,
-    first_em: bool = False,
-    em_iter_max: int = 5,
-    non_saddle: bool = True,
-    verbose: bool = False,
-    normalization: Mapping | None = None,
-    nClass: int = 1,
-    seed: int | None = None,
-) -> dict:
-    """Estimate from several random starting points and keep the best non-saddle optimum.
+def _box(beta: Beta, ms: MultiStart) -> tuple[pd.Series, pd.Series]:
+    """Lower and upper ends of the draws of the free parameters: the start value minus and plus 1
+    unless ``ms.lower`` or ``ms.upper`` names the parameter, kept inside the bounds of ``beta``."""
+    free = beta.free_names
+    values = pd.Series(beta.values(), dtype=float)[free]
+    ends = {"lower": values - 1, "upper": values + 1}
+    for side, given in (("lower", ms.lower), ("upper", ms.upper)):
+        given = dict(given or {})
+        unknown = [n for n in given if n not in beta]
+        if unknown:
+            raise ValueError(f"MultiStart.{side} names unknown parameters: {', '.join(unknown)}")
+        fixed = [n for n in given if n not in free]
+        if fixed:
+            raise ValueError(
+                f"MultiStart.{side} names fixed parameters: {', '.join(fixed)}; only free ones are drawn"
+            )
+        for n, v in given.items():
+            ends[side][n] = float(v)
+    lower, upper = ends["lower"], ends["upper"]
+    for n in free:
+        lo, hi = beta[n].lower, beta[n].upper
+        if lo is not None:
+            lower[n] = max(lower[n], lo)
+        if hi is not None:
+            upper[n] = min(upper[n], hi)
+        if lower[n] > upper[n]:
+            raise ValueError(f"the multistart range of {n} is empty: [{lower[n]}, {upper[n]}], bounds included")
+    return lower, upper
 
-    Returns ``best_model`` (None when no candidate qualifies; R returns NA), ``best_ll`` and
-    ``models`` (a dict from candidate number to model, None for failed candidates).
+
+def _normalization_sets(model) -> list[dict[str, list[str]]]:
+    """The groups of ``model.normalization_groups()`` that ``_normalize`` takes together.
+
+    One set for a single-class model. A latent class model gives one set per class (the names
+    with the suffix ``_s``), then one of the shared names, as ``customMultiStart`` does with
+    ``nClass``.
     """
-    beta = pd.Series(apollo_beta, dtype=float)
-    fixed = list(apollo_fixed or [])
-    ms = {"apolloBetaMax": beta + 1, "apolloBetaMin": beta - 1, "nCandidates": 100}
-    ms.update(customMultistart_settings or {})
-    if estimate_settings is None and estimation_settings is not None:
-        estimate_settings = estimation_settings  # deprecated alias, kept as in R
-    est_set = dict(DEFAULT_ESTIMATE_SETTINGS)
-    est_set.update(estimate_settings or {})
-    est_set["scaleAfterConvergence"] = False
-    rng = np.random.default_rng(seed)
+    groups = {k: list(model.normalization_groups().get(k, [])) for k in _NORMALIZATION_KEYS}
+    n_classes = int(getattr(model, "n_classes", 0) or 0)
+    if n_classes < 2:
+        return [groups]
+    suffixes = tuple(f"_{s}" for s in range(1, n_classes + 1))
+    sets = [{k: [n for n in v if n.endswith(sfx)] for k, v in groups.items()} for sfx in suffixes]
+    sets.append({k: [n for n in v if not n.endswith(suffixes)] for k, v in groups.items()})
+    return sets
 
-    n_cand = int(ms["nCandidates"])
-    beta_max = pd.Series(ms["apolloBetaMax"], dtype=float)
-    beta_min = pd.Series(ms["apolloBetaMin"], dtype=float)
-    variables = [v for v in beta.index if v not in fixed]
-    beta_matrix = pd.DataFrame(np.tile(beta.to_numpy(), (n_cand, 1)), columns=beta.index)
-    for v in variables:
-        beta_matrix[v] = rng.uniform(beta_min[v], beta_max[v], n_cand)
 
-    if normalization is not None and normalization.get("normalization") in ("alpha_beta", "theta_phi"):
-        norm = normalization["normalization"]
-        keys = ("work_elasticities", "times_elasticities", "goods_elasticities", "sig", "rho", "cholesky")
-        params = {k: list(normalization.get(k) or []) for k in keys}
-        is_lc = apollo_inputs.lc_pars is not None
-        if not is_lc and nClass <= 1:
-            beta_matrix = _normalize(beta_matrix, rng, variables, norm, *params.values())
-        else:
-            for k in range(1, nClass + 1):
-                suffixed = [[f"{p}_{k}" for p in v] for v in params.values()]
-                beta_matrix = _normalize(beta_matrix, rng, variables, norm, *suffixed)
-            # Parameters shared across classes are passed without a suffix.
-            beta_matrix = _normalize(beta_matrix, rng, variables, norm, *params.values())
+def _candidates(model, beta: Beta, ms: MultiStart) -> pd.DataFrame:
+    """The ``ms.n`` starting points, one row each over every parameter of ``beta``.
 
-    print("Testing candidates...", end="")
-    works = []
-    for i in range(n_cand):
+    Only free parameters are drawn (uniform over the range of ``_box``) and normalized; fixed
+    and locked ones keep their values. The draws use ``ms.seed``.
+    """
+    rng = np.random.default_rng(ms.seed)
+    values = pd.Series(beta.values(), dtype=float)
+    free = beta.free_names
+    lower, upper = _box(beta, ms)
+    draws = pd.DataFrame(np.tile(values.to_numpy(), (ms.n, 1)), columns=values.index)
+    for v in free:
+        draws[v] = rng.uniform(lower[v], upper[v], ms.n)
+    if ms.normalization is not None:
+        for groups in _normalization_sets(model):
+            draws = _normalize(draws, rng, free, ms.normalization, *(groups[k] for k in _NORMALIZATION_KEYS))
+    return draws
+
+
+def _usable(start: dict, beta: Beta, prob_fn, inputs) -> bool:
+    """True when ``start`` is strictly inside the bounds and its log-likelihood is finite."""
+    for n in beta.free_names:
+        lo, hi = beta[n].lower, beta[n].upper
+        if (lo is not None and not start[n] > lo) or (hi is not None and not start[n] < hi):
+            return False
+    try:
         with np.errstate(all="ignore"):
-            P = apollo_probabilities(beta_matrix.iloc[i].to_dict(), apollo_inputs, "estimate")
-            ll = float(np.sum(_loglik_per_indiv(_model_component(P), apollo_inputs)))
-        works.append(not np.isnan(ll))
-    print("Done...", sum(works), "candidates available")
+            P = prob_fn(start, inputs, "estimate")
+            ll = float(np.sum(_loglik_per_indiv(_model_component(P), inputs)))
+    except _FAILURES:
+        return False
+    return bool(np.isfinite(ll))
 
-    models: dict[int, engine.Estimate | None] = {}
-    best_model, best_ll = None, -np.inf
-    kwargs = _estimate_kwargs(est_set)
-    quiet = _estimate_kwargs(est_set, silent=True)
-    for i in [i for i in range(n_cand) if works[i]]:
-        cand = i + 1
-        print(f"Candidate {cand} ...", end="" if not verbose else "\n")
-        start = beta_matrix.iloc[i].to_dict()
+
+def run_multistart(model, beta: Beta, control: Control, settings: EstimationSettings, inputs, prob_fn) -> Result:
+    """Estimate from ``settings.multistart.n`` random starts and keep the best.
+
+    Every candidate with a finite starting log-likelihood is estimated as ``fit`` estimates
+    (``settings.method`` and ``fallback``), after ``em_iter_max`` EM iterations when
+    ``first_em``. The best converged result, at a maximum when ``non_saddle`` (largest Hessian
+    eigenvalue below 0), is returned with ``starts``: the ``Result`` of every candidate, None
+    for those skipped or failed. When no candidate qualifies, raises ``RuntimeError`` with the
+    attempts as ``.attempts``.
+    """
+    ms = settings.multistart
+    verbose = settings.verbose
+    if ms.non_saddle and settings.resolved_hessian() == "none":
+        raise ValueError("MultiStart.non_saddle needs the Hessian: set hessian, or non_saddle=False")
+    draws = _candidates(model, beta, ms)
+    fixed = beta.fixed_names
+    if verbose:
+        print("Testing candidates...", end="")
+    usable = [_usable(draws.iloc[i].to_dict(), beta, prob_fn, inputs) for i in range(ms.n)]
+    if verbose:
+        print(f" Done. {sum(usable)} candidates available")
+
+    starts: list[Result | None] = [None] * ms.n
+    best, best_ll = None, -np.inf
+    for i in [i for i in range(ms.n) if usable[i]]:
+        start = draws.iloc[i].to_dict()
+        start_beta = beta.model_copy(deep=True).set(**{n: start[n] for n in beta.free_names})
         try:
-            sink = contextlib.nullcontext() if verbose else contextlib.redirect_stdout(io.StringIO())
-            if first_em:
-                print("Starting EM...", end="" if not verbose else "\n")
-                with sink:
-                    em = engine.lc_em(start, fixed, apollo_probabilities, apollo_inputs,
-                                      max_iterations=em_iter_max, post_em=0, estimate_kwargs=quiet)
-                start = em.estimate.to_dict()
-                print(f"LL: {-round(em.maximum, 2)} ...", end="")
-            print("Starting solver...", end="" if not verbose else "\n")
-            sink = contextlib.nullcontext() if verbose else contextlib.redirect_stdout(io.StringIO())
-            with sink, np.errstate(all="ignore"):
-                model = engine.estimate(start, fixed, apollo_probabilities, apollo_inputs, **(kwargs if verbose else quiet))
-            models[cand] = model
-            print(f"LL: {-round(model.maximum, 2)} ...Done...", end="")
-        except (FloatingPointError, ValueError, np.linalg.LinAlgError, ZeroDivisionError) as err:
-            print(f"Failed ({err})")
-            models[cand] = None
+            with np.errstate(all="ignore"):
+                if ms.first_em:
+                    em = engine.lc_em(
+                        start, fixed, prob_fn, inputs, max_iterations=ms.em_iter_max,
+                        tolerance=settings.em_tolerance, post_em=0, estimate_kwargs={"silent": True},
+                        bounds=beta.bounds(),
+                    )
+                    start = em.estimate.to_dict()
+                est, notes = estimate_once(start, beta, prob_fn, inputs, settings, silent=True)
+        except _FAILURES as err:
+            if verbose:
+                print(f"Candidate {i + 1}: failed ({err})")
             continue
+        starts[i] = Result(model, start_beta, control, settings, est, inputs, prob_fn, notes=notes)
+        eig = est.eigValue if np.isfinite(est.eigValue) else np.inf
+        saddle = ms.non_saddle and not eig < 0
+        if est.code == 0 and not saddle and est.maximum > best_ll:
+            best, best_ll = i, est.maximum
+        if verbose:
+            status = "best so far" if best == i else "not converged" if est.code != 0 else ""
+            status = status or ("saddle point" if saddle else "")
+            print(f"Candidate {i + 1}: LL {est.maximum:.4f}" + (f" ({status})" if status else ""))
 
-        converged = model.code == 0
-        eig = model.eigValue if np.isfinite(model.eigValue) else np.inf
-        ok = converged and model.maximum > best_ll and (eig < 0 if non_saddle else True)
-        if ok:
-            best_ll, best_model = model.maximum, model
-            print("Best found", end="")
-        print()
-
-    return {"best_model": best_model, "best_ll": best_ll, "models": models}
+    if best is None:
+        failed = sum(r is None for r in starts)
+        err = RuntimeError(
+            f"no multistart candidate converged to a maximum ({ms.n} candidates, {sum(usable)} with a finite "
+            f"starting log-likelihood, {failed} skipped or failed); the attempts are in .attempts"
+        )
+        err.attempts = starts
+        raise err
+    chosen = starts[best]
+    notes = chosen.notes + [f"Best of {ms.n} multistart candidates: candidate {best + 1}"]
+    return Result(model, chosen.beta, control, settings, chosen._estimate, inputs, prob_fn, starts=starts, notes=notes)

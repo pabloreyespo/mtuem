@@ -8,7 +8,6 @@ from .data import DATASETS, load_dataset, maed
 from .io import load
 from .lc_profiled import mtuem_get_profiled_sigma, mtuem_lc_profiled_likelihood, mtuem_profile_ic
 from .models import MTUEM, LatentClassMTUEM
-from .multistart import customMultiStart
 from .postestimation import cholesky_delta_method, cholesky_to_cov, get_corr, values_of_time
 from .results import Result
 from .utils import (
@@ -47,7 +46,6 @@ __all__ = [
     "additive_quadratic_mtuem_likelihood",
     "cholesky_delta_method",
     "cholesky_to_cov",
-    "customMultiStart",
     "get_additive_quadratic_essentials",
     "get_cond_err",
     "get_corr",

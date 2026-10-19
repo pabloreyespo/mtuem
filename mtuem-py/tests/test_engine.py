@@ -15,7 +15,8 @@ from mtuem._engine.estimate import _escape_saddle
 from mtuem._engine.latent import _loglik_per_indiv
 from mtuem._engine.loglike import _hessian
 from mtuem._engine.optimize import _maximise
-from mtuem.config import Control
+from mtuem.config import Control, EstimationSettings, MultiStart
+from mtuem.models import LatentClassMTUEM
 
 
 def small_lc(n=250, shared=False):
@@ -232,14 +233,24 @@ def test_saddle_escape_steps_off_a_stationary_saddle():
 
 
 def test_multistart_with_em_warm_start():
-    beta, fixed, pf, inputs = small_lc(n=150)
-    res = mtuem.customMultiStart(
-        beta, fixed, pf, inputs, {"nCandidates": 2}, {"maxIterations": 30}, first_em=True, em_iter_max=2,
-        normalization={"normalization": "theta_phi", "work_elasticities": ["Theta", "Phi", "thw"],
-                       "times_elasticities": ["th1"], "goods_elasticities": ["ph1"], "cholesky": CHK},
-        nClass=2, seed=3,
+    values, _, _, inputs = small_lc(n=150)
+    model = LatentClassMTUEM(
+        work_times=["Tw"], free_times=["Tf1"], free_goods=["Ef1"], Tc="Tc", Ec="EcI", w="w",
+        covariance="cholesky", n_classes=2, allocation=["female"],
     )
-    assert len(res["models"]) > 0
+    db = inputs.database
+    beta = model.beta().set(**values)
+    settings = EstimationSettings(
+        backend="numpy", max_iterations=30, verbose=False,
+        multistart=MultiStart(n=2, first_em=True, em_iter_max=2, normalization="theta_phi", non_saddle=False, seed=3),
+    )
+    try:
+        res = model.fit(db, beta, Control(indiv_id="PeID"), settings)
+        attempts = res.starts
+    except RuntimeError as err:  # no candidate converged in 30 iterations
+        attempts = err.attempts
+    assert len(attempts) == 2
+    assert any(a is not None for a in attempts)
 
 
 def test_alpha_beta_normalization_caps_work_elasticities():
