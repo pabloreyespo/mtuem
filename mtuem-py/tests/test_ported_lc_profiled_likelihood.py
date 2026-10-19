@@ -71,8 +71,8 @@ def test_the_profiled_likelihood_is_a_proper_mixture_of_the_class_densities():
     P = mtuem.mtuem_lc_profiled_likelihood(fx.lc_settings, "estimate", fx.apollo_inputs)
     prof = mtuem.mtuem_get_profiled_sigma()
 
-    E1 = mtuem.mtuem_residuals(fx.class_settings[0], fx.apollo_inputs)
-    E2 = mtuem.mtuem_residuals(fx.class_settings[1], fx.apollo_inputs)
+    E1 = mtuem.likelihood.residuals(fx.class_settings[0], fx.apollo_inputs)
+    E2 = mtuem.likelihood.residuals(fx.class_settings[1], fx.apollo_inputs)
     P_ref = fx.pi1 * mtuem_dmvnorm_ref(E1, prof["Sigma"][0]) + (1 - fx.pi1) * mtuem_dmvnorm_ref(E2, prof["Sigma"][1])
 
     assert_allclose(P, P_ref, rtol=1e-8)
@@ -98,7 +98,7 @@ def test_the_fixed_point_converges_on_a_stationary_covariance():
     prof = mtuem.mtuem_get_profiled_sigma()
 
     # One more weighted second-moment update leaves Sigma unchanged.
-    E = [mtuem.mtuem_residuals(cs, fx.apollo_inputs) for cs in fx.class_settings]
+    E = [mtuem.likelihood.residuals(cs, fx.apollo_inputs) for cs in fx.class_settings]
     W = prof["posterior"]
     for s in range(2):
         ws = W[:, s]
@@ -130,7 +130,7 @@ def test_a_single_class_specification_reduces_to_the_plain_multivariate_normal()
 
     # With a single class the posterior weights are all one, so the profiled covariance
     # is the (uncentred) residual second moment.
-    E = mtuem.mtuem_residuals(fx.class_settings[0], fx.apollo_inputs)
+    E = mtuem.likelihood.residuals(fx.class_settings[0], fx.apollo_inputs)
     Sigma = E.T @ E / E.shape[0]
     assert_allclose(P, mtuem_dmvnorm_ref(E, Sigma), rtol=1e-8)
 

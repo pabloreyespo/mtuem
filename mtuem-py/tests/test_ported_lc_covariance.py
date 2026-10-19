@@ -32,7 +32,7 @@ def test_mtuem_residuals_refactor_preserves_mtuem_likelihood_output_closed_form_
         "sig": sig, "Tc": Tc, "Ec": Ec, "w": w, "tau": tau,
     }
 
-    L_actual = mtuem.mtuem_likelihood(settings, "estimate", inputs_of(database))
+    L_actual = mtuem.likelihood.theta_phi(settings, "estimate", inputs_of(database))
 
     # With explicit sig and no rho the correlation is the identity, so the likelihood is
     # a product of independent normal densities.
@@ -130,8 +130,8 @@ def test_profiled_likelihood_recovers_class_specific_sigma_and_matches_the_ordin
 
     # The profiled likelihood equals the ordinary mixture at the recovered Sigma,
     # computed here through inv()/slogdet() rather than the Cholesky-based density.
-    E1 = mtuem.mtuem_residuals(class_settings[0], inputs)
-    E2 = mtuem.mtuem_residuals(class_settings[1], inputs)
+    E1 = mtuem.likelihood.residuals(class_settings[0], inputs)
+    E2 = mtuem.likelihood.residuals(class_settings[1], inputs)
     P_manual = pi1 * mtuem_dmvnorm_ref(E1, S1_hat) + (1 - pi1) * mtuem_dmvnorm_ref(E2, S2_hat)
     assert_allclose(P_profiled, P_manual, rtol=1e-8)
 
@@ -230,7 +230,7 @@ def test_custom_multistart_normalizes_shared_unsuffixed_covariance_parameters_wi
                 "cholesky": {"chk11": b.chk11},
                 "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168, "componentName": f"class_{s + 1}",
             }
-            P[f"class_{s + 1}"] = mtuem.mtuem_likelihood(settings, functionality, inputs)
+            P[f"class_{s + 1}"] = mtuem.likelihood.theta_phi(settings, functionality, inputs)
         P["model"] = engine.lc({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
         return P
 

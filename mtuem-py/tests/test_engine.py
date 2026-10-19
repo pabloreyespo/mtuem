@@ -50,7 +50,7 @@ def small_lc(n=250, shared=False):
                 "cholesky": [getattr(b, k) for k in CHK] if shared else [getattr(b, k)[s] for k in CHK],
                 "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168,
             }
-            P[f"class_{s + 1}"] = mtuem.mtuem_likelihood(st, functionality, inputs)
+            P[f"class_{s + 1}"] = mtuem.likelihood.theta_phi(st, functionality, inputs)
         P["model"] = engine.lc({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
         return P
 

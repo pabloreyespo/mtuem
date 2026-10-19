@@ -64,7 +64,7 @@ def test_additive_quadratic_likelihood_reproduces_the_multivariate_normal_densit
     Sigma = np.array([[1.5, 0.3, -0.2], [0.3, 1.0, 0.1], [-0.2, 0.1, 2.0]])
     settings = dict(fx.mtuem_settings, omitted_times="Tf2", omitted_goods="Ef2", cholesky=mtuem_chol_vec(Sigma))
 
-    L = mtuem.additive_quadratic_mtuem_likelihood(settings, "estimate", fx.apollo_inputs)
+    L = mtuem.likelihood.additive_quadratic(settings, "estimate", fx.apollo_inputs)
 
     idx = [fx.cols[c] for c in ("Tw", "Tf1", "Ef1")]
     assert_allclose(L, mtuem_dmvnorm_ref((fx.obs - fx.opt)[:, idx], Sigma), rtol=1e-10)
@@ -74,7 +74,7 @@ def test_omitting_all_but_one_equation_falls_back_to_the_univariate_normal():
     fx = aq_fixture(n=30, seed=62)
     settings = dict(fx.mtuem_settings, omitted_times=["Tf1", "Tf2"], omitted_goods=["Ef1", "Ef2"], sig=[1.3])
 
-    L = mtuem.additive_quadratic_mtuem_likelihood(settings, "estimate", fx.apollo_inputs)
+    L = mtuem.likelihood.additive_quadratic(settings, "estimate", fx.apollo_inputs)
 
     err = fx.obs[:, 0] - fx.opt[:, 0]
     assert_allclose(L, stats.norm.pdf(err, scale=1.3), rtol=1e-12)
@@ -86,8 +86,8 @@ def test_omitting_an_equation_keeps_its_parameters_in_the_aggregates():
     fx = aq_fixture(n=30, seed=63)
     settings = dict(fx.mtuem_settings, omitted_times="Tf2", omitted_goods="Ef2")
 
-    pred_full = mtuem.additive_quadratic_mtuem_likelihood(fx.mtuem_settings, "prediction", fx.apollo_inputs)
-    pred_omit = mtuem.additive_quadratic_mtuem_likelihood(settings, "prediction", fx.apollo_inputs)
+    pred_full = mtuem.likelihood.additive_quadratic(fx.mtuem_settings, "prediction", fx.apollo_inputs)
+    pred_omit = mtuem.likelihood.additive_quadratic(settings, "prediction", fx.apollo_inputs)
 
     pd.testing.assert_frame_equal(pred_omit, pred_full, rtol=1e-12)
 
@@ -97,7 +97,7 @@ def test_omitted_categories_must_name_existing_free_categories():
     settings = dict(fx.mtuem_settings, omitted_times="Tf9")
 
     with pytest.raises(ValueError, match="not in free_times / free_goods"):
-        mtuem.additive_quadratic_mtuem_likelihood(settings, "estimate", fx.apollo_inputs)
+        mtuem.likelihood.additive_quadratic(settings, "estimate", fx.apollo_inputs)
 
 
 def test_omitting_every_equation_is_rejected():
@@ -105,7 +105,7 @@ def test_omitting_every_equation_is_rejected():
     settings = dict(fx.mtuem_settings, work_times=[], omitted_times=["Tf1", "Tf2"], omitted_goods=["Ef1", "Ef2"])
 
     with pytest.raises(ValueError, match="nothing left to estimate"):
-        mtuem.additive_quadratic_mtuem_likelihood(settings, "estimate", fx.apollo_inputs)
+        mtuem.likelihood.additive_quadratic(settings, "estimate", fx.apollo_inputs)
 
 
 def test_the_cholesky_length_is_checked_against_the_surviving_equations():
@@ -115,13 +115,13 @@ def test_the_cholesky_length_is_checked_against_the_surviving_equations():
     settings = dict(fx.mtuem_settings, omitted_times=["Tf1", "Tf2"], omitted_goods="Ef2", cholesky=[1.0] * 15)
 
     with pytest.raises(ValueError, match="must match M"):
-        mtuem.additive_quadratic_mtuem_likelihood(settings, "estimate", fx.apollo_inputs)
+        mtuem.likelihood.additive_quadratic(settings, "estimate", fx.apollo_inputs)
 
 
 def test_additive_quadratic_prediction_closes_both_budgets_and_reports_values_of_time():
     fx = aq_fixture(n=25, seed=67, goods_cost={"P1": 1, "P2": 2})
 
-    pred = mtuem.additive_quadratic_mtuem_likelihood(fx.mtuem_settings, "prediction", fx.apollo_inputs)
+    pred = mtuem.likelihood.additive_quadratic(fx.mtuem_settings, "prediction", fx.apollo_inputs)
 
     # No residual time or goods category is reported, because the parameterised
     # categories already exhaust both budgets.
@@ -135,7 +135,7 @@ def test_additive_quadratic_handles_the_apollo_bookkeeping_functionalities():
     fx = aq_fixture(n=11, seed=68)
     named = dict(fx.mtuem_settings, componentName="aq_component")
     inp = fx.apollo_inputs
-    f = mtuem.additive_quadratic_mtuem_likelihood
+    f = mtuem.likelihood.additive_quadratic
 
     assert_allclose(f(fx.mtuem_settings, "validate", inp), np.ones(11))
     assert np.all(np.isnan(f(fx.mtuem_settings, "zero_LL", inp)))
@@ -147,7 +147,7 @@ def test_additive_quadratic_handles_the_apollo_bookkeeping_functionalities():
 def test_additive_quadratic_output_matches_estimate_and_report_prints_the_values_of_time(capsys):
     fx = aq_fixture(n=20, seed=69)
     settings = dict(fx.mtuem_settings, omitted_times="Tf2", omitted_goods="Ef2", sig=[1, 1, 1])
-    f = mtuem.additive_quadratic_mtuem_likelihood
+    f = mtuem.likelihood.additive_quadratic
 
     assert_allclose(f(settings, "output", fx.apollo_inputs), f(settings, "estimate", fx.apollo_inputs))
     f(settings, "report", fx.apollo_inputs)
@@ -160,7 +160,7 @@ def test_optimal_tw_false_builds_the_other_equations_from_observed_work_time():
         fx.mtuem_settings, omitted_times="Tf2", omitted_goods=["Ef1", "Ef2"], optimal_tw=False, sig=[1, 1]
     )
 
-    L = mtuem.additive_quadratic_mtuem_likelihood(settings, "estimate", fx.apollo_inputs)
+    L = mtuem.likelihood.additive_quadratic(settings, "estimate", fx.apollo_inputs)
 
     ti_from_obs = mtuem.get_ti_additive_quadratic(
         settings["times_elasticities"], settings["times_satiations"], fx.ess["Sth"], fx.ess["B"], fx.tau,

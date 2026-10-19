@@ -22,7 +22,7 @@ class Inputs:
         autodiff: bool = False,
     ):
         self.database = database.reset_index(drop=True)
-        # True when the probabilities function is written with mtuem.autodiff (exact derivatives)
+        # True when the probabilities function is written with mtuem.likelihood_jax (exact derivatives)
         self.autodiff = autodiff
         # The engine always works in logs: likelihood functions return log-likelihoods, so tiny
         # densities never underflow to zero.
@@ -83,12 +83,12 @@ def make_inputs(
 ) -> Inputs:
     """Check and bundle the model inputs.
 
-    With ``autodiff=True`` the model is written with ``mtuem.autodiff``: the probabilities
+    With ``autodiff=True`` the model is written with ``mtuem.likelihood_jax``: the probabilities
     function returns log-likelihoods and estimation uses exact (JAX) gradients, scores and
     Hessians.
     """
     if autodiff:
-        from .. import autodiff as _ad  # noqa: F401  (fails early with a clear message without JAX)
+        from .. import likelihood_jax as _lj  # noqa: F401  (fails early with a clear message without JAX)
     control = Control() if control is None else control
     fixed = list(fixed or [])
     missing = [f for f in fixed if f not in beta]

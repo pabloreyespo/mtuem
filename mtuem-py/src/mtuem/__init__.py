@@ -3,14 +3,9 @@
 A Python port of the R package mtuem, with a private estimation engine in ``mtuem._engine``.
 """
 
+from . import likelihood, likelihood_jax
 from .data import DATASETS, load_dataset, maed
 from .lc_profiled import mtuem_get_profiled_sigma, mtuem_lc_profiled_likelihood, mtuem_profile_ic
-from .likelihood import (
-    additive_quadratic_mtuem_likelihood,
-    mtuem_ab_likelihood,
-    mtuem_likelihood,
-    mtuem_residuals,
-)
 from .multistart import customMultiStart
 from .postestimation import (
     cholesky_to_cov,
@@ -35,6 +30,13 @@ from .utils import (
     get_xi_thph,
 )
 
+# Former names of the likelihood functions, kept until the public surface is settled; new code
+# uses mtuem.likelihood.theta_phi, .alpha_beta, .additive_quadratic and .residuals.
+mtuem_likelihood = likelihood.theta_phi
+mtuem_ab_likelihood = likelihood.alpha_beta
+additive_quadratic_mtuem_likelihood = likelihood.additive_quadratic
+mtuem_residuals = likelihood.residuals
+
 __all__ = [
     "DATASETS",
     "additive_quadratic_mtuem_likelihood",
@@ -54,6 +56,8 @@ __all__ = [
     "get_xi_additive_quadratic",
     "get_xi_albe",
     "get_xi_thph",
+    "likelihood",
+    "likelihood_jax",
     "load_dataset",
     "maed",
     "mtuem_ab_likelihood",

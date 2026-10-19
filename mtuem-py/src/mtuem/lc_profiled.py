@@ -5,7 +5,7 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from .likelihood import mtuem_likelihood, mtuem_residuals, works_in_logs
+from .likelihood import residuals, theta_phi, works_in_logs
 from .utils import cov_complete, cov_to_sig_rho
 
 # Covariances, posterior weights and class shares of the last successful evaluation, the
@@ -44,15 +44,15 @@ def _posterior(log_num: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return e / tot, (m + np.log(tot)).ravel()
 
 
-def _profile_core(class_settings, classProb, apollo_inputs, em_settings, logs: bool = False) -> dict | None:
+def _profile_core(class_settings, classProb, inputs, em_settings, logs: bool = False) -> dict | None:
     """Fixed point for the class covariances, computed in logs.
 
     Returns the mixture likelihood as ``logP`` and ``P``. In density mode (``logs=False``) a
     mixture density that underflows to zero makes the whole likelihood zero, as in R.
     """
     S = len(class_settings)
-    N = len(apollo_inputs.database)
-    E = [mtuem_residuals(cs, apollo_inputs) for cs in class_settings]
+    N = len(inputs.database)
+    E = [residuals(cs, inputs) for cs in class_settings]
     if any(not np.all(np.isfinite(e)) for e in E):
         return None
     M = E[0].shape[1]
@@ -109,7 +109,7 @@ def _stash(core: dict) -> None:
     _PROFILE_STASH.update(Sigma=core["Sigma"], W=core["W"], Pi=core["Pi"])
 
 
-def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "estimate", apollo_inputs=None):
+def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "estimate", inputs=None):
     """Latent class Theta-Phi likelihood with the covariance concentrated out (inner fixed point).
 
     ``lc_settings`` holds ``class_settings`` (one ``mtuem_settings`` per class, without ``sig``,
@@ -125,22 +125,22 @@ def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "est
 
     if functionality == "preprocess":
         return {"componentName": lc_settings.get("componentName") or "..", "gradient": False}
-    N = len(apollo_inputs.database)
+    N = len(inputs.database)
     if functionality == "validate":
-        return np.zeros(N) if works_in_logs(apollo_inputs) else np.ones(N)
+        return np.zeros(N) if works_in_logs(inputs) else np.ones(N)
     if functionality == "zero_LL":
         return np.full(N, np.nan)
 
-    logs = works_in_logs(apollo_inputs)
+    logs = works_in_logs(inputs)
     if functionality in ("estimate", "conditionals", "raw", "components"):
-        core = _profile_core(class_settings, classProb, apollo_inputs, em, logs)
+        core = _profile_core(class_settings, classProb, inputs, em, logs)
         if core is None:
             return np.full(N, -np.inf) if logs else np.zeros(N)
         _stash(core)
         return core["logP"] if logs else core["P"]
 
     if functionality in ("output", "report"):
-        ans = mtuem_lc_profiled_likelihood(lc_settings, "estimate", apollo_inputs)
+        ans = mtuem_lc_profiled_likelihood(lc_settings, "estimate", inputs)
         if functionality == "report":
             from .utils import get_tw_thph, get_values_of_time_thph
 
@@ -151,13 +151,13 @@ def mtuem_lc_profiled_likelihood(lc_settings: Mapping, functionality: str = "est
         return ans
 
     if functionality == "prediction":
-        core = _profile_core(class_settings, classProb, apollo_inputs, em, works_in_logs(apollo_inputs))
+        core = _profile_core(class_settings, classProb, inputs, em, works_in_logs(inputs))
         if core is None:
             return np.zeros(N)
         _stash(core)
         frames = []
         for s in range(S):
-            opt = mtuem_likelihood(class_settings[s], "prediction", apollo_inputs)
+            opt = theta_phi(class_settings[s], "prediction", inputs)
             frames.append(opt.add_suffix(f"_class{s + 1}"))
         post = pd.DataFrame(core["W"], columns=[f"post_class{s + 1}" for s in range(S)])
         return pd.concat(frames + [post], axis=1)

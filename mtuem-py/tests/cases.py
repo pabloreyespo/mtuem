@@ -48,15 +48,15 @@ def start_values(case: str) -> tuple[dict, list[str]]:
 def build(case: str, autodiff: bool = False):
     """Return (beta, fixed, probabilities, inputs).
 
-    With ``autodiff=True`` the same model is written with ``mtuem.autodiff`` (log-likelihoods,
+    With ``autodiff=True`` the same model is written with ``mtuem.likelihood_jax`` (log-likelihoods,
     exact derivatives). The profiled latent class model has no autodiff version.
     """
     if autodiff:
-        from mtuem import autodiff as ad
+        from mtuem import likelihood_jax as lj
 
-        loglik, alloc, mix = ad.mtuem_loglik, ad.class_alloc, ad.lc
+        loglik, alloc, mix = lj.theta_phi, lj.class_alloc, lj.lc
     else:
-        loglik, alloc, mix = mtuem.mtuem_likelihood, engine.class_alloc, engine.lc
+        loglik, alloc, mix = mtuem.likelihood.theta_phi, engine.class_alloc, engine.lc
     beta, fixed = start_values(case)
     lc = case.startswith("lc")
     control = Control(model_name=case, description=case, indiv_id="PeID", output_dir=Path("output"))

@@ -19,7 +19,7 @@ def _autodiff_em_objective(base: pd.Series, free: list[str], prob_fn: ProbFn, in
     import jax
     import jax.numpy as jnp
 
-    from ..autodiff import _safe_log
+    from ..likelihood_jax import _safe_log
 
     base = {n: float(v) for n, v in base.items()}
     idx = jnp.asarray(inputs.indiv_index)

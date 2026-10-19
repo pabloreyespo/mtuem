@@ -28,7 +28,7 @@ def cms_setup():
             "sig": {"sig1": b.sig1},
             "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168,
         }
-        P = {"model": mtuem.mtuem_likelihood(settings, functionality, inputs)}
+        P = {"model": mtuem.likelihood.theta_phi(settings, functionality, inputs)}
         return P
 
     return beta, fixed, probabilities, inputs

@@ -10,9 +10,15 @@ from .latent import ClassProbs, class_alloc, lc, lc_conditionals
 from .output import output_text, save_files
 from .postestimation import delta_method, prediction
 
+
+class FallbackWarning(UserWarning):
+    """A model asked for the JAX backend but a likelihood form has no JAX version: NumPy is used."""
+
+
 __all__ = [
     "ClassProbs",
     "Estimate",
+    "FallbackWarning",
     "Inputs",
     "class_alloc",
     "delta_method",
