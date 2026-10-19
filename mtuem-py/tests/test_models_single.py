@@ -369,8 +369,3 @@ def test_fit_rejects_missing_indiv_id_values():
 
 def test_validate_accepts_boolean_covariates():
     eq3(elasticity_covariates={"Phi": ["female"]})._validate_data(database(), CONTROL)
-
-
-def test_fit_is_not_implemented_yet():
-    with pytest.raises(NotImplementedError, match="MTUEM.fit is not implemented yet"):
-        eq3().fit(database(), eq3().beta(), CONTROL)

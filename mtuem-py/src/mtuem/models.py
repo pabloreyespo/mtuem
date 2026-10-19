@@ -9,9 +9,11 @@ import numpy as np
 import pandas as pd
 from pydantic import model_validator
 
+from . import _engine as engine
 from . import likelihood, likelihood_jax
 from .beta import Beta
 from .config import Control, EstimationSettings, _Strict
+from .results import Result
 
 ProbFn = Callable[[Mapping, Any, str], dict]
 LcParsFn = Callable[[Any, Any], dict]
@@ -310,7 +312,46 @@ class MTUEM(_Strict):
         beta: Beta,
         control: Control,
         settings: EstimationSettings | None = None,
-    ) -> Any:
-        """Estimate the model on ``data`` from the start values ``beta``."""
+    ) -> Result:
+        """Estimate the model on ``data`` from the start values ``beta``; returns a new ``Result``.
+
+        ``beta`` must hold exactly the parameters of ``self.beta()``; its fixed flags and bounds
+        apply. ``settings`` defaults to ``EstimationSettings()``. The model and ``beta`` are not
+        changed, so the model can be fitted again (for example over a grid of start values).
+        """
+        settings = EstimationSettings() if settings is None else settings
+        self._check_beta(beta)
+        if settings.method == "em":
+            raise NotImplementedError("method='em' is not available for this model yet")
+        if settings.multistart is not None:
+            raise NotImplementedError("multistart is not available for this model yet")
         self._validate_data(data, control)
-        raise NotImplementedError("MTUEM.fit is not implemented yet")
+        beta = beta.model_copy(deep=True)
+        silent = not settings.verbose
+        prob_fn, lc_pars, autodiff = self._compile(settings.backend)
+        inputs = engine.make_inputs(
+            data, beta.values(), beta.fixed_names, control, lc_pars, autodiff=autodiff, silent=silent
+        )
+        est = engine.estimate(
+            beta.values(),
+            beta.fixed_names,
+            prob_fn,
+            inputs,
+            max_iterations=settings.max_iterations,
+            max_function_evals=settings.max_function_evals,
+            hessian=settings.resolved_hessian(),
+            saddle_escapes=settings.saddle_escapes,
+            silent=silent,
+            bounds=beta.bounds(),
+        )
+        return Result(self, beta, control, settings, est, inputs, prob_fn)
+
+    def _check_beta(self, beta: Beta) -> None:
+        expected = self.beta().names
+        missing = [n for n in expected if n not in beta]
+        extra = [n for n in beta.names if n not in expected]
+        if missing or extra:
+            parts = [f"missing: {', '.join(missing)}" if missing else "", f"extra: {', '.join(extra)}" if extra else ""]
+            raise ValueError(
+                "beta does not hold the parameters of this model (" + "; ".join(p for p in parts if p) + ")"
+            )

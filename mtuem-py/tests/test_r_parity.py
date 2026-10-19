@@ -13,11 +13,12 @@ import pandas as pd
 import pytest
 
 import mtuem
-from cases import CASES, CHK, build
+from cases import CASES, build, declarative, renamed
+from cases import database as cases_database
 from mtuem import _engine as engine
 from mtuem._engine.latent import _loglik_per_indiv
 from mtuem._engine.output import _estimates_table, print_matrix
-from mtuem.config import Control
+from mtuem.config import Control, EstimationSettings
 
 REF = Path(__file__).parent / "reference"
 SINGLE = ["eq1", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky"]
@@ -36,13 +37,24 @@ def total_ll(case: str, beta: dict) -> float:
     return float(np.sum(_loglik_per_indiv(pf(beta, inputs, "estimate")["model"], inputs)))
 
 
+def fit(case: str, backend: str):
+    """``MTUEM.fit`` of the declarative README model from the R starting values."""
+    ref = load_ref(case)
+    model = declarative(case)
+    beta = model.beta().set(**renamed(ref["beta_start"]))
+    if "bounds" in ref:
+        for name, bound in ref["bounds"].items():
+            if "lower" in bound:
+                beta.lower(name, bound["lower"])
+            if "upper" in bound:
+                beta.upper(name, bound["upper"])
+    control = Control(model_name=case, description=case, indiv_id="PeID")
+    return model.fit(cases_database(), beta, control, EstimationSettings(backend=backend, verbose=False))
+
+
 @pytest.fixture(scope="module")
 def single_models():
-    out = {}
-    for case in SINGLE:
-        beta, fixed, pf, inputs = build(case)
-        out[case] = (engine.estimate(beta, fixed, pf, inputs, silent=True), pf, inputs)
-    return out
+    return {case: fit(case, "numpy") for case in SINGLE}
 
 
 @pytest.mark.parametrize("case", CASES)
@@ -54,18 +66,33 @@ def test_log_likelihood_matches_r(case, point):
     assert total_ll(case, ref[beta_key]) == pytest.approx(ref[ll_key], rel=1e-10, abs=1e-8)
 
 
-@pytest.mark.parametrize("case", SINGLE)
-def test_estimation_matches_r(case, single_models):
+def check_fit(case: str, result, se_rtol: float):
     ref = load_ref(case)
-    model = single_models[case][0]
-    assert model.code == 0
-    assert model.maximum == pytest.approx(ref["maximum"], abs=1e-3)
-    assert model.eigValue < 0
-    est, se, robse = num(ref["estimate"]), num(ref["se"]), num(ref["robse"])
-    np.testing.assert_allclose(model.estimate[est.index], est, rtol=1e-4, atol=1e-4)
+    assert result.converged
+    assert result.loglik == pytest.approx(ref["maximum"], abs=1e-3)
+    assert result._estimate.eigValue < 0
+    est = num(renamed(ref["estimate"]))
+    se, robse = num(renamed(ref["se"])), num(renamed(ref["robse"]))
+    np.testing.assert_allclose(result.estimates[est.index], est, rtol=1e-4, atol=1e-4)
     free = se.dropna().index
-    np.testing.assert_allclose(model.se[free], se[free], rtol=2e-3)
-    np.testing.assert_allclose(model.robse[free], robse[free], rtol=2e-3)
+    np.testing.assert_allclose(result.se[free], se[free], rtol=se_rtol)
+    np.testing.assert_allclose(result.robse[free], robse[free], rtol=se_rtol)
+
+
+@pytest.mark.parametrize("case", SINGLE)
+def test_fit_single_class_matches_r(case, single_models):
+    check_fit(case, single_models[case], 2e-3)
+
+
+@pytest.mark.parametrize("case", SINGLE + ["eq1_bounded"])
+def test_fit_single_class_matches_r_jax(case):
+    check_fit(case, fit(case, "jax"), 5e-3)
+
+
+def test_fit_with_a_binding_bound_matches_r():
+    # R reports the constrained maximum with thw fixed at the binding bound; the bounded fit
+    # reaches it from beta.lower.
+    check_fit("eq1_bounded", fit("eq1_bounded", "numpy"), 2e-3)
 
 
 def test_lc_standard_errors_match_r_at_the_r_optimum():
@@ -91,8 +118,7 @@ def test_lc_estimation_reaches_at_least_the_r_likelihood(case):
 @pytest.mark.parametrize("case", SINGLE)
 def test_values_of_time_match_r(case, single_models):
     ref = load_ref(case)
-    model, _, inputs = single_models[case]
-    vot = mtuem.mtuem_values_of_time(model, inputs, Ec="EcI", silent=True)["summary"]
+    vot = single_models[case].values_of_time()["summary"]
     r = pd.DataFrame(ref["vot"])
     np.testing.assert_allclose(vot["mean"], r["mean"], rtol=1e-3)
     np.testing.assert_allclose(vot["s.e."], r["s.e."], rtol=5e-3, atol=2e-4)
@@ -106,7 +132,7 @@ def test_lc_values_of_time_means_match_r(case):
     est = pd.Series(ref["estimate"], dtype=float)
     model = engine.Estimate(estimate=est, beta_start=est, fixed=fixed,
                            control=inputs.control, maximum=ref["maximum"], LLStart=0.0)
-    vot = mtuem.mtuem_values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)
+    vot = mtuem.values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)
     r = pd.DataFrame(ref["vot"])
     np.testing.assert_allclose(vot["summary"]["mean"], r["mean"], rtol=1e-6)
 
@@ -114,16 +140,15 @@ def test_lc_values_of_time_means_match_r(case):
 @pytest.mark.parametrize("case", ["eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky"])
 def test_residual_correlation_matches_r(case, single_models):
     ref = load_ref(case)
-    model, pf, inputs = single_models[case]
-    cr = mtuem.mtuem_get_corr(model, pf, inputs)
+    result = single_models[case]
+    cr = mtuem.get_corr(result._estimate, result._prob_fn, result._inputs)
     np.testing.assert_allclose(cr["corr"].to_numpy(), np.array(ref["corr"]["corr"]), atol=2e-4)
     np.testing.assert_allclose(cr["sigma"].to_numpy(), num(ref["corr"]["sigma"]).to_numpy(), rtol=1e-4)
 
 
 def test_prediction_matches_r(single_models):
     ref = load_ref("eq3_cholesky")
-    model, pf, inputs = single_models["eq3_cholesky"]
-    pred = engine.prediction(model, pf, inputs, silent=True).head(10)
+    pred = single_models["eq3_cholesky"].predict().head(10)
     r = pd.DataFrame(ref["pred_head"])
     for col in ["Tw", "Tf1", "Tfi", "Ef1", "Xfj", "VoL", "VTAW"]:
         np.testing.assert_allclose(pred[col], r[col], rtol=1e-4)
@@ -131,8 +156,7 @@ def test_prediction_matches_r(single_models):
 
 def test_cholesky_delta_method_matches_r(single_models):
     ref = load_ref("eq3_cholesky")
-    model = single_models["eq3_cholesky"][0]
-    dm = mtuem.mtuem_cholesky_deltaMethod(model, CHK, ["Tw", "Tf1", "Ef1"])
+    dm = single_models["eq3_cholesky"].correlations()
     r = pd.DataFrame(ref["chol_dm"])
     assert list(dm["Expression"]) == list(r["Expression"])
     np.testing.assert_allclose(dm["Value"], r["Value"], rtol=1e-4, atol=2e-4)

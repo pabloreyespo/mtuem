@@ -14,12 +14,16 @@ from .utils import cov_complete, get_tw_thph
 # ----------------------------------------------------------------------------------------------
 # Error covariance
 # ----------------------------------------------------------------------------------------------
-def mtuem_get_corr(model, apollo_probabilities, apollo_inputs) -> dict:
-    """Covariance, correlation and sds of observed minus predicted allocations."""
-    pred = engine.prediction(model, apollo_probabilities, apollo_inputs, silent=True)
+def get_corr(est, prob_fn, inputs) -> dict:
+    """Covariance, correlation and sds of observed minus predicted allocations.
+
+    ``est`` is the engine estimate, ``prob_fn`` the probabilities function and ``inputs`` the
+    engine inputs of the model.
+    """
+    pred = engine.prediction(est, prob_fn, inputs, silent=True)
     drop = ["ID", "Observation", "Tfi", "Xfj", "VoL", "VTAW"]
     opt = pred.drop(columns=[c for c in drop if c in pred.columns])
-    err = apollo_inputs.database[list(opt.columns)].to_numpy(dtype=float) - opt.to_numpy(dtype=float)
+    err = inputs.database[list(opt.columns)].to_numpy(dtype=float) - opt.to_numpy(dtype=float)
     cols = list(opt.columns)
     cov = cov_complete(err)
     sd = np.sqrt(np.diag(cov))
@@ -39,10 +43,13 @@ def cholesky_to_cov(estimates: Mapping, cholesky_names: list[str]) -> np.ndarray
     return L @ L.T
 
 
-def mtuem_cholesky_deltaMethod(
-    model, cholesky_names: list[str], eq_names: list[str] | None = None, deltaMethod_settings_extra: Mapping | None = None
+def cholesky_delta_method(
+    est, cholesky_names: list[str], eq_names: list[str] | None = None, delta_method_settings: Mapping | None = None
 ) -> pd.DataFrame:
-    """Standard deviations and correlations implied by the Cholesky factor, with delta method s.e."""
+    """Standard deviations and correlations implied by the Cholesky factor, with delta method s.e.
+
+    ``delta_method_settings`` is passed to the engine delta method (``varcov``, ``silent``).
+    """
     K = len(cholesky_names)
     M = int(round((-1 + np.sqrt(1 + 8 * K)) / 2))
     if M * (M + 1) // 2 != K:
@@ -64,7 +71,7 @@ def mtuem_cholesky_deltaMethod(
                 return float(S[i, j] / np.sqrt(S[i, i] * S[j, j]))
 
             expressions[f"rho_{lab(j)}_{lab(i)}"] = rho
-    return engine.delta_method(model, expressions, **dict(deltaMethod_settings_extra or {}))
+    return engine.delta_method(est, expressions, **dict(delta_method_settings or {}))
 
 
 # ----------------------------------------------------------------------------------------------
@@ -74,7 +81,7 @@ def _vot_par(b: pd.Series, name: str) -> float:
     if name not in b.index:
         raise KeyError(
             f"Parameter '{name}' is not among the model estimates. Check nClass and the parameter naming: "
-            "mtuem_values_of_time expects the Theta-Phi parameterization, with a '_s' suffix per class when nClass > 1."
+            "values_of_time expects the Theta-Phi parameterization, with a '_s' suffix per class when nClass > 1."
         )
     return float(b[name])
 
@@ -93,11 +100,11 @@ def _wmean(x: np.ndarray, wt: np.ndarray) -> float:
     return float(np.sum(x[ok] * wt[ok]) / np.sum(wt[ok]))
 
 
-def _vot_weights(weights, model, apollo_probabilities, apollo_inputs, nClass: int, N: int) -> np.ndarray:
+def _vot_weights(weights, est, prob_fn, inputs, nClass: int, N: int) -> np.ndarray:
     if weights is None:
         if nClass == 1:
             return np.ones((N, 1))
-        weights = _vot_posterior(model, apollo_probabilities, apollo_inputs, nClass)
+        weights = _vot_posterior(est, prob_fn, inputs, nClass)
     if isinstance(weights, pd.DataFrame):
         weights = weights.drop(columns=[c for c in ("ID", "Observation") if c in weights.columns]).to_numpy(float)
     elif isinstance(weights, (list, tuple)):
@@ -110,17 +117,17 @@ def _vot_weights(weights, model, apollo_probabilities, apollo_inputs, nClass: in
     return weights
 
 
-def _vot_posterior(model, apollo_probabilities, apollo_inputs, nClass: int) -> np.ndarray:
+def _vot_posterior(est, prob_fn, inputs, nClass: int) -> np.ndarray:
     post = None
-    if apollo_probabilities is not None:
+    if prob_fn is not None:
         try:
-            post = engine.lc_conditionals(model, apollo_probabilities, apollo_inputs)
+            post = engine.lc_conditionals(est, prob_fn, inputs)
         except (ValueError, AttributeError, KeyError):
             post = None
     if post is None:
         try:
-            if apollo_probabilities is not None:
-                apollo_probabilities(model.estimate.to_dict(), apollo_inputs, "estimate")
+            if prob_fn is not None:
+                prob_fn(est.estimate.to_dict(), inputs, "estimate")
             prof = mtuem_get_profiled_sigma()
             if prof["posterior"].shape[1] == nClass:
                 post = prof["posterior"]
@@ -128,7 +135,7 @@ def _vot_posterior(model, apollo_probabilities, apollo_inputs, nClass: int) -> n
             post = None
     if post is None:
         raise ValueError(
-            "Could not recover the posterior class probabilities. Pass apollo_probabilities so they can be "
+            "Could not recover the posterior class probabilities. Pass prob_fn so they can be "
             "computed with lc_conditionals, or supply them through the 'weights' argument."
         )
     return post
@@ -145,10 +152,10 @@ def _vot_report(summ: pd.DataFrame, nClass: int, conf_level: float) -> None:
     print()
 
 
-def mtuem_values_of_time(
-    model,
-    apollo_inputs,
-    apollo_probabilities=None,
+def values_of_time(
+    est,
+    inputs,
+    prob_fn=None,
     nClass: int = 1,
     weights=None,
     tau: float = 168,
@@ -164,12 +171,14 @@ def mtuem_values_of_time(
 
     The leading fraction of each value of time is averaged over the sample (weighted by class
     membership in latent class models) and the delta method is applied to the parameter ratio,
-    exactly as ``mtuem::mtuem_values_of_time``.
+    exactly as ``mtuem::mtuem_values_of_time``. ``est`` is the engine estimate, ``inputs`` the
+    engine inputs (anything with a ``database``) and ``prob_fn`` the probabilities function, needed
+    for the posterior class weights of latent class models when ``weights`` is not given.
     """
-    db = apollo_inputs.database
+    db = inputs.database
     N = len(db)
-    b = model.estimate
-    W = _vot_weights(weights, model, apollo_probabilities, apollo_inputs, nClass, N)
+    b = est.estimate
+    W = _vot_weights(weights, est, prob_fn, inputs, nClass, N)
     z = stats.norm.ppf(1 - (1 - conf_level) / 2)
     wage = db[w].to_numpy(dtype=float)
     summ, indiv, deltas = [], [], []
@@ -190,7 +199,7 @@ def mtuem_values_of_time(
         indiv.append(pd.DataFrame({"class": s, "Tw": Tw, "VoL": coef_vol * cte_vol_i,
                                    "VTAW": coef_vtaw * cte_vtaw_i, "weight": wt}))
         if standard_errors:
-            delta = engine.delta_method(model, {
+            delta = engine.delta_method(est, {
                 "VoL": lambda p, c=cte_vol, n=names: c * p[n["Theta"]] / p[n["Phi"]],
                 "VTAW": lambda p, c=cte_vtaw, n=names: c * p[n["thw"]] / p[n["Phi"]],
             }, silent=silent)
