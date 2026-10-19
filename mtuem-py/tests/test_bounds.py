@@ -169,3 +169,19 @@ def test_result_is_kept_strictly_inside_the_bounds():
     res = maximise_bounded(coupled, np.array([1.0 - 1e-15, 0.0]), *COUPLED_BOUNDS)
     assert res.code == 0
     assert 1.0 - res.x[0] > 5e-13  # 1e-12 inside, up to rounding
+
+
+@pytest.mark.parametrize("level, d, c", [(1e3, 1e-6, 1e6), (1e3, 1e-5, 1e4), (1e5, 1e-3, 1e2)])
+def test_interior_parameter_next_to_a_bound_stays_interior(level, d, c):
+    # x2 < 1 binds; at x2 = 1 the maximum in x0 is d, just inside its bound x0 > 0.
+    def f(x):
+        w = x[0] - d - 0.3 * (x[2] - 1.0)
+        return np.array([-level - c * w * w, -(x[1] - 1.0) ** 2, -(x[2] - 2.0) ** 2])
+
+    with np.errstate(over="ignore", invalid="ignore"):
+        res = maximise_bounded(f, np.array([0.5, 0.0, 0.0]), np.array([0.0, -np.inf, -np.inf]),
+                               np.array([np.inf, np.inf, 1.0]))
+    assert res.code == 0
+    assert abs(res.x[0] - d) <= 1e-2 * d
+    assert 0.0 < 1.0 - res.x[2] < 1e-7
+    assert res.f == pytest.approx(-level - 1.0, abs=1e-9 * level + 1e-9)

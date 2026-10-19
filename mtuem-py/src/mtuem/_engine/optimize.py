@@ -179,6 +179,28 @@ def _inside(x: np.ndarray, lower: np.ndarray, upper: np.ndarray, rel: float) -> 
     return np.where(np.isfinite(upper), np.minimum(x, upper - np.where(np.isfinite(upper), d_hi, 0.0)), x)
 
 
+def _no_gain_left(fun_vec: Callable[[np.ndarray], np.ndarray], x: np.ndarray) -> bool:
+    """Whether a diagonal Newton model predicts a negligible gain at ``x``.
+
+    ``_maximise`` reports false convergence (8) when no step improves f and its own model, BHHH
+    after a restart, still predicts a gain. With few individuals BHHH is degenerate at an exact
+    maximum (every score is near zero), so this applies the same test, predicted gain below
+    1e-7 * max(|f|, 1), with central second differences on the diagonal instead.
+    """
+    f0 = float(np.sum(fun_vec(x)))
+    gain = 0.0
+    for i in range(x.size):
+        h = 1e-5 * max(1.0, abs(x[i]))
+        e = np.zeros(x.size)
+        e[i] = h
+        fp, fm = float(np.sum(fun_vec(x + e))), float(np.sum(fun_vec(x - e)))
+        g, H = (fp - fm) / (2 * h), (fp - 2 * f0 + fm) / h**2
+        if not (np.isfinite(g) and np.isfinite(H)) or H >= 0:
+            return False
+        gain += 0.5 * g * g / -H
+    return gain < 1e-7 * max(abs(f0), 1.0)
+
+
 def maximise_bounded(
     fun_vec: Callable[[np.ndarray], np.ndarray],
     x0: np.ndarray,
@@ -190,47 +212,44 @@ def maximise_bounded(
     outer_eps: float = 1e-5,
     outer_iterations: int = 100,
     x_tol: float = 1e-8,
+    active_tol: float = 1e-6,
     **maximise_kwargs,
 ) -> _OptResult:
     """Maximise ``sum(fun_vec(x))`` subject to ``lower < x < upper`` (infinite entries are no bound).
 
-    The adaptive logarithmic barrier of R's ``constrOptim``, which maxLik uses for Apollo's
-    inequality constraints. With ``g(x)`` the stacked distances ``x - lower`` and ``upper - x``
-    for the finite bounds and ``A = dg/dx``, each outer iteration maximises
+    1. The plain optimiser from ``x0``. An unconstrained maximum strictly inside the bounds is
+       the constrained maximum and is returned as is, so bounds that do not bind leave the
+       result exactly as without bounds.
+    2. Otherwise the adaptive logarithmic barrier of R's ``constrOptim``, which maxLik uses for
+       Apollo's inequality constraints. With ``g(x)`` the stacked distances ``x - lower`` and
+       ``upper - x`` for the finite bounds and ``A = dg/dx``, each outer iteration maximises
 
-        R(x) = f(x) + mu * sum(g(x_k) * log g(x) - A x)
+           R(x) = f(x) + mu * sum(g(x_k) * log g(x) - A x)
 
-    from ``x_k`` with ``_maximise``. The barrier gradient ``mu * A'(g(x_k) / g(x) - 1)`` vanishes
-    at ``x_k``, so the penalty fades as the iterates settle and the limit is the constrained
-    maximum, also when it lies on a bound. The barrier is used only when the unconstrained
-    maximum (from ``x0``) is not strictly inside the bounds; otherwise that maximum is returned
-    as is.
+       from ``x_k``. It stops when an outer iteration improves R by less than
+       ``outer_eps * (|R(x_k)| + outer_eps)`` (constrOptim's rule) or when every bound the
+       iteration closed in on (gap at least halved) is within ``x_tol * max(1, |bound|)``; the
+       second rule keeps f near zero from pushing gaps into the rounding error of x. The barrier
+       enters ``_maximise`` as one extra individual with an exact gradient, its Hessian
+       ``A' diag(mu g(x_k) / g^2) A`` is added to the BHHH seed, and the inner runs accept a
+       stall (see ``_maximise``).
+    3. An active-set finish, which removes the barrier's ``mu`` bias and the stiffness it has
+       next to a bound. The parameters the barrier left within ``active_tol * max(1, |bound|)``
+       of a bound are fixed exactly at it, and the plain optimiser maximises f over the others.
+       A free parameter that this takes out of its bounds joins the active set; a fixed one
+       whose gradient points into the feasible region (relative size above the convergence
+       threshold of ``_maximise``) is released; then the finish is repeated. It ends when the
+       maximum over the free parameters is inside the bounds and every fixed parameter's
+       gradient points out of them (the Karush-Kuhn-Tucker conditions).
 
-    Stopping: an outer iteration ends the loop when it improves R by less than
-    ``outer_eps * (|R(x_k)| + outer_eps)`` (constrOptim's rule), or when every active bound (a
-    parameter with one bound whose gap the iteration at least halved) is within
-    ``x_tol * max(1, |bound|)``. The second
-    rule is scale-free in f; without it, f near zero runs further outer iterations that only
-    push the gap into the rounding error of x, where the inner BFGS cannot converge.
-
-    Active bounds and the barrier's stiffness: next to an active bound the barrier curvature
-    ``mu g(x_k) / g^2`` dwarfs that of f, which BFGS learns slowly and the relative tolerances
-    of ``_maximise`` do not resolve. Since f is near-linear over such a small gap, the
-    equilibrium of R along an active parameter alone is ``g = mu g_k / (mu - f')`` (lower bound;
-    ``mu + f'`` for an upper bound). Each later outer iteration moves the active parameters
-    there before its inner run, and each inner run is followed by the same step for its own R;
-    both steps are kept only if they raise R. The barrier enters ``_maximise`` as one extra
-    individual with an exact gradient; the BHHH seed gets the barrier Hessian
-    ``A' diag(mu g(x_k) / g^2) A`` as extra rows, and the inner runs accept a stall (see
-    ``_maximise``), which that curvature otherwise turns into endless BHHH re-seeds. The scores of ``fun_vec`` are central differences (with steps kept inside the
-    bounds where the full step gives a non-finite value) unless ``exact_grad_and_scores`` is
-    given.
-
-    ``max_iterations`` is shared by the unconstrained run and the inner barrier runs. The code
-    is that of the last inner run: an inner run that does not converge (false convergence, or
-    the iteration or evaluation limit) ends the loop with its code, and a budget used up before
-    the barrier can run gives code 10. The returned ``f`` is the unpenalised objective, and
-    ``x`` is kept at least 1e-12 (relative) inside the bounds.
+    Code 0 means that the last run of step 3 converged and the KKT conditions hold; a run that
+    does not converge ends the search with its code (8, 9 or 10), and an active set that does
+    not settle within ``2 n + 2`` rounds gives code 8. ``max_iterations`` is shared by all
+    runs, and a budget used up gives code 10. Gradients with respect to the parameters at a
+    bound are one-sided, from inside. The scores of ``fun_vec`` in the barrier runs are central
+    differences with steps kept inside the bounds unless ``exact_grad_and_scores`` is given.
+    The returned ``f`` is the unpenalised objective, and ``x`` is kept at least 1e-12
+    (relative) inside the bounds, so that rescaling it cannot round it onto a bound.
     """
     x = np.asarray(x0, dtype=float).copy()
     lower = np.broadcast_to(np.asarray(lower, dtype=float), x.shape)
@@ -238,27 +257,28 @@ def maximise_bounded(
     lo, hi = np.isfinite(lower), np.isfinite(upper)
     if not (np.all(x > lower) and np.all(x < upper)):
         raise ValueError("The starting values must lie strictly inside the bounds")
-    # An unconstrained maximum strictly inside the bounds is the constrained maximum: bounds that
-    # do not bind leave the optimiser's path, and so its result, exactly as without bounds.
+    maximise_kwargs.pop("accept_stall", None)
     max_iterations = int(maximise_kwargs.pop("max_iterations", 500))
     free = _maximise(fun_vec, x, max_iterations=max_iterations, exact_grad_and_scores=exact_grad_and_scores,
                      **maximise_kwargs)
     if not (lo.any() or hi.any()) or (free.code == 0 and np.all(free.x > lower) and np.all(free.x < upper)):
         return free
     used, evals = free.iterations, free.function_evals
-    if used >= max_iterations:
-        # No budget left for the barrier: the free run's point, brought inside the bounds.
-        xf = _inside(free.x, lower, upper, 1e-12)
-        v = np.asarray(fun_vec(xf), dtype=float)
-        if not np.all(np.isfinite(v)):
-            xf, v = x, np.asarray(fun_vec(x), dtype=float)
-        return _OptResult(xf, float(np.sum(v)), 10, MESSAGES[10], used, evals)
 
-    eye = np.eye(x.size)
+    def result(z, code):
+        z = _inside(z, lower, upper, 1e-12)
+        return _OptResult(z, float(np.sum(fun_vec(z))), code, MESSAGES[code], used, evals)
+
+    if used >= max_iterations:
+        # No budget left: the free run's point, brought inside the bounds (or the start).
+        xf = _inside(free.x, lower, upper, 1e-12)
+        return result(xf if np.all(np.isfinite(fun_vec(xf))) else x, 10)
+
+    n = x.size
+    eye = np.eye(n)
     A = np.vstack([eye[lo], -eye[hi]])
     b = np.concatenate([-lower[lo], upper[hi]])
-    only_lo, only_hi = lo & ~hi, hi & ~lo
-    tol_x = x_tol * np.maximum(1.0, np.abs(np.where(lo, lower, np.where(hi, upper, 0.0))))
+    bound_scale = np.maximum(1.0, np.abs(np.where(lo, lower, np.where(hi, upper, 0.0))))
 
     def g(z):
         return A @ z + b
@@ -274,12 +294,8 @@ def maximise_bounded(
     def f_grad_and_scores(z):
         if exact_grad_and_scores is not None:
             return exact_grad_and_scores(z)
-        steps = 1e-5 * np.maximum(1.0, np.abs(z))
-        grad, S = _central_scores(fvec, z, steps)
-        if grad is None:
-            # The function ends at a bound: keep each step within half the distance to it.
-            grad, S = _central_scores(fvec, z, np.minimum(steps, 0.5 * gap(z)))
-        return grad, S
+        # Central differences, with each step kept within half the distance to the bounds.
+        return _central_scores(fvec, z, np.minimum(1e-5 * np.maximum(1.0, np.abs(z)), 0.5 * gap(z)))
 
     def penalised(g_old):
         def barrier(z):
@@ -302,48 +318,95 @@ def maximise_bounded(
 
         return r_vec, r_grad_and_scores
 
-    def settle(z, r, xc, active, r_vec):
-        """Active parameters moved to the equilibrium of the barrier centred at ``xc``, if R rises."""
-        grad, _ = f_grad_and_scores(z)
-        if grad is None:
-            return z, r
-        glo_c, ghi_c = xc - lower, upper - xc
-        with np.errstate(divide="ignore", invalid="ignore"):
-            g_lo = np.where(mu - grad > 0, mu * glo_c / (mu - grad), np.inf)
-            g_hi = np.where(mu + grad > 0, mu * ghi_c / (mu + grad), np.inf)
-            zn = np.where(active & only_lo & (g_lo < z - lower), lower + g_lo, z)
-            zn = np.where(active & only_hi & (g_hi < upper - z), upper - g_hi, zn)
-        if np.array_equal(zn, z) or not (np.all(zn > lower) and np.all(zn < upper)):
-            return z, r
-        v = np.asarray(r_vec(zn), dtype=float)
-        rn = float(np.sum(v))
-        return (zn, rn) if np.all(np.isfinite(v)) and rn >= r else (z, r)
-
-    code = 10
-    active = np.zeros(x.size, dtype=bool)
+    # Step 2: the barrier.
     for _ in range(int(outer_iterations)):
         if used >= max_iterations:
-            code = 10
-            break
+            return result(x, 10)
         r_vec, r_grad = penalised(g(x))
         r_old = float(np.sum(r_vec(x)))
-        start, r_start = settle(x, r_old, x, active, r_vec) if active.any() else (x, r_old)
-        res = _maximise(r_vec, start, max_iterations=max_iterations - used, exact_grad_and_scores=r_grad,
+        res = _maximise(r_vec, x, max_iterations=max_iterations - used, exact_grad_and_scores=r_grad,
                         accept_stall=True, **maximise_kwargs)
         used += res.iterations
         evals += res.function_evals
-        code = res.code
-        if code != 0:
-            x = res.x
+        if res.code in (9, 10):
+            return result(res.x, res.code)
+        closing = (gap(res.x) < 0.5 * gap(x)) & (lo | hi)
+        x = res.x
+        if res.code != 0 or abs(res.f - r_old) < outer_eps * (abs(r_old) + outer_eps):
             break
-        active = (gap(res.x) < 0.5 * gap(x)) & (only_lo | only_hi)
-        xn, r_new = settle(res.x, res.f, x, active, r_vec)
-        x = xn
-        if abs(r_new - r_old) < outer_eps * (abs(r_old) + outer_eps):
+        if closing.any() and np.all(gap(x)[closing] <= x_tol * bound_scale[closing]):
             break
-        if active.any() and np.all(gap(x)[active] <= tol_x[active]):
-            break
-    # Keep x strictly inside by a margin far below any tolerance, so that rescaling it (the next
-    # EM step, the final estimation) cannot round it onto a bound.
-    x = _inside(x, lower, upper, 1e-12)
-    return _OptResult(x, float(np.sum(fun_vec(x))), code, MESSAGES[code], used, evals)
+
+    # Step 3: active-set finish.
+    at_lo = lo & (x - lower <= active_tol * bound_scale)
+    at_hi = hi & ~at_lo & (upper - x <= active_tol * bound_scale)
+
+    def outward_gradient(z, fixed_lo, fixed_hi):
+        """One-sided derivatives (from inside) at the fixed parameters; NaN elsewhere."""
+        f0 = fvec(z)
+        d = np.full(n, np.nan)
+        if f0 is None:
+            return d
+        for i in np.flatnonzero(fixed_lo | fixed_hi):
+            h = 1e-6 * max(1.0, abs(z[i]))
+            if lo[i] and hi[i]:
+                h = min(h, 0.5 * (upper[i] - lower[i]))
+            e = np.zeros(n)
+            e[i] = h if fixed_lo[i] else -h
+            f1 = fvec(z + e)
+            if f1 is not None:
+                d[i] = (f1.sum() - f0.sum()) / e[i]
+        return d
+
+    for _ in range(2 * n + 2):
+        if used >= max_iterations:
+            return result(x, 10)
+        fixed = at_lo | at_hi
+        z = np.where(at_lo, lower, np.where(at_hi, upper, x))
+        if not fixed.all():
+            idx = np.flatnonzero(~fixed)
+            # f less its value at the start, spread over the individuals: the tolerances of
+            # _maximise, relative to max(|f|, 1), then bound the gain still available in absolute
+            # terms, as a constrained maximum next to a bound needs whatever the level of f.
+            v0 = np.asarray(fun_vec(z), dtype=float)
+            shift = float(v0.sum()) / v0.size if np.all(np.isfinite(v0)) else 0.0
+
+            def sub_vec(y, z=z, idx=idx, shift=shift):
+                full = z.copy()
+                full[idx] = y
+                return np.asarray(fun_vec(full), dtype=float) - shift
+
+            sub_grad = None
+            if exact_grad_and_scores is not None:
+                def sub_grad(y, z=z, idx=idx):
+                    full = z.copy()
+                    full[idx] = y
+                    grad, S = exact_grad_and_scores(full)
+                    return (None, None) if grad is None else (grad[idx], S[:, idx])
+
+            res = _maximise(sub_vec, z[idx], max_iterations=max_iterations - used,
+                            exact_grad_and_scores=sub_grad, **maximise_kwargs)
+            used += res.iterations
+            evals += res.function_evals
+            z[idx] = res.x
+            if res.code == 8 and _no_gain_left(sub_vec, res.x):
+                res.code = 0
+            if res.code != 0:
+                return result(z, res.code)
+        out_lo, out_hi = lo & ~fixed & (z <= lower), hi & ~fixed & (z >= upper)
+        if out_lo.any() or out_hi.any():
+            # Free parameters the maximum takes out of their bounds join the active set.
+            at_lo, at_hi = at_lo | out_lo, at_hi | out_hi
+            x = np.clip(z, lower, upper)
+            continue
+        x = z
+        grad = outward_gradient(z, at_lo, at_hi)
+        # The gradient test of _maximise on the shifted f (|f| <= 1): an absolute threshold.
+        size = np.abs(grad) * np.maximum(np.abs(z), 1.0)
+        inward = fixed & np.isfinite(grad) & (size >= 1e-4) & np.where(at_lo, grad > 0, grad < 0)
+        if not inward.any():
+            return result(z, 0)
+        # Release the fixed parameters whose gradient points into the feasible region.
+        at_lo, at_hi = at_lo & ~inward, at_hi & ~inward
+        x = _inside(z, lower, upper, 1e-8)
+    return result(x, 8)
