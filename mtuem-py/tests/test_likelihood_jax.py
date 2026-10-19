@@ -256,16 +256,21 @@ def test_additive_quadratic_jax_matches_numpy(structure, kind, point, maed_input
     assert_jax_matches_numpy("additive_quadratic", structure, kind, point, maed_inputs)
 
 
-@pytest.mark.parametrize("form", ["alpha_beta", "additive_quadratic"])
-@pytest.mark.parametrize("kind", ERRORS)
-def test_jax_gradient_matches_central_differences(form, kind, maed_inputs):
+GRADIENT_CASES = (
+    [("alpha_beta", "full", kind) for kind in ERRORS]
+    + [("additive_quadratic", st, kind) for st in ("full", "omitted", "observed_tw") for kind in ERRORS]
+)
+
+
+@pytest.mark.parametrize("form,structure,kind", GRADIENT_CASES)
+def test_jax_gradient_matches_central_differences(form, structure, kind, maed_inputs):
     np_fn, jax_fn, make, points, structures = FORMS[form]
     names = list(points[0])
-    x0 = np.array([points[0][n] for n in names] + error_values(kind, structures["full"][0]))
+    x0 = np.array([points[0][n] for n in names] + error_values(kind, structures[structure][0]))
     k = len(names)
 
     def total(fn, x):
-        s = make(dict(zip(names, x[:k])), "full", kind, x[k:], maed_inputs.database)
+        s = make(dict(zip(names, x[:k])), structure, kind, x[k:], maed_inputs.database)
         return fn(s, "estimate", maed_inputs).sum()
 
     g_jax = np.asarray(jax.grad(lambda x: total(jax_fn, x))(jnp.asarray(x0)))
@@ -327,3 +332,133 @@ def test_ported_forms_and_the_fallback_warning(monkeypatch):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert lj.require_jax_form("lc_profiled") is False  # warned once only
+
+
+def test_cholesky_length_is_checked_before_any_functionality(maed_inputs):
+    db = maed_inputs.database
+    for form in ("alpha_beta", "additive_quadratic"):
+        np_fn, jax_fn, make, points, _ = FORMS[form]
+        s = make(points[0], "full", "cholesky", [1.0, 0.0, 1.0], db)
+        for functionality in ("validate", "preprocess", "estimate"):
+            with pytest.raises(ValueError, match="cholesky"):
+                np_fn(s, functionality, maed_inputs)
+            with pytest.raises(ValueError, match="cholesky"):
+                jax_fn(s, functionality, maed_inputs)
+    s = ab_settings(AB_POINTS[0], "full", "cholesky", [1.0, 0.0, 1.0], db) | {"work_elasticities": {"Theta": 1.0, "Phi": 1.0, "thw": 0.0}}
+    with pytest.raises(ValueError, match="cholesky"):
+        lj.theta_phi(s, "validate", maed_inputs)
+
+
+# A class whose alpha-beta discriminant is negative in about half of the rows (numpy: NaN residuals there).
+AB_NEGATIVE_DISCRIMINANT = {"alpha": 0.55, "beta": 0.0, "th1": 0.1, "th2": 0.05, "ph1": 0.2}
+
+
+def _non_pd_rho_errors(eqs):
+    M = len(eqs)
+    R = np.eye(M)
+    R[0, 1] = R[0, 2] = 0.9
+    R[1, 2] = -0.9
+    return [SD[q] for q in eqs] + list(R[np.triu_indices(M, 1)])
+
+
+DEGENERATE_CLASSES = {
+    "non_pd_rho": ("sig_rho", AB_POINTS[1], _non_pd_rho_errors(AB_STRUCTURES["full"][0])),
+    "negative_discriminant_sig": ("sig", AB_NEGATIVE_DISCRIMINANT, error_values("sig", AB_STRUCTURES["full"][0])),
+    "negative_discriminant_profiled": ("profiled", AB_NEGATIVE_DISCRIMINANT, []),
+}
+
+
+@pytest.mark.parametrize("case", list(DEGENERATE_CLASSES))
+def test_lc_gradient_is_finite_when_one_class_is_degenerate(case, maed_inputs):
+    kind2, p2, e2 = DEGENERATE_CLASSES[case]
+    db, N = maed_inputs.database, maed_inputs.nObs
+    names = list(AB_POINTS[0])
+    e1 = error_values("sig", AB_STRUCTURES["full"][0])
+    x0 = np.array([AB_POINTS[0][n] for n in names] + [p2[n] for n in names] + [0.3] + list(e2))
+
+    def settings(x):
+        s1 = ab_settings(dict(zip(names, x[0:5])), "full", "sig", e1, db)
+        s2 = ab_settings(dict(zip(names, x[5:10])), "full", kind2, x[11:], db)
+        return s1, s2
+
+    def total(x):
+        s1, s2 = settings(x)
+        pis = lj.class_alloc({"utilities": [jnp.zeros(N), x[10] * jnp.ones(N)]})
+        P = {"class_1": lj.alpha_beta(s1, "estimate", maed_inputs), "class_2": lj.alpha_beta(s2, "estimate", maed_inputs)}
+        return lj.lc({"inClassProb": P, "classProb": pis}, maed_inputs).sum()
+
+    # The value is what numpy gives, with the degenerate class contributing nothing where it
+    # has zero likelihood (numpy's NaN rows are -inf here; a profiled class with an
+    # incomplete row is -inf everywhere, see _loglik_from_errors).
+    s1, s2 = settings(x0)
+    ll1 = np.asarray(lk.alpha_beta(s1, "estimate", maed_inputs))
+    ll2_np = np.asarray(lk.alpha_beta(s2, "estimate", maed_inputs))
+    ll2_jax = np.asarray(lj.alpha_beta(s2, "estimate", maed_inputs))
+    if case == "non_pd_rho":
+        assert np.all(np.isneginf(ll2_np)) and np.all(np.isneginf(ll2_jax))
+    elif case == "negative_discriminant_sig":
+        assert np.any(np.isnan(ll2_np)) and np.any(np.isfinite(ll2_np))
+        np.testing.assert_allclose(ll2_jax, np.where(np.isnan(ll2_np), -np.inf, ll2_np), rtol=1e-10)
+    else:
+        assert np.any(np.isnan(ll2_np)) and np.any(np.isfinite(ll2_np))
+        assert np.all(np.isneginf(ll2_jax))
+    ll2 = ll2_jax
+    lp1, lp2 = -np.log1p(np.exp(0.3)), 0.3 - np.log1p(np.exp(0.3))
+    expected = np.sum(np.logaddexp(lp1 + ll1, lp2 + ll2))
+    assert np.isfinite(expected)
+    assert float(total(jnp.asarray(x0))) == pytest.approx(expected, rel=1e-10)
+    g = np.asarray(jax.grad(total)(jnp.asarray(x0)))
+    assert np.all(np.isfinite(g))
+    # The degenerate class has zero likelihood in the affected rows: no gradient from there.
+    if case != "negative_discriminant_sig":
+        assert np.all(g[5:10] == 0) and np.all(g[11:] == 0)
+
+
+def _collinear_inputs(c: float):
+    """maed with Tf2 replaced so that its alpha-beta residual (point 0) is a linear
+    combination of the Tw and Tf1 residuals plus ``c`` times fixed noise."""
+    db = database()
+    p = AB_POINTS[0]
+    we = {"alpha": p["alpha"], "beta": p["beta"]}
+    tw = mtuem.get_tw_albe(we, 168, db.Tc.to_numpy(), db.EcI.to_numpy(), db.w.to_numpy()).ravel()
+    ti = mtuem.get_ti_albe([p["th1"], p["th2"]], p["beta"], tw, 168, db.Tc.to_numpy())
+    combo = 0.5 * (db.Tw.to_numpy() - tw) - 0.3 * (db.Tf1.to_numpy() - ti[:, 0])
+    noise = np.random.default_rng(7).normal(size=len(db))
+    db["Tf2"] = ti[:, 1] + combo + c * noise
+    return engine.make_inputs(db, {"b": 0.0}, [], Control(indiv_id="PeID"), autodiff=True)
+
+
+def _corr_eigenvalues(inputs):
+    s = ab_settings(AB_POINTS[0], "full", "profiled", [], inputs.database)
+    corr = lk.alpha_beta(s, "get_covar", inputs)["corr"].to_numpy()
+    return np.linalg.eigvalsh(corr)
+
+
+def test_profiled_near_collinear_residuals_agree_with_numpy_near_pd():
+    """numpy projects the profiled correlation with nearPD and rejects eigenvalues <= 1e-6;
+    JAX rejects the same points directly (eigenvalue <= 1e-6, or <= 1e-6 times the largest).
+    """
+    from scipy.optimize import brentq
+
+    def gap(log_c):
+        eig = _corr_eigenvalues(_collinear_inputs(np.exp(log_c)))
+        return eig[0] - 1e-6 * (1 + eig[-1]) / 2
+
+    # Exactly collinear; inside numpy's nearPD window 1e-6 < eig <= 1e-6 * largest; well
+    # conditioned (smallest eigenvalue about 1e-3).
+    c_window = np.exp(brentq(gap, np.log(1e-6), np.log(10.0), xtol=1e-6))
+    for c, finite in ((0.0, False), (c_window, False), (0.5, True)):
+        inputs = _collinear_inputs(c)
+        eig = _corr_eigenvalues(inputs)
+        if c == c_window:
+            assert 1e-6 < eig[0] < 1e-6 * eig[-1]
+        if finite:
+            assert eig[0] > 1e-4
+        s = ab_settings(AB_POINTS[0], "full", "profiled", [], inputs.database)
+        ll_np = np.asarray(lk.alpha_beta(s, "estimate", inputs))
+        ll_jax = np.asarray(lj.alpha_beta(s, "estimate", inputs))
+        if finite:
+            assert np.all(np.isfinite(ll_np))
+            np.testing.assert_allclose(ll_jax, ll_np, rtol=1e-10)
+        else:
+            assert np.all(np.isneginf(ll_np)) and np.all(np.isneginf(ll_jax))

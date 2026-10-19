@@ -114,6 +114,31 @@ def _stack(cols: list) -> "jnp.ndarray":
     return jnp.column_stack([c if c.ndim == 2 else c[:, None] for c in cols])
 
 
+def _check_cholesky(s: Mapping, M: int) -> None:
+    """Validate the cholesky length early, before any functionality, as the numpy code does."""
+    n = _vec(s.get("cholesky")).size
+    if n and n != M * (M + 1) // 2:
+        raise ValueError(f"The length of cholesky ({n}) must match M * (M + 1) / 2 where M is the number of equations ({M}).")
+
+
+def _safe_sqrt(x):
+    """(sqrt(x) where x >= 0 and 0 elsewhere, x >= 0), with finite derivatives everywhere.
+
+    The argument is replaced by 1 before the square root wherever it is not positive, so the
+    derivative of the discarded branch is never inf or NaN (a single ``where`` would still
+    propagate NaN gradients through the unused branch). Callers mark the rows where x < 0,
+    which numpy computes as NaN, with ``_mark_rows``.
+    """
+    positive = x > 0
+    root = jnp.where(positive, jnp.sqrt(jnp.where(positive, x, 1.0)), 0.0)
+    return root, x >= 0
+
+
+def _mark_rows(E, ok):
+    """Residuals with the rows where ``ok`` is False set to NaN (numpy's value there)."""
+    return jnp.where(jnp.broadcast_to(ok, (E.shape[0],))[:, None], E, jnp.nan)
+
+
 def _mvn_logpdf_chol(E, L) -> "jnp.ndarray":
     """Zero-mean normal log density with covariance L L' (L lower triangular)."""
     M = L.shape[0]
@@ -126,42 +151,71 @@ def _loglik_from_errors(E, s: Mapping) -> "jnp.ndarray":
     """Per-row normal log-likelihood of the residuals ``E`` under the error structure of ``s``.
 
     With no ``sig``/``rho``/``cholesky`` the covariance is profiled from the residuals, as in
-    the R package (the R code projects a non positive definite correlation matrix with
-    ``nearPD``; here such a point gets log-likelihood -inf).
+    the R package. The numpy/R code projects the profiled correlation matrix with ``nearPD``
+    and then gives zero likelihood when an eigenvalue is <= 1e-6. A sample correlation matrix
+    is positive semi-definite, so the projection only acts when an eigenvalue is
+    <= 1e-6 times the largest one, and then leaves an eigenvalue of about 1e-8 times the
+    largest, which the guard rejects. Here the same points are rejected directly (eigenvalue
+    <= 1e-6, or <= 1e-6 times the largest when profiled), so both backends agree without the
+    projection.
+
+    Rows with a non-finite residual (for example a negative discriminant in the optimal work
+    time) get -inf. The profiled covariance uses all rows, so one such row makes the whole
+    profiled likelihood -inf; numpy instead profiles from the complete rows only (as R's
+    ``use = "complete.obs"``) and returns NaN for the incomplete ones.
+
+    Degenerate points get -inf with finite (zero) derivatives: the error structure is
+    replaced by the identity, and bad rows by zeros, before any Cholesky factor or log is
+    taken, so no NaN reaches the gradient of a latent class mixture in which only one class is
+    degenerate.
     """
     M = E.shape[1]
     chol = _vec(s.get("cholesky"))
     sig = _vec(s.get("sig"))
     rho = _vec(s.get("rho"))
+    row_bad = ~jnp.all(jnp.isfinite(jax.lax.stop_gradient(E)), axis=1)
+    E = jnp.where(row_bad[:, None], 0.0, E)
+    profiled = not chol.size and not sig.size
     if chol.size:
-        if chol.size != M * (M + 1) // 2:
-            raise ValueError(f"The length of cholesky ({chol.size}) must match M * (M + 1) / 2 where M is the number of equations ({M}).")
         rows, cols = np.tril_indices(M)
         L = jnp.zeros((M, M)).at[rows, cols].set(chol)
-    elif sig.size == 0:
-        # Profiled: standard deviations and correlations both come from the residuals.
+        Sigma = L @ L.T
+    elif profiled:
+        # Standard deviations and correlations both come from the residuals.
         centred = E - E.mean(axis=0)
-        L = jnp.linalg.cholesky(centred.T @ centred / (E.shape[0] - 1))
+        Sigma = centred.T @ centred / (E.shape[0] - 1)
     else:
         # Explicit sds; correlations from rho (upper triangle, row-wise) or zero.
         R = jnp.eye(M)
         if rho.size:
             iu = np.triu_indices(M, 1)
             R = R.at[iu].set(rho).at[(iu[1], iu[0])].set(rho)
-        L = jnp.linalg.cholesky(R * jnp.outer(sig, sig))
-    ll = _mvn_logpdf_chol(E, L)
+        Sigma = R * jnp.outer(sig, sig)
+
     # The same degeneracy guards as the numpy/R likelihood: zero likelihood when a standard
     # deviation is <= 1e-6 (an explicit sig must also be positive) or when the implied
-    # correlation matrix has an eigenvalue <= 1e-6.
-    Sigma = L @ L.T
-    sd = jnp.sqrt(jnp.diag(Sigma))
-    bad = ~jnp.all(jnp.isfinite(L)) | jnp.any(sd <= 1e-6)
+    # correlation matrix has an eigenvalue <= 1e-6. The guards only select, so they are
+    # computed without derivatives.
+    S = jax.lax.stop_gradient(Sigma)
+    var = jnp.diag(S)
+    bad = ~jnp.all(jnp.isfinite(S)) | jnp.any(var <= 1e-12)
+    if profiled:
+        bad = bad | jnp.any(row_bad)
     if sig.size and not chol.size:
-        bad = bad | jnp.any(sig <= 1e-6)
+        bad = bad | jnp.any(jax.lax.stop_gradient(sig) <= 1e-6)
     if M > 1:
-        corr = Sigma / jnp.outer(sd, sd)
-        bad = bad | (jnp.min(jnp.linalg.eigvalsh(corr)) <= 1e-6)
-    return jnp.where(bad | ~jnp.isfinite(ll), -jnp.inf, ll)
+        sd = jnp.sqrt(jnp.where(var > 0, var, 1.0))
+        eig = jnp.linalg.eigvalsh(jnp.where(bad, jnp.eye(M), S / jnp.outer(sd, sd)))
+        bad = bad | (eig[0] <= 1e-6)
+        if profiled:
+            bad = bad | (eig[0] <= 1e-6 * eig[-1])
+
+    if chol.size:
+        L = jnp.where(bad, jnp.eye(M), L)
+    else:
+        L = jnp.linalg.cholesky(jnp.where(bad, jnp.eye(M), Sigma))
+    ll = _mvn_logpdf_chol(E, L)
+    return jnp.where(bad | row_bad | ~jnp.isfinite(ll), -jnp.inf, ll)
 
 
 # ----------------------------------------------------------------------------------------------
@@ -175,7 +229,8 @@ def _theta_phi_residuals(s: Mapping, inputs) -> "jnp.ndarray":
     ec = Ec / (w * (tau - Tc))
     base = Theta + Phi + thw
     tpe = Phi + thw + (Theta + thw) * ec
-    tw_opt = 0.5 * (tau - Tc) * (tpe + jnp.sqrt(tpe**2 - 4 * thw * ec * base)) / base
+    root, ok = _safe_sqrt(tpe**2 - 4 * thw * ec * base)
+    tw_opt = 0.5 * (tau - Tc) * (tpe + root) / base
 
     work = as_names(s["work_times"])
     free_times = as_names(s.get("free_times"))
@@ -190,7 +245,11 @@ def _theta_phi_residuals(s: Mapping, inputs) -> "jnp.ndarray":
         cost = _vec(s.get("goods_cost", 1))
         cols.append(jnp.outer(w * tw_used - Ec, (ph / cost) / Phi))
     obs = jnp.asarray(inputs.matrix(work + free_times + free_goods))
-    return obs - _stack(cols)
+    return _mark_rows(obs - _stack(cols), ok)
+
+
+def _n_equations(s: Mapping) -> int:
+    return 1 + len(as_names(s.get("free_times"))) + len(as_names(s.get("free_goods")))
 
 
 def theta_phi(settings: Mapping, functionality: str = "estimate", inputs=None):
@@ -199,6 +258,7 @@ def theta_phi(settings: Mapping, functionality: str = "estimate", inputs=None):
     Takes the same settings. ``prediction`` and ``preprocess`` are answered by the numpy code.
     """
     s = dict(settings)
+    _check_cholesky(s, _n_equations(s))
     out = _other_functionality(likelihood.theta_phi, s, functionality, inputs, ("prediction", "preprocess"))
     if out is not None:
         return out
@@ -215,7 +275,8 @@ def _alpha_beta_residuals(s: Mapping, inputs) -> "jnp.ndarray":
     tau, Tc, Ec, w = _context(s)
     ec = Ec / (w * (tau - Tc))
     betaalphaec = beta + alpha * ec
-    tw_opt = (tau - Tc) * (betaalphaec + jnp.sqrt(betaalphaec**2 - ec * (2 * alpha + 2 * beta - 1)))
+    root, ok = _safe_sqrt(betaalphaec**2 - ec * (2 * alpha + 2 * beta - 1))
+    tw_opt = (tau - Tc) * (betaalphaec + root)
 
     work = as_names(s["work_times"])
     free_times = as_names(s.get("free_times"))
@@ -229,7 +290,7 @@ def _alpha_beta_residuals(s: Mapping, inputs) -> "jnp.ndarray":
         cost = _vec(s.get("goods_cost", 1))
         cols.append(jnp.outer(w * tw_opt - Ec, (ph / cost) / (1 - alpha)))
     obs = jnp.asarray(inputs.matrix(work + free_times + free_goods))
-    return obs - _stack(cols)
+    return _mark_rows(obs - _stack(cols), ok)
 
 
 def alpha_beta(settings: Mapping, functionality: str = "estimate", inputs=None):
@@ -239,6 +300,7 @@ def alpha_beta(settings: Mapping, functionality: str = "estimate", inputs=None):
     the numpy code.
     """
     s = dict(settings)
+    _check_cholesky(s, _n_equations(s))
     out = _other_functionality(likelihood.alpha_beta, s, functionality, inputs, ("prediction", "preprocess", "get_covar"))
     if out is not None:
         return out
@@ -288,6 +350,7 @@ def additive_quadratic(settings: Mapping, functionality: str = "estimate", input
     """
     s = likelihood._with_defaults(settings, likelihood._AQ_DEFAULTS)
     all_cols, eq_names = likelihood._additive_quadratic_equations(s)
+    _check_cholesky(s, len(eq_names))
     out = _other_functionality(likelihood.additive_quadratic, dict(settings), functionality, inputs, ("prediction", "preprocess"))
     if out is not None:
         return out
