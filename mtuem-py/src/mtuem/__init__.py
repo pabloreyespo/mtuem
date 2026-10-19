@@ -7,7 +7,7 @@ from . import likelihood, likelihood_jax
 from .data import DATASETS, load_dataset, maed
 from .io import load
 from .lc_profiled import mtuem_get_profiled_sigma, mtuem_lc_profiled_likelihood, mtuem_profile_ic
-from .models import MTUEM, LatentClassMTUEM
+from .models import MTUEM, CustomModel, LatentClassMTUEM
 from .postestimation import cholesky_delta_method, cholesky_to_cov, get_corr, values_of_time
 from .results import Result
 from .utils import (
@@ -39,6 +39,7 @@ mtuem_cholesky_deltaMethod = cholesky_delta_method
 mtuem_get_corr = get_corr
 
 __all__ = [
+    "CustomModel",
     "DATASETS",
     "LatentClassMTUEM",
     "MTUEM",

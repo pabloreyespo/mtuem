@@ -15,31 +15,44 @@ from . import _engine as engine
 from ._engine.estimate import _corr
 from .beta import Beta
 from .config import Control, EstimationSettings
-from .models import MTUEM
+from .models import MTUEM, CustomModel, _DetachedModel
 from .results import Result
 
 
-def load(path: Path, data: pd.DataFrame | None = None, model_class: type | None = None) -> Result:
+def load(
+    path: Path, data: pd.DataFrame | None = None, model_class: type | None = None, model=None
+) -> Result:
     """Restore a saved result from ``<model_name>_model.json`` (or the folder holding it).
 
     Without ``data`` the estimates, report, files and delta method are available; values of
     time and predictions need the estimation data. ``model_class`` replaces the model class
-    stored in the file, for custom models whose module cannot be imported here.
+    stored in the file, for subclasses whose module cannot be imported here. ``model`` is a
+    model instance to attach instead of the one in the file: required to get predictions and
+    values of time from a ``CustomModel`` result, whose model is not saved.
     """
     path = _model_file(Path(path))
     saved = json.loads(path.read_text(encoding="utf-8"))
-    cls = model_class if model_class is not None else _import_class(saved["model_class"], path)
-    if not (isinstance(cls, type) and issubclass(cls, MTUEM)):
-        raise TypeError(f"the model class must be a subclass of mtuem.MTUEM, not {cls!r}")
-    model = cls.model_validate(saved["model"])
     beta = Beta.model_validate(saved["beta"])
-    names = model.beta().names
-    for what, saved_names in (("saved estimates", list(saved["estimates"])), ("saved beta", beta.names)):
-        if sorted(names) != sorted(saved_names):
-            raise ValueError(
-                f"the saved model has the parameters {', '.join(names)}, "
-                f"but the {what} are of {', '.join(saved_names)}"
-            )
+    if model is not None:
+        if not (hasattr(model, "_compile") and hasattr(model, "_validate_data")):
+            raise TypeError(f"model must be a model instance (MTUEM or CustomModel), not {model!r}")
+    elif saved["model"] is None:
+        model = _DetachedModel()
+    else:
+        cls = model_class if model_class is not None else _import_class(saved["model_class"], path)
+        if not (isinstance(cls, type) and issubclass(cls, MTUEM)):
+            raise TypeError(f"the model class must be a subclass of mtuem.MTUEM, not {cls!r}")
+        model = cls.model_validate(saved["model"])
+    if not isinstance(model, CustomModel):
+        names = model.beta().names
+        for what, saved_names in (("saved estimates", list(saved["estimates"])), ("saved beta", beta.names)):
+            if sorted(names) != sorted(saved_names):
+                raise ValueError(
+                    f"the saved model has the parameters {', '.join(names)}, "
+                    f"but the {what} are of {', '.join(saved_names)}"
+                )
+    elif sorted(saved["estimates"]) != sorted(beta.names):
+        raise ValueError("the saved estimates and the saved beta have different parameters")
     # Files of a loaded result go next to its json, not to the folder of the machine that saved it.
     control = Control.model_validate(saved["control"] | {"output_dir": path.parent})
     settings = EstimationSettings.model_validate(saved["settings"])

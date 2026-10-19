@@ -142,6 +142,8 @@ class Result:
     # ------------------------------------------------------------------------------------------
     def _require_data(self, what: str) -> engine.Inputs:
         if self._inputs is None:
+            if getattr(self.model, "detached", False):
+                raise ValueError(f"{what} needs the model and the estimation data: pass model= and data= to mtuem.load")
             raise ValueError(_NO_DATA.format(what=what))
         return self._inputs
 
@@ -161,6 +163,16 @@ class Result:
         The budgets and the wage come from the model; keyword arguments go to
         ``mtuem.values_of_time`` (for example ``conf_level`` or ``weights``).
         """
+        if getattr(self.model, "is_custom", False):
+            # No model to take the budgets from: the caller names the columns.
+            missing = [k for k in ("Tc", "Ec", "w") if not isinstance(kwargs.get(k), str)]
+            if missing:
+                raise ValueError(
+                    "values_of_time of a custom model needs the column names Tc, Ec and w as keyword "
+                    "arguments (the model does not say which columns they are)"
+                )
+            inputs = self._require_data("values_of_time")
+            return values_of_time(self._estimate, inputs, self._prob_fn, **({"silent": True} | kwargs))
         if getattr(self.model, "utility", None) != "theta_phi":
             raise ValueError("values_of_time needs a model with utility='theta_phi'")
         if self.model.elasticity_covariates:
@@ -224,6 +236,10 @@ class Result:
     # ------------------------------------------------------------------------------------------
     def _n_classes(self) -> int:
         """The number of classes of a latent class model, 0 for a single-class model."""
+        if getattr(self.model, "is_custom", False):
+            # A custom model does not declare its classes: the estimation reports their shares.
+            shares = self._estimate.classShares
+            return 0 if shares is None else len(shares)
         return int(getattr(self.model, "n_classes", 0) or 0)
 
     def _require_classes(self, what: str) -> int:
@@ -241,7 +257,7 @@ class Result:
         n_classes = self._require_classes("posterior")
         inputs = self._require_data("posterior")
         columns = [f"class_{s}" for s in range(1, n_classes + 1)]
-        if self.model.covariance == "profiled":
+        if getattr(self.model, "covariance", None) == "profiled":
             # The profiled likelihood mixes row by row (fit rejects panel data for it) and stores
             # its posteriors when an evaluation succeeds.
             _PROFILE_STASH.clear()
@@ -285,6 +301,7 @@ class Result:
 
     def _to_json(self) -> dict:
         est = self._estimate
+        custom = getattr(self.model, "is_custom", False)
         cls = type(self.model)
         eig = est.hessianEigenValue
         beta = self.beta.model_dump(mode="json")
@@ -296,14 +313,16 @@ class Result:
         # The output folder is a path of this machine: a loaded result saves next to its json.
         control = self.control.model_dump(mode="json") | {"output_dir": "."}
         parts = {
-            "model": self.model.model_dump(mode="json"),
+            "model": None if custom else self.model.model_dump(mode="json"),
             "beta": beta,
             "control": control,
             "settings": self.settings.model_dump(mode="json"),
         }
         # JSON has no infinity or NaN, and pydantic writes them as null inside untyped fields:
         # check the Python values so nothing is lost silently.
-        sources = {"model": self.model, "control": self.control, "settings": self.settings}
+        sources = {"control": self.control, "settings": self.settings}
+        if not custom:
+            sources["model"] = self.model
         for key, obj in sources.items():
             if not _finite(obj.model_dump()):
                 raise ValueError(f"cannot save the result: the {key} holds a number that is not finite")
@@ -311,7 +330,7 @@ class Result:
             raise ValueError("cannot save the result: the beta holds a number that is not finite")
         return {
             "mtuem_version": __version__,
-            "model_class": f"{cls.__module__}:{cls.__qualname__}",
+            "model_class": "mtuem.models:CustomModel" if custom else f"{cls.__module__}:{cls.__qualname__}",
             **parts,
             "estimates": _series(self.estimates),
             "se": _series(self.se),

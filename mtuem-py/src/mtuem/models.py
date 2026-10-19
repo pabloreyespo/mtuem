@@ -35,6 +35,27 @@ def _numeric(v):
     return float(v) if isinstance(v, (int, float, np.number)) else v
 
 
+def _check_data(data: pd.DataFrame, cols: list[str], control: Control | None) -> None:
+    """Raise ``ValueError`` naming the ``cols`` (and the individual id) that are missing,
+    non-numeric or not finite."""
+    missing = [c for c in cols if c not in data.columns]
+    if control is not None and control.indiv_id and control.indiv_id not in data.columns:
+        missing.append(control.indiv_id)
+    if missing:
+        raise ValueError(f"the data lack the columns: {', '.join(missing)}")
+    if control is not None and control.indiv_id and data[control.indiv_id].isna().any():
+        raise ValueError(f"the individual id column {control.indiv_id} has missing values")
+    non_numeric = [
+        c for c in cols
+        if not (pd.api.types.is_numeric_dtype(data[c]) or pd.api.types.is_bool_dtype(data[c]))
+    ]
+    if non_numeric:
+        raise ValueError(f"the model needs numeric columns, these are not: {', '.join(non_numeric)}")
+    not_finite = [c for c in cols if not np.all(np.isfinite(data[c].to_numpy(dtype=float, na_value=np.nan)))]
+    if not_finite:
+        raise ValueError(f"columns with NaN or infinite values: {', '.join(not_finite)}")
+
+
 def _fit(model, data: pd.DataFrame, beta: Beta, control: Control, settings: EstimationSettings | None) -> Result:
     """Fit ``model``: check ``beta`` and ``data``, build the inputs once, then run the multistart
     when ``settings.multistart`` is set, else one estimation by ``settings.method``."""
@@ -352,23 +373,7 @@ class MTUEM(_Strict):
     # ------------------------------------------------------------------------------------------
     def _validate_data(self, data: pd.DataFrame, control: Control | None = None) -> None:
         """Raise ``ValueError`` naming the columns that are missing, non-numeric or not finite."""
-        cols = self.columns()
-        missing = [c for c in cols if c not in data.columns]
-        if control is not None and control.indiv_id and control.indiv_id not in data.columns:
-            missing.append(control.indiv_id)
-        if missing:
-            raise ValueError(f"the data lack the columns: {', '.join(missing)}")
-        if control is not None and control.indiv_id and data[control.indiv_id].isna().any():
-            raise ValueError(f"the individual id column {control.indiv_id} has missing values")
-        non_numeric = [
-            c for c in cols
-            if not (pd.api.types.is_numeric_dtype(data[c]) or pd.api.types.is_bool_dtype(data[c]))
-        ]
-        if non_numeric:
-            raise ValueError(f"the model needs numeric columns, these are not: {', '.join(non_numeric)}")
-        not_finite = [c for c in cols if not np.all(np.isfinite(data[c].to_numpy(dtype=float, na_value=np.nan)))]
-        if not_finite:
-            raise ValueError(f"columns with NaN or infinite values: {', '.join(not_finite)}")
+        _check_data(data, self.columns(), control)
 
     def fit(
         self,
@@ -685,3 +690,106 @@ class LatentClassMTUEM(MTUEM):
         for name, reason in self.beta().locked.items():
             if not beta[name].fixed:
                 raise ValueError(f"{name} must stay fixed: {reason}")
+
+
+class CustomModel:
+    """A model with a hand-written likelihood, the escape hatch for what the declarative models
+    cannot express (the successor of Apollo's ``apollo_probabilities``).
+
+    ``probabilities(params, inputs, functionality)`` returns a dict with ``"model"``, the
+    per-row (or per-individual) log-likelihood, and for a latent class model the class
+    components too (``"class_1"`` ...). ``inputs.attach(params)`` gives a namespace with the
+    data columns, the parameters and what ``lc_pars`` returns. ``lc_pars(params, inputs)`` is
+    needed for ``method="em"`` and latent class models. ``backend`` is the one the functions are
+    written for: ``"jax"`` (differentiable with ``jax.numpy``, or ``mtuem.likelihood_jax``) or
+    ``"numpy"``; ``fit`` raises ``ValueError`` when ``settings.backend`` differs.
+
+    ``columns`` lists the data columns to validate (numeric and finite); the individual id is
+    always checked. ``normalization_groups`` names parameters by role for
+    ``MultiStart.normalization`` (keys as ``MTUEM.normalization_groups``).
+
+    Results of a custom model save every file, with ``"model": null`` in the json: load them
+    with ``mtuem.load(path, data=data, model=model)`` to get predictions and values of time.
+    """
+
+    is_custom = True
+
+    def __init__(
+        self,
+        probabilities: ProbFn,
+        lc_pars: LcParsFn | None = None,
+        backend: Literal["jax", "numpy"] = "numpy",
+        normalization_groups: dict[str, list[str]] | None = None,
+        columns: list[str] | None = None,
+    ):
+        if backend not in ("jax", "numpy"):
+            raise ValueError(f"backend must be 'jax' or 'numpy', not {backend!r}")
+        self._probabilities = probabilities
+        self._lc_pars = lc_pars
+        self.backend = backend
+        self._groups = {k: list(v) for k, v in (normalization_groups or {}).items()}
+        self._columns = list(columns or [])
+
+    def __repr__(self) -> str:
+        return f"CustomModel(backend={self.backend!r}, latent_class={self._lc_pars is not None})"
+
+    def model_copy(self, deep: bool = False) -> CustomModel:
+        """A copy for ``Result`` (the callables are shared, the lists are copied)."""
+        return CustomModel(
+            self._probabilities, self._lc_pars, self.backend, self._groups, self._columns
+        )
+
+    def columns(self) -> list[str]:
+        """The data columns validated before fitting."""
+        return list(self._columns)
+
+    def normalization_groups(self) -> dict[str, list[str]]:
+        return {k: list(v) for k, v in self._groups.items()}
+
+    def _compile(self, backend: str) -> tuple[ProbFn, LcParsFn | None, bool]:
+        if backend != self.backend:
+            raise ValueError(
+                f"this custom model is written for backend={self.backend!r}, "
+                f"but settings.backend is {backend!r}; set EstimationSettings(backend={self.backend!r})"
+            )
+        return self._probabilities, self._lc_pars, backend == "jax"
+
+    def _validate_data(self, data: pd.DataFrame, control: Control | None = None) -> None:
+        _check_data(data, self._columns, control)
+
+    def _check_beta(self, beta: Beta) -> None:
+        # There is no generator of parameter names: any set of names is accepted.
+        unknown = [n for n in beta.fixed_names if n not in beta]
+        if unknown:
+            raise ValueError(f"fixed parameters not in beta: {', '.join(unknown)}")
+
+    def fit(
+        self,
+        data: pd.DataFrame,
+        beta: Beta,
+        control: Control,
+        settings: EstimationSettings | None = None,
+    ) -> Result:
+        """Estimate on ``data`` from the start values ``beta`` (as ``MTUEM.fit``)."""
+        return _fit(self, data, beta, control, settings)
+
+
+class _DetachedModel(CustomModel):
+    """Stands in for the model of a custom result loaded without ``model=``."""
+
+    detached = True
+
+    def __init__(self):
+        super().__init__(lambda *a, **k: {})
+
+    def model_copy(self, deep: bool = False) -> _DetachedModel:
+        return self
+
+    def _compile(self, backend: str):
+        raise ValueError(_DETACHED)
+
+    def _validate_data(self, data, control=None) -> None:
+        raise ValueError(_DETACHED)
+
+
+_DETACHED = "this result is of a custom model, which is not saved: pass model= and data= to mtuem.load"
