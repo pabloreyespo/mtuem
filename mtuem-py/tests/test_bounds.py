@@ -123,13 +123,34 @@ def coupled(x):
 COUPLED_BOUNDS = (np.array([-np.inf, -0.5]), np.array([1.0, np.inf]))
 
 
-def test_barrier_converges_on_a_coupled_problem():
-    res = maximise_bounded(coupled, np.zeros(2), *COUPLED_BOUNDS)
+@pytest.mark.parametrize("level", [0.0, 1000.0])
+def test_barrier_converges_on_a_coupled_problem(level):
+    # A constant shifts f to log-likelihood scale; the binding parameter must still land on its bound.
+    def shifted(x):
+        v = coupled(x)
+        v[0] -= level
+        return v
+
+    res = maximise_bounded(shifted, np.zeros(2), *COUPLED_BOUNDS)
     assert res.code == 0 and res.message == "successful convergence"
     assert res.iterations <= 500
-    assert res.x[0] < 1.0
-    np.testing.assert_allclose(res.x, [1.0, 9 / 11], atol=1e-5)
-    assert res.f == pytest.approx(-51 / 11, abs=1e-7)
+    assert 0.0 < 1.0 - res.x[0] < 1e-7
+    # x1 is unbounded: its accuracy is that of BFGS's relative tolerance on f (~1e-10 |f|).
+    assert res.x[1] == pytest.approx(9 / 11, abs=1e-6 if level == 0 else 1e-4)
+    assert res.f == pytest.approx(-51 / 11 - level, abs=1e-7)
+
+
+@pytest.mark.parametrize("sc", [1e4, 1e6])
+def test_barrier_converges_on_a_badly_scaled_problem(sc):
+    # f = -(x0 - 2)^2 - sc (x1 - 3 / sqrt(sc))^2 with x0 < 1: curvatures 2 and 2 sc.
+    def f(x):
+        with np.errstate(over="ignore"):  # trial points far along x1 overflow to -inf
+            return np.array([-(x[0] - 2.0) ** 2, -sc * (x[1] - 3.0 / np.sqrt(sc)) ** 2])
+
+    res = maximise_bounded(f, np.zeros(2), np.full(2, -np.inf), np.array([1.0, np.inf]))
+    assert res.code == 0
+    assert 0.0 < 1.0 - res.x[0] < 1e-7
+    assert res.x[1] == pytest.approx(3.0 / np.sqrt(sc), rel=1e-6)
 
 
 def test_exhausted_budget_inside_the_barrier_reports_the_iteration_limit():
@@ -137,12 +158,14 @@ def test_exhausted_budget_inside_the_barrier_reports_the_iteration_limit():
     res = maximise_bounded(coupled, np.zeros(2), *COUPLED_BOUNDS, max_iterations=33)
     assert res.code == 10 and res.message == "iteration limit reached without convergence"
     assert res.iterations <= 33
-    # A budget used up by the free run leaves none for the barrier.
+    # A budget used up by the free run leaves none for the barrier: its point (x0 = 2.26),
+    # brought inside the bounds, is returned.
     res = maximise_bounded(coupled, np.zeros(2), *COUPLED_BOUNDS, max_iterations=16)
     assert res.code == 10 and res.iterations <= 16
+    assert 0.0 < 1.0 - res.x[0] < 1e-11
 
 
 def test_result_is_kept_strictly_inside_the_bounds():
     res = maximise_bounded(coupled, np.array([1.0 - 1e-15, 0.0]), *COUPLED_BOUNDS)
     assert res.code == 0
-    assert 1.0 - res.x[0] >= 1e-12
+    assert 1.0 - res.x[0] > 5e-13  # 1e-12 inside, up to rounding
