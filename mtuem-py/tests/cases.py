@@ -151,3 +151,20 @@ def declarative(case: str):
 def renamed(values: dict) -> dict:
     """Reference parameter values under the declarative names."""
     return {RENAME.get(k, k): v for k, v in values.items()}
+
+
+# Declarative versions of the latent class README models (mtuem.LatentClassMTUEM). They use the
+# R parameter names unchanged (Theta_1, chk21_2, x_female_2; lc_shared has unsuffixed chk terms).
+LATENT = ["lc_cholesky", "lc_profiled", "lc_shared"]
+
+
+def latent_class(case: str):
+    """The latent class README model ``case`` as an ``mtuem.LatentClassMTUEM``."""
+    from mtuem.models import LatentClassMTUEM
+
+    return LatentClassMTUEM(
+        work_times=["Tw"], free_times=["Tf1"], free_goods=["Ef1"], goods_cost={"Ef1": 1},
+        Tc="Tc", Ec="EcI", w="w", n_classes=2, allocation=["female", "older45"],
+        covariance="profiled" if case == "lc_profiled" else "cholesky",
+        shared=CHK if case == "lc_shared" else [],
+    )

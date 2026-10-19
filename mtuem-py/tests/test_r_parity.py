@@ -13,12 +13,13 @@ import pandas as pd
 import pytest
 
 import mtuem
-from cases import CASES, build, declarative, renamed
+from cases import CASES, LATENT, build, declarative, latent_class, renamed
 from cases import database as cases_database
 from mtuem import _engine as engine
 from mtuem._engine.latent import _loglik_per_indiv
 from mtuem._engine.output import _estimates_table, print_matrix
 from mtuem.config import Control, EstimationSettings
+from mtuem.results import Result
 
 REF = Path(__file__).parent / "reference"
 SINGLE = ["eq1", "eq3_profiled", "eq3_sig", "eq3_full", "eq3_cholesky"]
@@ -32,8 +33,26 @@ def num(series) -> pd.Series:
     return pd.to_numeric(pd.Series(series), errors="coerce")
 
 
-def total_ll(case: str, beta: dict) -> float:
+def lc_compiled(case: str, backend: str = "numpy"):
+    """(model, prob_fn, inputs) of the declarative latent class README model ``case``."""
+    model = latent_class(case)
+    prob_fn, lc_pars, autodiff = model._compile(backend)
+    beta = model.beta()
+    control = Control(model_name=case, description=case, indiv_id="PeID")
+    inputs = engine.make_inputs(cases_database(), beta.values(), beta.fixed_names, control, lc_pars, autodiff=autodiff)
+    return model, prob_fn, inputs
+
+
+def probabilities(case: str):
+    """(prob_fn, inputs) of ``case``: the declarative model for latent class cases."""
+    if case in LATENT:
+        return lc_compiled(case)[1:]
     _, _, pf, inputs = build(case)
+    return pf, inputs
+
+
+def total_ll(case: str, beta: dict) -> float:
+    pf, inputs = probabilities(case)
     return float(np.sum(_loglik_per_indiv(pf(beta, inputs, "estimate")["model"], inputs)))
 
 
@@ -97,12 +116,14 @@ def test_fit_with_a_binding_bound_matches_r():
 
 def test_lc_standard_errors_match_r_at_the_r_optimum():
     ref = load_ref("lc_cholesky")
-    _, fixed, pf, inputs = build("lc_cholesky")
-    model = engine.estimate(ref["estimate"], fixed, pf, inputs, silent=True)
-    assert model.maximum == pytest.approx(ref["maximum"], abs=1e-3)
+    model = latent_class("lc_cholesky")
+    control = Control(model_name="lc_cholesky", description="lc_cholesky", indiv_id="PeID")
+    result = model.fit(cases_database(), model.beta().set(**ref["estimate"]), control,
+                       EstimationSettings(backend="numpy", verbose=False))
+    assert result.loglik == pytest.approx(ref["maximum"], abs=1e-3)
     se, robse = num(ref["se"]).dropna(), num(ref["robse"]).dropna()
-    np.testing.assert_allclose(model.se[se.index], se, rtol=2e-3)
-    np.testing.assert_allclose(model.robse[robse.index], robse, rtol=2e-3)
+    np.testing.assert_allclose(result.se[se.index], se, rtol=2e-3)
+    np.testing.assert_allclose(result.robse[robse.index], robse, rtol=2e-3)
 
 
 @pytest.mark.parametrize("case", ["lc_profiled", "lc_shared"])
@@ -110,9 +131,11 @@ def test_lc_estimation_reaches_at_least_the_r_likelihood(case):
     # R stops early from the README starting values (false/singular convergence); the Python
     # optimiser must reach a likelihood at least as high.
     ref = load_ref(case)
-    beta, fixed, pf, inputs = build(case)
-    model = engine.estimate(beta, fixed, pf, inputs, silent=True, hessian="none")
-    assert model.maximum >= ref["maximum"] - 1e-3
+    model = latent_class(case)
+    control = Control(model_name=case, description=case, indiv_id="PeID")
+    result = model.fit(cases_database(), model.beta().set(**ref["beta_start"]), control,
+                       EstimationSettings(backend="numpy", hessian="none", verbose=False))
+    assert result.loglik >= ref["maximum"] - 1e-3
 
 
 @pytest.mark.parametrize("case", SINGLE)
@@ -128,11 +151,13 @@ def test_values_of_time_match_r(case, single_models):
 def test_lc_values_of_time_means_match_r(case):
     # Posterior weights and means at the R estimates (no standard errors needed).
     ref = load_ref(case)
-    _, fixed, pf, inputs = build(case)
+    model, pf, inputs = lc_compiled(case)
+    beta = model.beta().set(**ref["estimate"])
     est = pd.Series(ref["estimate"], dtype=float)
-    model = engine.Estimate(estimate=est, beta_start=est, fixed=fixed,
-                           control=inputs.control, maximum=ref["maximum"], LLStart=0.0)
-    vot = mtuem.values_of_time(model, inputs, pf, nClass=2, Ec="EcI", standard_errors=False, silent=True)
+    estimate = engine.Estimate(estimate=est, beta_start=est, fixed=beta.fixed_names,
+                               control=inputs.control, maximum=ref["maximum"], LLStart=0.0)
+    result = Result(model, beta, inputs.control, EstimationSettings(backend="numpy"), estimate, inputs, pf)
+    vot = result.values_of_time(standard_errors=False)
     r = pd.DataFrame(ref["vot"])
     np.testing.assert_allclose(vot["summary"]["mean"], r["mean"], rtol=1e-6)
 
@@ -165,7 +190,7 @@ def test_cholesky_delta_method_matches_r(single_models):
 
 def test_profiled_covariance_matches_r():
     ref = load_ref("lc_profiled")
-    _, _, pf, inputs = build("lc_profiled")
+    _, pf, inputs = lc_compiled("lc_profiled")
     pf(ref["estimate"], inputs, "estimate")
     prof = mtuem.mtuem_get_profiled_sigma()
     for s in range(2):
@@ -198,7 +223,7 @@ def test_estimates_table_prints_like_r(case):
 def test_exponentiated_log_likelihood_reproduces_r_densities(case):
     # The engine works in logs: exp of the log-likelihood is the density R reports.
     ref = load_ref(case)
-    _, _, pf, inputs = build(case)
+    pf, inputs = probabilities(case)
     logL = np.asarray(pf(ref["estimate"], inputs, "estimate")["model"], dtype=float)
     L = np.exp(logL)
     assert np.all(L >= 0)

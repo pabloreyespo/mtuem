@@ -13,9 +13,11 @@ import numpy as np
 import pandas as pd
 
 from . import _engine as engine
+from ._engine.latent import _first_row
 from ._engine.output import __version__, _estimates_table
 from .beta import Beta
 from .config import Control, EstimationSettings
+from .lc_profiled import _PROFILE_STASH
 from .postestimation import cholesky_delta_method, values_of_time
 
 _NO_DATA = "{what} needs the estimation data: pass data= to mtuem.load"
@@ -159,6 +161,17 @@ class Result:
         inputs = self._require_data("values_of_time")
         db = inputs.database
         args: dict[str, Any] = {"tau": self.model.tau, "silent": True}
+        n_classes = self._n_classes()
+        if n_classes:
+            shared = [n for n in ("Theta", "Phi", "thw") if n in self.model.shared]
+            if shared:
+                raise ValueError(
+                    f"values_of_time needs class-specific Theta, Phi and thw; this model shares {', '.join(shared)}"
+                )
+            post = self.posterior()[[f"class_{s}" for s in range(1, n_classes + 1)]].to_numpy()
+            # Posterior weights of each individual on each of its rows.
+            weights = post if len(post) == inputs.nObs else post[inputs.indiv_index]
+            args |= {"nClass": n_classes, "weights": weights}
         constants = {}
         for key, name in (("Tc", "Tc"), ("Ec", "Ec"), ("w", "w")):
             v = getattr(self.model, name)
@@ -182,8 +195,71 @@ class Result:
         delta method standard errors (robust)."""
         if getattr(self.model, "covariance", None) != "cholesky":
             raise ValueError("correlations needs a model with covariance='cholesky'")
-        names = self.model._covariance_names()["cholesky"]
-        return cholesky_delta_method(self._estimate, names, self.model._equations(), {"silent": True})
+        model = self.model
+        equations = model._equations()
+        if not self._n_classes():
+            names = model._covariance_names()["cholesky"]
+            return cholesky_delta_method(self._estimate, names, equations, {"silent": True})
+        # One block per class, over the equations the class takes part in.
+        frames = []
+        for s in range(1, model.n_classes + 1):
+            absent = model.absent_times(s)
+            active = [i for i, c in enumerate(equations, start=1) if c not in absent]
+            names = [model._name(n, s) for n in model._covariance_names(active)["cholesky"]]
+            labels = [equations[i - 1] for i in active]
+            frame = cholesky_delta_method(self._estimate, names, labels, {"silent": True})
+            frame.insert(0, "class", s)
+            frames.append(frame)
+        return pd.concat(frames, ignore_index=True)
+
+    # ------------------------------------------------------------------------------------------
+    # Latent classes
+    # ------------------------------------------------------------------------------------------
+    def _n_classes(self) -> int:
+        """The number of classes of a latent class model, 0 for a single-class model."""
+        return int(getattr(self.model, "n_classes", 0) or 0)
+
+    def _require_classes(self, what: str) -> int:
+        n_classes = self._n_classes()
+        if not n_classes:
+            raise ValueError(f"{what} needs a latent class model")
+        return n_classes
+
+    def posterior(self) -> pd.DataFrame:
+        """Posterior class membership probabilities at the estimates.
+
+        One row per individual (``control.indiv_id``), in order of first appearance in the
+        data, with columns ``ID, class_1 .. class_S``.
+        """
+        n_classes = self._require_classes("posterior")
+        inputs = self._require_data("posterior")
+        columns = [f"class_{s}" for s in range(1, n_classes + 1)]
+        if self.model.covariance == "profiled":
+            # The profiled likelihood mixes row by row (fit rejects panel data for it) and stores
+            # its posteriors when an evaluation succeeds.
+            _PROFILE_STASH.clear()
+            self._prob_fn(self.estimates.to_dict(), inputs, "estimate")
+            if "W" not in _PROFILE_STASH:
+                raise ValueError("the profiled likelihood is degenerate at the estimates: no posterior")
+            post = _PROFILE_STASH["W"]
+            out = pd.DataFrame(post, columns=columns)
+            out.insert(0, "ID", inputs.ids)
+            return out
+        post = engine.lc_conditionals(self._estimate, self._prob_fn, inputs)
+        return post.rename(columns={f"X{s}": f"class_{s}" for s in range(1, n_classes + 1)})
+
+    def class_shares(self) -> pd.Series:
+        """Mean class allocation probabilities at the estimates (``class_1 .. class_S``)."""
+        n_classes = self._require_classes("class_shares")
+        shares = self._estimate.classShares
+        if shares is None:
+            inputs = self._require_data("class_shares")
+            pis = inputs.attach(self.estimates.to_dict()).pi_values
+            shares = pd.Series(
+                [float(np.mean(_first_row(p, inputs))) for p in pis],
+                index=[f"class_{s}" for s in range(1, n_classes + 1)],
+            )
+        return shares.copy()
 
     # ------------------------------------------------------------------------------------------
     # Files
