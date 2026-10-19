@@ -246,3 +246,22 @@ def test_bound_where_f_is_not_defined_is_still_checked():
     res = run(1e-9)
     assert res.x[0] == pytest.approx(1e-9, rel=1e-2)
     assert res.code != 0 or res.f == pytest.approx(-1.0 - 1e-9 + 1e-9 * np.log(1e-9), abs=1e-11)
+
+
+@pytest.mark.parametrize("N, d", [(50, 1e-5), (500, 1e-6), (500, 5e-5)])
+def test_polish_differences_scale_with_the_level_of_f_not_its_spread(N, d):
+    # N identical individuals at level -100: the roundoff of a sum scales with that level, while
+    # the shifted f of the polish has near-zero spread. The optimum in x0 is d, next to x0 > 0.
+    c = 1e2
+
+    def f(x):
+        w = x[0] - d - 0.3 * (x[2] - 1.0)
+        return np.full(N, -100.0) + (-c * w * w - (x[1] - 1.0) ** 2 - (x[2] - 2.0) ** 2) / N
+
+    with np.errstate(over="ignore", invalid="ignore"):
+        res = maximise_bounded(f, np.array([0.5, 0.0, 0.0]), np.array([0.0, -np.inf, -np.inf]),
+                               np.array([np.inf, np.inf, 1.0]))
+    assert res.code == 0
+    # Roundoff in f (about 1e-16 of its level) limits x0 to sqrt(1e-16 * 100 N / c) of the optimum.
+    assert res.x[0] == pytest.approx(d, rel=0.1, abs=3 * np.sqrt(1e-16 * 100.0 * N / c))
+    assert res.f == pytest.approx(-100.0 * N - 1.0, abs=1e-9)

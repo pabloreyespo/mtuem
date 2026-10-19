@@ -192,7 +192,7 @@ def _sided_column(fn: Callable[[np.ndarray], np.ndarray | None], x: np.ndarray, 
     """
     e = np.zeros(x.size)
     near, far = min(room_lo, room_hi), max(room_lo, room_hi)
-    if 0.1 * near >= max(h, floor):
+    if 0.1 * near >= floor:
         e[i] = min(h, 0.1 * near)
         up, down = fn(x + e), fn(x - e)
         return None if up is None or down is None else (up - down) / (2 * e[i])
@@ -204,24 +204,19 @@ def _sided_column(fn: Callable[[np.ndarray], np.ndarray | None], x: np.ndarray, 
     return (-3 * f0 + 4 * f1 - f2) / (2 * e[i])
 
 
-def _roundoff_floor(f0: np.ndarray, x: np.ndarray) -> np.ndarray:
-    """Difference steps ``1e-10 max(1, sum|f0|) max(1, |x|)``, at which roundoff in a sum of the size
-    of ``f0`` stays below 1e-5 of a difference."""
-    return 1e-10 * max(1.0, float(np.sum(np.abs(f0)))) * np.maximum(1.0, np.abs(x))
+def _roundoff_floor(level: float, x: np.ndarray) -> np.ndarray:
+    """Difference steps ``1e-10 max(1, level) max(1, |x|)``, at which roundoff in a sum of absolute
+    size ``level`` stays below 1e-5 of a difference."""
+    return 1e-10 * max(1.0, float(level)) * np.maximum(1.0, np.abs(x))
 
 
 def _sided_scores(fn: Callable[[np.ndarray], np.ndarray | None], x: np.ndarray, steps: np.ndarray,
-                  room_lo: np.ndarray, room_hi: np.ndarray, floor: np.ndarray | None = None):
-    """Like ``_central_scores`` but with the steps of ``_sided_column`` next to a bound.
-
-    ``floor`` defaults to ``_roundoff_floor`` for the values of ``fn`` at ``x``.
-    """
+                  room_lo: np.ndarray, room_hi: np.ndarray, floor: np.ndarray):
+    """Like ``_central_scores`` but with the steps of ``_sided_column`` next to a bound."""
     S = None
     f0 = fn(x)
     if f0 is None:
         return None, None
-    if floor is None:
-        floor = _roundoff_floor(f0, x)
     for i in range(x.size):
         col = _sided_column(fn, x, i, steps[i], room_lo[i], room_hi[i], floor[i], f0)
         if col is None:
@@ -405,7 +400,7 @@ def maximise_bounded(
         f0 = fvec(z)
         if f0 is None:
             return d
-        floor = _roundoff_floor(f0, z)
+        floor = _roundoff_floor(np.sum(np.abs(f0)), z)
         for i in np.flatnonzero(fixed):
             col = _sided_column(fvec, z, i, 1e-5 * max(1.0, abs(z[i])), z[i] - lower[i], upper[i] - z[i],
                                 floor[i], f0)
@@ -427,6 +422,7 @@ def maximise_bounded(
         """
         v0 = fvec(z)
         shift = float(v0.sum()) / v0.size if v0 is not None else 0.0
+        level = float(np.sum(np.abs(v0))) if v0 is not None else 1.0  # roundoff scales with the unshifted f
 
         def full(y):
             w = z.copy()
@@ -444,7 +440,8 @@ def maximise_bounded(
             if exact_grad_and_scores is not None:
                 grad, S = exact_grad_and_scores(full(y))
                 return (None, None) if grad is None else (grad[idx], S[:, idx])
-            return _sided_scores(sub_fvec, y, 1e-5 * np.maximum(1.0, np.abs(y)), y - lower[idx], upper[idx] - y)
+            return _sided_scores(sub_fvec, y, 1e-5 * np.maximum(1.0, np.abs(y)), y - lower[idx], upper[idx] - y,
+                                 _roundoff_floor(level, y))
 
         def grad_and_hessian(y):
             g0, _ = sub_grad(y)
