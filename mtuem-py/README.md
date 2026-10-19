@@ -116,9 +116,9 @@ result = model.fit(data, beta, control)
 ```
 
 A latent class custom model also returns its classes (`"class_1"`, ...) and passes
-`lc_pars=` (needed for EM). The likelihood functions are `mtuem.likelihood_jax` (JAX) and
-`mtuem.likelihood` (NumPy): `theta_phi`, `alpha_beta`, `additive_quadratic`, the profiled latent
-class `lc_profiled`, and `class_alloc` and `lc` for class allocation and mixtures.
+`lc_pars=` (needed for EM). `mtuem.likelihood_jax` (JAX) and `mtuem.likelihood` (NumPy) offer
+the same functions: `theta_phi`, `alpha_beta`, `additive_quadratic`, the profiled latent class
+`lc_profiled`, and `class_alloc` and `lc` for class allocation and mixtures.
 
 ## Estimation settings
 
@@ -170,7 +170,9 @@ is not saved: pass it as `model=` together with `data=`.
 `examples/maed_*.py` are the Python versions of the examples of the R package: a single
 equation model, three-equation models with each error structure (profiled, `sig`, `sig` and
 `rho`, Cholesky), and two-class latent class models with per-class, profiled and shared
-covariances. Run them from `mtuem-py` with `uv run python examples/maed_1eq.py`.
+covariances. Run them from `mtuem-py` with `uv run python examples/maed_1eq.py`. They run on
+the default JAX backend, so their standard errors differ slightly from runs with numerical
+(numDeriv) derivatives, such as the R ones.
 
 ## Datasets
 

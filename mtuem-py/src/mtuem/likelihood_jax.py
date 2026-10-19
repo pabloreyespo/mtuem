@@ -31,6 +31,16 @@ from . import _engine, likelihood
 from ._engine import ClassProbs, FallbackWarning
 from .utils import as_names
 
+__all__ = [
+    "additive_quadratic",
+    "alpha_beta",
+    "class_alloc",
+    "lc",
+    "lc_profiled",
+    "require_jax_form",
+    "theta_phi",
+]
+
 ESTIMATE_LIKE = ("estimate", "conditionals", "raw", "components", "output", "report")
 
 PORTED: frozenset[str] = frozenset({"theta_phi", "alpha_beta", "additive_quadratic", "lc_profiled"})

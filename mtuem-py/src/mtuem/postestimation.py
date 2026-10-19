@@ -21,7 +21,8 @@ def get_corr(est, prob_fn, inputs) -> dict:
     engine inputs of the model.
     """
     pred = engine.prediction(est, prob_fn, inputs, silent=True)
-    # Leftover time and money (Tfi, Xfj, or T and X without free times or goods) are no equations.
+    # Leftover time and money are no equations: Tfi and Xfj, or T and X in a model without free
+    # times or goods. So a data column named T or X cannot be an allocation equation here.
     drop = ["ID", "Observation", "Tfi", "Xfj", "T", "X", "VoL", "VTAW"]
     opt = pred.drop(columns=[c for c in drop if c in pred.columns])
     err = inputs.database[list(opt.columns)].to_numpy(dtype=float) - opt.to_numpy(dtype=float)

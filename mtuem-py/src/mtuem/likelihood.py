@@ -5,6 +5,10 @@ Each likelihood takes the same ``settings`` dictionary as the corresponding R fu
 ``additive_quadratic``: ``additive_quadratic_mtuem_likelihood``), a ``functionality`` string,
 and the model ``inputs`` (in R they are read from the calling frame; here they are passed
 explicitly). ``mtuem.likelihood_jax`` holds the JAX versions.
+
+For latent class models, ``class_alloc`` (class allocation probabilities), ``lc`` (the mixture
+of class log-likelihoods) and ``lc_profiled`` (the profiled latent class likelihood) are the
+NumPy counterparts of the functions of the same name in ``mtuem.likelihood_jax``.
 """
 
 from collections.abc import Mapping
@@ -12,6 +16,7 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
+from ._engine import class_alloc, lc
 from .utils import (
     as_names,
     as_vector,
@@ -36,6 +41,17 @@ from .utils import (
     near_pd,
     rho_from_upper,
 )
+
+__all__ = [
+    "additive_quadratic",
+    "alpha_beta",
+    "class_alloc",
+    "lc",
+    "lc_profiled",
+    "residuals",
+    "theta_phi",
+    "works_in_logs",
+]
 
 ESTIMATE_LIKE = ("estimate", "conditionals", "raw", "components")
 
@@ -402,3 +418,18 @@ def additive_quadratic(settings: Mapping, functionality: str = "estimate", input
     if functionality == "gradient":
         return {"like": None, "grad": None}
     raise ValueError("Invalid value of argument 'functionality'")
+
+
+# ----------------------------------------------------------------------------------------------
+# Profiled latent class likelihood
+# ----------------------------------------------------------------------------------------------
+def lc_profiled(lc_settings: Mapping, functionality: str = "estimate", inputs=None):
+    """Latent class Theta-Phi likelihood with the class covariances profiled out.
+
+    The same function as ``mtuem.lc_profiled.lc_profiled`` (see there for the settings), here
+    beside the other NumPy likelihoods; ``mtuem.likelihood_jax.lc_profiled`` is its JAX version.
+    """
+    # Imported here: mtuem.lc_profiled builds on the residuals of this module.
+    from .lc_profiled import lc_profiled as profiled
+
+    return profiled(lc_settings, functionality, inputs)

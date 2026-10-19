@@ -56,7 +56,7 @@ def build(case: str, autodiff: bool = False):
     if autodiff:
         loglik, alloc, mix = lj.theta_phi, lj.class_alloc, lj.lc
     else:
-        loglik, alloc, mix = mtuem.likelihood.theta_phi, engine.class_alloc, engine.lc
+        loglik, alloc, mix = mtuem.likelihood.theta_phi, mtuem.likelihood.class_alloc, mtuem.likelihood.lc
     beta, fixed = start_values(case)
     lc = case.startswith("lc")
     control = Control(model_name=case, description=case, indiv_id="PeID", output_dir=Path("output"))
@@ -114,7 +114,7 @@ def build(case: str, autodiff: bool = False):
             else:
                 P[f"class_{s + 1}"] = loglik(st, functionality, inputs)
         if case == "lc_profiled":
-            profiled = lj.lc_profiled if autodiff else mtuem.lc_profiled.lc_profiled
+            profiled = lj.lc_profiled if autodiff else mtuem.likelihood.lc_profiled
             P["model"] = profiled({"class_settings": class_settings, "classProb": b.pi_values}, functionality, inputs)
         else:
             P["model"] = mix({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)

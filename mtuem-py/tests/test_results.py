@@ -175,6 +175,10 @@ def test_residual_covariance_is_get_corr_at_the_estimates(fitted):
     for key in got:
         pd.testing.assert_frame_equal(pd.DataFrame(got[key]), pd.DataFrame(want[key]))
     assert list(got["sigma"].index) == ["Tw"]
+    # One equation: sigma is the standard deviation of observed minus predicted work time.
+    errors = fitted._inputs.database["Tw"].to_numpy() - fitted.predict()["Tw"].to_numpy()
+    assert got["sigma"]["Tw"] == pytest.approx(np.std(errors, ddof=1), rel=1e-12)
+    assert got["covar"].loc["Tw", "Tw"] == pytest.approx(np.var(errors, ddof=1), rel=1e-12)
 
 
 def test_residual_covariance_needs_data_and_a_single_class_model(saved):

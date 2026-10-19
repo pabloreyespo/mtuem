@@ -95,6 +95,39 @@ def test_the_former_names_are_gone(name):
     assert not hasattr(mtuem, name)
 
 
+# Helpers that belong to one backend only.
+NUMPY_ONLY = {"residuals", "works_in_logs"}
+JAX_ONLY = {"require_jax_form"}
+LIKELIHOODS = {"theta_phi", "alpha_beta", "additive_quadratic", "class_alloc", "lc", "lc_profiled"}
+
+
+def _own_functions(module):
+    """Public functions defined in ``module`` itself (not imported helpers)."""
+    return {n for n, v in vars(module).items()
+            if not n.startswith("_") and inspect.isfunction(v) and v.__module__ == module.__name__}
+
+
+def test_numpy_and_jax_likelihood_modules_expose_the_same_functions():
+    numpy_names, jax_names = set(mtuem.likelihood.__all__), set(mtuem.likelihood_jax.__all__)
+    assert numpy_names - NUMPY_ONLY == jax_names - JAX_ONLY == LIKELIHOODS
+    for module in (mtuem.likelihood, mtuem.likelihood_jax):
+        assert all(inspect.isfunction(getattr(module, n)) for n in module.__all__)
+        assert _own_functions(module) <= set(module.__all__)
+
+
+def test_numpy_latent_class_functions_are_the_engine_ones():
+    from mtuem import _engine
+    from mtuem import lc_profiled
+
+    assert mtuem.likelihood.class_alloc is _engine.class_alloc
+    assert mtuem.likelihood.lc is _engine.lc
+    for module in (mtuem.likelihood, mtuem.likelihood_jax):
+        assert list(inspect.signature(module.lc_profiled).parameters) == ["lc_settings", "functionality", "inputs"]
+        assert list(inspect.signature(module.lc).parameters) == ["lc_settings", "inputs", "functionality"]
+        assert list(inspect.signature(module.class_alloc).parameters) == ["classAlloc_settings"]
+    assert inspect.signature(mtuem.likelihood.lc_profiled) == inspect.signature(lc_profiled.lc_profiled)
+
+
 def test_load_signature():
     params = list(inspect.signature(mtuem.load).parameters)
     assert params == ["path", "data", "model_class", "model"]
