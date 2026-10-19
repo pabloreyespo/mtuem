@@ -97,4 +97,5 @@ def test_the_deprecated_estimation_settings_alias_is_still_honoured():
 
     succeeded = [m for m in res["models"].values() if isinstance(m, engine.Estimate)]
     assert len(succeeded) > 0
-    assert all(m.routine == "bfgs" for m in succeeded)
+    # FAST sets hessianRoutine "none" and maxIterations 2; the defaults would give a Hessian and more iterations.
+    assert all(m.hessian is None and int(m.nIter) <= 2 for m in succeeded)
