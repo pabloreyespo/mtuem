@@ -1,0 +1,336 @@
+Model run by pablo using Apollo 0.3.9 on R 4.4.3 for Windows.
+Please acknowledge the use of Apollo by citing Hess & Palma (2019)
+  DOI 10.1016/j.jocm.2019.100170
+  www.ApolloChoiceModelling.com
+
+Model name                                  : lc_shared
+Model description                           : lc_shared
+Model run at                                : 2026-10-16 09:33:38.41771
+Estimation method                           : bgw
+Estimation diagnosis                        : Singular convergence (unfavorable)
+Optimisation diagnosis                      : Unknown (no Hessian calculated)
+Number of individuals                       : 712
+Number of rows in database                  : 712
+Number of modelled outcomes                 : 0
+
+Number of cores used                        :  1 
+Model without mixing
+
+LL(start)                                   : 0
+LL (whole model) at equal shares, LL(0)     : NA
+LL (whole model) at observed shares, LL(C)  : NA
+LL(final, whole model)                      : -8084.76
+Rho-squared vs equal shares                  :  Not applicable 
+Adj.Rho-squared vs equal shares              :  Not applicable 
+Rho-squared vs observed shares               :  Not applicable 
+Adj.Rho-squared vs observed shares           :  Not applicable 
+AIC                                         :  16203.52 
+BIC                                         :  -Inf 
+
+LL(0,class_1)                    : Not applicable
+LL(final,class_1)                : -8922.15
+LL(0,class_2)                    : Not applicable
+LL(final,class_2)                : -8084.76
+
+Estimated parameters                        : 17
+Time taken (hh:mm:ss)                       :  00:00:14.23 
+     pre-estimation                         :  00:00:1.31 
+     estimation                             :  00:00:12.86 
+     post-estimation                        :  00:00:0.06 
+Iterations                                  :  43 (Singular convergence (unfavorable)) 
+
+Unconstrained optimisation.
+
+Estimates:
+               Estimate   BHHH.s.e. BHHH.t.rat.(0)
+Theta_1         1.00000          NA             NA
+Phi_1           0.22087          NA             NA
+thw_1          -0.03695          NA             NA
+th1_1           0.63763          NA             NA
+ph1_1           0.23033          NA             NA
+asc_1           0.00000          NA             NA
+x_female_1      0.00000          NA             NA
+x_older45_1     0.00000          NA             NA
+Theta_2         1.00000          NA             NA
+Phi_2           0.31352          NA             NA
+thw_2          -0.05155          NA             NA
+th1_2           0.73250          NA             NA
+ph1_2           0.15749          NA             NA
+asc_2          54.98325          NA             NA
+x_female_2    302.60704          NA             NA
+x_older45_2   910.81169          NA             NA
+chk11           6.65958          NA             NA
+chk21          -5.17962          NA             NA
+chk22           4.88645          NA             NA
+chk31          14.28357          NA             NA
+chk32         -13.04545          NA             NA
+chk33          37.17679          NA             NA
+
+Your model did not converge properly, and some of your parameter values
+  are tending to +/- infinity. This could point to an identification
+  issue. If you want to retain these parameters in the model, you may
+  wish to set their value(s) in apollo_beta to the estimated value(s),
+  include the parameter name(s) in apollo_fixed, and re-estimate the
+  model.
+
+
+Summary of class allocation for model component :
+         Mean prob.
+class_1   2.821e-25
+class_2       1.000
+
+
+BHHH covariance matrix:
+                  Phi_1       thw_1       th1_1       ph1_1       Phi_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+chk11                NA          NA          NA          NA          NA
+chk21                NA          NA          NA          NA          NA
+chk22                NA          NA          NA          NA          NA
+chk31                NA          NA          NA          NA          NA
+chk32                NA          NA          NA          NA          NA
+chk33                NA          NA          NA          NA          NA
+                  thw_2       th1_2       ph1_2       asc_2  x_female_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+chk11                NA          NA          NA          NA          NA
+chk21                NA          NA          NA          NA          NA
+chk22                NA          NA          NA          NA          NA
+chk31                NA          NA          NA          NA          NA
+chk32                NA          NA          NA          NA          NA
+chk33                NA          NA          NA          NA          NA
+            x_older45_2       chk11       chk21       chk22       chk31
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+chk11                NA          NA          NA          NA          NA
+chk21                NA          NA          NA          NA          NA
+chk22                NA          NA          NA          NA          NA
+chk31                NA          NA          NA          NA          NA
+chk32                NA          NA          NA          NA          NA
+chk33                NA          NA          NA          NA          NA
+                  chk32       chk33
+Phi_1                NA          NA
+thw_1                NA          NA
+th1_1                NA          NA
+ph1_1                NA          NA
+Phi_2                NA          NA
+thw_2                NA          NA
+th1_2                NA          NA
+ph1_2                NA          NA
+asc_2                NA          NA
+x_female_2           NA          NA
+x_older45_2          NA          NA
+chk11                NA          NA
+chk21                NA          NA
+chk22                NA          NA
+chk31                NA          NA
+chk32                NA          NA
+chk33                NA          NA
+
+BHHH correlation matrix:
+                  Phi_1       thw_1       th1_1       ph1_1       Phi_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+chk11                NA          NA          NA          NA          NA
+chk21                NA          NA          NA          NA          NA
+chk22                NA          NA          NA          NA          NA
+chk31                NA          NA          NA          NA          NA
+chk32                NA          NA          NA          NA          NA
+chk33                NA          NA          NA          NA          NA
+                  thw_2       th1_2       ph1_2       asc_2  x_female_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+chk11                NA          NA          NA          NA          NA
+chk21                NA          NA          NA          NA          NA
+chk22                NA          NA          NA          NA          NA
+chk31                NA          NA          NA          NA          NA
+chk32                NA          NA          NA          NA          NA
+chk33                NA          NA          NA          NA          NA
+            x_older45_2       chk11       chk21       chk22       chk31
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+chk11                NA          NA          NA          NA          NA
+chk21                NA          NA          NA          NA          NA
+chk22                NA          NA          NA          NA          NA
+chk31                NA          NA          NA          NA          NA
+chk32                NA          NA          NA          NA          NA
+chk33                NA          NA          NA          NA          NA
+                  chk32       chk33
+Phi_1                NA          NA
+thw_1                NA          NA
+th1_1                NA          NA
+ph1_1                NA          NA
+Phi_2                NA          NA
+thw_2                NA          NA
+th1_2                NA          NA
+ph1_2                NA          NA
+asc_2                NA          NA
+x_female_2           NA          NA
+x_older45_2          NA          NA
+chk11                NA          NA
+chk21                NA          NA
+chk22                NA          NA
+chk31                NA          NA
+chk32                NA          NA
+chk33                NA          NA
+
+Settings and functions used in model definition:
+
+apollo_control
+--------------
+                       Value      
+modelName              "lc_shared"
+modelDescr             "lc_shared"
+indivID                "PeID"     
+outputDirectory        "./"       
+noValidation           "TRUE"     
+noDiagnostics          "TRUE"     
+debug                  "FALSE"    
+nCores                 "1"        
+workInLogs             "FALSE"    
+seed                   "13"       
+mixing                 "FALSE"    
+HB                     "FALSE"    
+calculateLLC           "TRUE"     
+analyticHessian        "FALSE"    
+dropLoopExpansion      "FALSE"    
+dropRedefCheck         "FALSE"    
+memorySaver            "FALSE"    
+panelData              "FALSE"    
+analyticGrad           "TRUE"     
+analyticGrad_manualSet "FALSE"    
+overridePanel          "FALSE"    
+preventOverridePanel   "FALSE"    
+noModification         "FALSE"    
+
+Hessian routines attempted
+--------------------------
+none
+
+
+apollo_lcPars
+---------------
+function (apollo_beta, apollo_inputs) 
+{
+    lcpars <- list()
+    lcpars[["Theta"]] <- list(Theta_1, Theta_2)
+    lcpars[["Phi"]] <- list(Phi_1, Phi_2)
+    lcpars[["thw"]] <- list(thw_1, thw_2)
+    lcpars[["th1"]] <- list(th1_1, th1_2)
+    lcpars[["ph1"]] <- list(ph1_1, ph1_2)
+    if (case == "lc_cholesky") {
+        lcpars[["chk11"]] <- list(chk11_1, chk11_2)
+        lcpars[["chk21"]] <- list(chk21_1, chk21_2)
+        lcpars[["chk22"]] <- list(chk22_1, chk22_2)
+        lcpars[["chk31"]] <- list(chk31_1, chk31_2)
+        lcpars[["chk32"]] <- list(chk32_1, chk32_2)
+        lcpars[["chk33"]] <- list(chk33_1, chk33_2)
+    }
+    V <- list()
+    V[["class_1"]] <- asc_1 + female * x_female_1 + older45 * 
+        x_older45_1
+    V[["class_2"]] <- asc_2 + female * x_female_2 + older45 * 
+        x_older45_2
+    lcpars[["pi_values"]] <- apollo_classAlloc(list(classes = c(class_1 = 1, 
+        class_2 = 2), utilities = V))
+    return(lcpars)
+}
+<bytecode: 0x000001b5f606d5f0>
+
+
+apollo_probabilities
+----------------------
+function (apollo_beta, apollo_inputs, functionality = "estimate") 
+{
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+    P <- list()
+    cs <- list()
+    for (s in 1:length(pi_values)) {
+        st <- list(work_times = "Tw", free_times = "Tf1", free_goods = "Ef1", 
+            goods_cost = list(Ef1 = 1), work_elasticities = list(Theta = Theta[[s]], 
+                Phi = Phi[[s]], thw = thw[[s]]), times_elasticities = list(th1 = th1[[s]]), 
+            goods_elasticities = list(ph1 = ph1[[s]]), Tc = Tc, 
+            Ec = EcI, w = w, tau = 168, componentName = paste0("class_", 
+                s))
+        if (case == "lc_cholesky") 
+            st$cholesky <- list(chk11[[s]], chk21[[s]], chk22[[s]], 
+                chk31[[s]], chk32[[s]], chk33[[s]])
+        if (case == "lc_shared") 
+            st$cholesky <- list(chk11, chk21, chk22, chk31, chk32, 
+                chk33)
+        if (case == "lc_profiled") {
+            cs[[s]] <- st
+        }
+        else {
+            P[[paste0("class_", s)]] <- mtuem_likelihood(st, 
+                functionality)
+        }
+    }
+    if (case == "lc_profiled") {
+        P[["model"]] <- mtuem_lc_profiled_likelihood(list(class_settings = cs, 
+            classProb = pi_values), functionality)
+    }
+    else {
+        lc_settings <- list(inClassProb = P, classProb = pi_values)
+        P[["model"]] <- apollo_lc(lc_settings, apollo_inputs, 
+            functionality)
+    }
+    P <- apollo_prepareProb(P, apollo_inputs, functionality)
+    return(P)
+}
+<bytecode: 0x000001b5f4f20078>

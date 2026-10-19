@@ -1,0 +1,240 @@
+Model run by pablo using Apollo 0.3.9 on R 4.4.3 for Windows.
+Please acknowledge the use of Apollo by citing Hess & Palma (2019)
+  DOI 10.1016/j.jocm.2019.100170
+  www.ApolloChoiceModelling.com
+
+Model name                                  : lc_profiled
+Model description                           : lc_profiled
+Model run at                                : 2026-10-16 09:33:38.513344
+Estimation method                           : bgw
+Estimation diagnosis                        : False convergence (unfavorable)
+Optimisation diagnosis                      : Unknown (no Hessian calculated)
+Number of individuals                       : 712
+Number of rows in database                  : 712
+Number of modelled outcomes                 : 0
+
+Number of cores used                        :  1 
+Model without mixing
+
+LL(start)                                   : 0
+LL at equal shares, LL(0)                   : NA
+LL at observed shares, LL(C)                : NA
+LL(final)                                   : -8966.61
+Rho-squared vs equal shares                  :  Not applicable 
+Adj.Rho-squared vs equal shares              :  Not applicable 
+Rho-squared vs observed shares               :  Not applicable 
+Adj.Rho-squared vs observed shares           :  Not applicable 
+AIC                                         :  17955.23 
+BIC                                         :  -Inf 
+
+Estimated parameters                        : 11
+Time taken (hh:mm:ss)                       :  00:00:18.18 
+     pre-estimation                         :  00:00:1.12 
+     estimation                             :  00:00:16.95 
+     post-estimation                        :  00:00:0.12 
+Iterations                                  :  19 (False convergence (unfavorable)) 
+
+Unconstrained optimisation.
+
+Estimates:
+               Estimate   BHHH.s.e. BHHH.t.rat.(0)
+Theta_1          1.0000          NA             NA
+Phi_1            1.0000          NA             NA
+thw_1         4.060e-06          NA             NA
+th1_1            0.3000          NA             NA
+ph1_1            0.3000          NA             NA
+asc_1            0.0000          NA             NA
+x_female_1       0.0000          NA             NA
+x_older45_1      0.0000          NA             NA
+Theta_2          1.0000          NA             NA
+Phi_2            1.0000          NA             NA
+thw_2        -3.843e-06          NA             NA
+th1_2            0.3000          NA             NA
+ph1_2            0.3000          NA             NA
+asc_2           -1.6329          NA             NA
+x_female_2    3.688e-06          NA             NA
+x_older45_2  -2.623e-06          NA             NA
+
+
+BHHH covariance matrix:
+                  Phi_1       thw_1       th1_1       ph1_1       Phi_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+                  thw_2       th1_2       ph1_2       asc_2  x_female_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+            x_older45_2
+Phi_1                NA
+thw_1                NA
+th1_1                NA
+ph1_1                NA
+Phi_2                NA
+thw_2                NA
+th1_2                NA
+ph1_2                NA
+asc_2                NA
+x_female_2           NA
+x_older45_2          NA
+
+BHHH correlation matrix:
+                  Phi_1       thw_1       th1_1       ph1_1       Phi_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+                  thw_2       th1_2       ph1_2       asc_2  x_female_2
+Phi_1                NA          NA          NA          NA          NA
+thw_1                NA          NA          NA          NA          NA
+th1_1                NA          NA          NA          NA          NA
+ph1_1                NA          NA          NA          NA          NA
+Phi_2                NA          NA          NA          NA          NA
+thw_2                NA          NA          NA          NA          NA
+th1_2                NA          NA          NA          NA          NA
+ph1_2                NA          NA          NA          NA          NA
+asc_2                NA          NA          NA          NA          NA
+x_female_2           NA          NA          NA          NA          NA
+x_older45_2          NA          NA          NA          NA          NA
+            x_older45_2
+Phi_1                NA
+thw_1                NA
+th1_1                NA
+ph1_1                NA
+Phi_2                NA
+thw_2                NA
+th1_2                NA
+ph1_2                NA
+asc_2                NA
+x_female_2           NA
+x_older45_2          NA
+
+Settings and functions used in model definition:
+
+apollo_control
+--------------
+                       Value        
+modelName              "lc_profiled"
+modelDescr             "lc_profiled"
+indivID                "PeID"       
+outputDirectory        "./"         
+noValidation           "TRUE"       
+noDiagnostics          "TRUE"       
+debug                  "FALSE"      
+nCores                 "1"          
+workInLogs             "FALSE"      
+seed                   "13"         
+mixing                 "FALSE"      
+HB                     "FALSE"      
+calculateLLC           "TRUE"       
+analyticHessian        "FALSE"      
+dropLoopExpansion      "FALSE"      
+dropRedefCheck         "FALSE"      
+memorySaver            "FALSE"      
+panelData              "FALSE"      
+analyticGrad           "TRUE"       
+analyticGrad_manualSet "FALSE"      
+overridePanel          "FALSE"      
+preventOverridePanel   "FALSE"      
+noModification         "FALSE"      
+
+Hessian routines attempted
+--------------------------
+none
+
+
+apollo_lcPars
+---------------
+function (apollo_beta, apollo_inputs) 
+{
+    lcpars <- list()
+    lcpars[["Theta"]] <- list(Theta_1, Theta_2)
+    lcpars[["Phi"]] <- list(Phi_1, Phi_2)
+    lcpars[["thw"]] <- list(thw_1, thw_2)
+    lcpars[["th1"]] <- list(th1_1, th1_2)
+    lcpars[["ph1"]] <- list(ph1_1, ph1_2)
+    if (case == "lc_cholesky") {
+        lcpars[["chk11"]] <- list(chk11_1, chk11_2)
+        lcpars[["chk21"]] <- list(chk21_1, chk21_2)
+        lcpars[["chk22"]] <- list(chk22_1, chk22_2)
+        lcpars[["chk31"]] <- list(chk31_1, chk31_2)
+        lcpars[["chk32"]] <- list(chk32_1, chk32_2)
+        lcpars[["chk33"]] <- list(chk33_1, chk33_2)
+    }
+    V <- list()
+    V[["class_1"]] <- asc_1 + female * x_female_1 + older45 * 
+        x_older45_1
+    V[["class_2"]] <- asc_2 + female * x_female_2 + older45 * 
+        x_older45_2
+    lcpars[["pi_values"]] <- apollo_classAlloc(list(classes = c(class_1 = 1, 
+        class_2 = 2), utilities = V))
+    return(lcpars)
+}
+<bytecode: 0x000001c45b075cf0>
+
+
+apollo_probabilities
+----------------------
+function (apollo_beta, apollo_inputs, functionality = "estimate") 
+{
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+    P <- list()
+    cs <- list()
+    for (s in 1:length(pi_values)) {
+        st <- list(work_times = "Tw", free_times = "Tf1", free_goods = "Ef1", 
+            goods_cost = list(Ef1 = 1), work_elasticities = list(Theta = Theta[[s]], 
+                Phi = Phi[[s]], thw = thw[[s]]), times_elasticities = list(th1 = th1[[s]]), 
+            goods_elasticities = list(ph1 = ph1[[s]]), Tc = Tc, 
+            Ec = EcI, w = w, tau = 168, componentName = paste0("class_", 
+                s))
+        if (case == "lc_cholesky") 
+            st$cholesky <- list(chk11[[s]], chk21[[s]], chk22[[s]], 
+                chk31[[s]], chk32[[s]], chk33[[s]])
+        if (case == "lc_shared") 
+            st$cholesky <- list(chk11, chk21, chk22, chk31, chk32, 
+                chk33)
+        if (case == "lc_profiled") {
+            cs[[s]] <- st
+        }
+        else {
+            P[[paste0("class_", s)]] <- mtuem_likelihood(st, 
+                functionality)
+        }
+    }
+    if (case == "lc_profiled") {
+        P[["model"]] <- mtuem_lc_profiled_likelihood(list(class_settings = cs, 
+            classProb = pi_values), functionality)
+    }
+    else {
+        lc_settings <- list(inClassProb = P, classProb = pi_values)
+        P[["model"]] <- apollo_lc(lc_settings, apollo_inputs, 
+            functionality)
+    }
+    P <- apollo_prepareProb(P, apollo_inputs, functionality)
+    return(P)
+}
+<bytecode: 0x000001c459f0daf0>

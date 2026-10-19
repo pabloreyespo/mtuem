@@ -1,0 +1,214 @@
+Model run by pablo using Apollo 0.3.9 on R 4.4.3 for Windows.
+Please acknowledge the use of Apollo by citing Hess & Palma (2019)
+  DOI 10.1016/j.jocm.2019.100170
+  www.ApolloChoiceModelling.com
+
+Model name                                  : eq3_cholesky
+Model description                           : eq3_cholesky
+Model run at                                : 2026-10-16 09:33:38.2011
+Estimation method                           : bgw
+Estimation diagnosis                        : Relative function convergence (favorable)
+Optimisation diagnosis                      : Maximum found
+     hessian properties                     : Negative definite
+     maximum eigenvalue                     : -0.402516
+     reciprocal of condition number         : 2.49054e-06
+Number of individuals                       : 712
+Number of rows in database                  : 712
+Number of modelled outcomes                 : 0
+
+Number of cores used                        :  1 
+Model without mixing
+
+LL(start)                                   : 0
+LL at equal shares, LL(0)                   : NA
+LL at observed shares, LL(C)                : NA
+LL(final)                                   : -8084.76
+Rho-squared vs equal shares                  :  Not applicable 
+Adj.Rho-squared vs equal shares              :  Not applicable 
+Rho-squared vs observed shares               :  Not applicable 
+Adj.Rho-squared vs observed shares           :  Not applicable 
+AIC                                         :  16189.52 
+BIC                                         :  -Inf 
+
+Estimated parameters                        : 10
+Time taken (hh:mm:ss)                       :  00:00:4.31 
+     pre-estimation                         :  00:00:0.9 
+     estimation                             :  00:00:1.75 
+     post-estimation                        :  00:00:1.66 
+Iterations                                  :  24  
+
+Unconstrained optimisation.
+
+Estimates:
+           Estimate        s.e.   t.rat.(0)    Rob.s.e. Rob.t.rat.(0)
+Theta       1.00000          NA          NA          NA            NA
+Phi         0.31353    0.018534      16.916    0.022956       13.6582
+thw        -0.05159    0.045841      -1.125    0.071397       -0.7226
+theta_1     0.73250    0.004409     166.141    0.004756      154.0123
+phi_1       0.15750    0.009773      16.116    0.013574       11.6033
+chk11       6.65953    0.187046      35.604    0.217980       30.5511
+chk21      -5.17958    0.229658     -22.553    0.251803      -20.5700
+chk22       4.88651    0.129598      37.705    0.154658       31.5955
+chk31      14.28340    1.567345       9.113    1.706160        8.3717
+chk32     -13.04523    1.451894      -8.985    1.588987       -8.2098
+chk33      37.17594    1.049254      35.431    1.796649       20.6918
+
+
+Classical covariance matrix:
+                Phi         thw     theta_1       phi_1       chk11       chk21
+Phi      3.4352e-04 -7.6598e-04  -4.739e-06  1.6771e-04  9.3904e-04 -1.0610e-04
+thw     -7.6598e-04    0.002101   8.774e-06 -4.2237e-04   -0.002802  5.6908e-04
+theta_1  -4.739e-06   8.774e-06   1.944e-05  -5.854e-06  -9.726e-06  -3.214e-05
+phi_1    1.6771e-04 -4.2237e-04  -5.854e-06   9.551e-05  5.4562e-04  -8.648e-05
+chk11    9.3904e-04   -0.002802  -9.726e-06  5.4562e-04    0.034986   -0.025112
+chk21   -1.0610e-04  5.6908e-04  -3.214e-05  -8.648e-05   -0.025112    0.052743
+chk22     3.017e-05  -8.093e-05   2.105e-05   1.225e-05  1.0707e-04  -5.649e-05
+chk31     -0.006487    0.014276  2.3036e-04   -0.003429    0.049406   -0.139872
+chk32      0.002802   -0.007816 -5.7420e-04    0.001812    0.010484   -0.001290
+chk33     -0.005472    0.016259 -1.0582e-04   -0.003139   -0.022266    0.005390
+              chk22       chk31       chk32       chk33
+Phi       3.017e-05   -0.006487    0.002802   -0.005472
+thw      -8.093e-05    0.014276   -0.007816    0.016259
+theta_1   2.105e-05  2.3036e-04 -5.7420e-04 -1.0582e-04
+phi_1     1.225e-05   -0.003429    0.001812   -0.003139
+chk11    1.0707e-04    0.049406    0.010484   -0.022266
+chk21    -5.649e-05   -0.139872   -0.001290    0.005390
+chk22       0.01680 -4.0796e-04   -0.045065 -8.0141e-04
+chk31   -4.0796e-04    2.456572   -0.061512    0.100210
+chk32      -0.04507   -0.061512    2.107996   -0.056241
+chk33   -8.0141e-04    0.100210   -0.056241    1.100934
+
+Robust covariance matrix:
+                Phi         thw     theta_1       phi_1       chk11       chk21
+Phi      5.2696e-04   -0.001544  -1.524e-05  2.9543e-04    0.001398  -4.101e-05
+thw       -0.001544    0.005098   3.269e-05 -9.1844e-04   -0.003592 -5.8369e-04
+theta_1  -1.524e-05   3.269e-05   2.262e-05  -1.402e-05  -5.925e-05  -8.094e-05
+phi_1    2.9543e-04 -9.1844e-04  -1.402e-05  1.8424e-04  7.3119e-04   4.621e-05
+chk11      0.001398   -0.003592  -5.925e-05  7.3119e-04    0.047515   -0.032560
+chk21    -4.101e-05 -5.8369e-04  -8.094e-05   4.621e-05   -0.032560    0.063405
+chk22    -1.068e-05 -2.2298e-04 -1.5107e-04   8.956e-06    0.002123   -0.002560
+chk31     -0.005260    0.021061  -3.388e-05   -0.003146    0.004818   -0.164273
+chk32      0.004492   -0.016747 -7.8002e-04    0.003517   -0.026237    0.051880
+chk33     -0.018360    0.061353   1.452e-05   -0.010063   -0.028184   -0.057312
+              chk22       chk31       chk32       chk33
+Phi      -1.068e-05   -0.005260    0.004492   -0.018360
+thw     -2.2298e-04    0.021061   -0.016747    0.061353
+theta_1 -1.5107e-04  -3.388e-05 -7.8002e-04   1.452e-05
+phi_1     8.956e-06   -0.003146    0.003517   -0.010063
+chk11      0.002123    0.004818   -0.026237   -0.028184
+chk21     -0.002560   -0.164273    0.051880   -0.057312
+chk22      0.023919    0.015413   -0.054721    0.009694
+chk31      0.015413    2.910981   -0.781574    1.446721
+chk32     -0.054721   -0.781574    2.524881   -0.614445
+chk33      0.009694    1.446721   -0.614445    3.227949
+
+Classical correlation matrix:
+                Phi         thw     theta_1       phi_1       chk11       chk21
+Phi         1.00000    -0.90154    -0.05799    0.925903    0.270870   -0.024925
+thw        -0.90154     1.00000     0.04341   -0.942800   -0.326820    0.054055
+theta_1    -0.05799     0.04341     1.00000   -0.135859   -0.011794   -0.031742
+phi_1       0.92590    -0.94280    -0.13586    1.000000    0.298485   -0.038531
+chk11       0.27087    -0.32682    -0.01179    0.298485    1.000000   -0.584577
+chk21      -0.02493     0.05405    -0.03174   -0.038531   -0.584577    1.000000
+chk22       0.01256    -0.01362     0.03683    0.009675    0.004417   -0.001898
+chk31      -0.22331     0.19869     0.03334   -0.223891    0.168526   -0.388583
+chk32       0.10413    -0.11744    -0.08970    0.127688    0.038604   -0.003868
+chk33      -0.28136     0.33804    -0.02288   -0.306127   -0.113450    0.022368
+              chk22       chk31       chk32       chk33
+Phi        0.012560   -0.223305    0.104127   -0.281357
+thw       -0.013623    0.198692   -0.117440    0.338041
+theta_1    0.036833    0.033336   -0.089702   -0.022876
+phi_1      0.009675   -0.223891    0.127688   -0.306127
+chk11      0.004417    0.168526    0.038604   -0.113450
+chk21     -0.001898   -0.388583   -0.003868    0.022368
+chk22      1.000000   -0.002008   -0.239503   -0.005894
+chk31     -0.002008    1.000000   -0.027031    0.060935
+chk32     -0.239503   -0.027031    1.000000   -0.036918
+chk33     -0.005894    0.060935   -0.036918    1.000000
+
+Robust correlation matrix:
+                Phi         thw     theta_1       phi_1       chk11       chk21
+Phi        1.000000    -0.94190   -0.139558    0.948146     0.27942   -0.007094
+thw       -0.941904     1.00000    0.096267   -0.947705    -0.23081   -0.032467
+theta_1   -0.139558     0.09627    1.000000   -0.217142    -0.05715   -0.067585
+phi_1      0.948146    -0.94771   -0.217142    1.000000     0.24713    0.013519
+chk11      0.279416    -0.23081   -0.057152    0.247126     1.00000   -0.593201
+chk21     -0.007094    -0.03247   -0.067585    0.013519    -0.59320    1.000000
+chk22     -0.003008    -0.02019   -0.205384    0.004266     0.06298   -0.065738
+chk31     -0.134310     0.17289   -0.004175   -0.135843     0.01295   -0.382371
+chk32      0.123146    -0.14761   -0.103213    0.163048    -0.07575    0.129664
+chk33     -0.445165     0.47829    0.001699   -0.412631    -0.07197   -0.126683
+              chk22       chk31       chk32       chk33
+Phi       -0.003008   -0.134310     0.12315   -0.445165
+thw       -0.020193    0.172892    -0.14761    0.478287
+theta_1   -0.205384   -0.004175    -0.10321    0.001699
+phi_1      0.004266   -0.135843     0.16305   -0.412631
+chk11      0.062982    0.012954    -0.07575   -0.071966
+chk21     -0.065738   -0.382371     0.12966   -0.126683
+chk22      1.000000    0.058409    -0.22267    0.034887
+chk31      0.058409    1.000000    -0.28829    0.471956
+chk32     -0.222669   -0.288290     1.00000   -0.215228
+chk33      0.034887    0.471956    -0.21523    1.000000
+
+Settings and functions used in model definition:
+
+apollo_control
+--------------
+                       Value         
+modelName              "eq3_cholesky"
+modelDescr             "eq3_cholesky"
+indivID                "PeID"        
+outputDirectory        "./"          
+debug                  "FALSE"       
+nCores                 "1"           
+workInLogs             "FALSE"       
+seed                   "13"          
+mixing                 "FALSE"       
+HB                     "FALSE"       
+noValidation           "FALSE"       
+noDiagnostics          "FALSE"       
+calculateLLC           "TRUE"        
+analyticHessian        "FALSE"       
+dropLoopExpansion      "FALSE"       
+dropRedefCheck         "FALSE"       
+memorySaver            "FALSE"       
+panelData              "FALSE"       
+analyticGrad           "TRUE"        
+analyticGrad_manualSet "FALSE"       
+overridePanel          "FALSE"       
+preventOverridePanel   "FALSE"       
+noModification         "FALSE"       
+
+Hessian routines attempted
+--------------------------
+numerical second derivative of LL (using numDeriv)
+
+
+apollo_probabilities
+----------------------
+function (apollo_beta, apollo_inputs, functionality = "estimate") 
+{
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+    P <- list()
+    s <- list(work_times = "Tw", work_elasticities = list(Theta = Theta, 
+        Phi = Phi, thw = thw), Tc = Tc, Ec = EcI, w = w, tau = 168)
+    if (case != "eq1") {
+        s$free_times <- "Tf1"
+        s$free_goods <- "Ef1"
+        s$goods_cost <- list(Ef1 = 1)
+        s$times_elasticities <- list(theta_1 = theta_1)
+        s$goods_elasticities <- list(phi_1 = phi_1)
+    }
+    if (case %in% c("eq3_sig", "eq3_full")) 
+        s$sig <- list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3)
+    if (case == "eq3_full") 
+        s$rho <- list(rho_12 = rho_12, rho_13 = rho_13, rho_23 = rho_23)
+    if (case == "eq3_cholesky") 
+        s$cholesky <- list(chk11 = chk11, chk21 = chk21, chk22 = chk22, 
+            chk31 = chk31, chk32 = chk32, chk33 = chk33)
+    P[["model"]] <- mtuem_likelihood(s, functionality)
+    P <- apollo_prepareProb(P, apollo_inputs, functionality)
+    return(P)
+}
+<bytecode: 0x0000017796863b30>

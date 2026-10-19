@@ -1,0 +1,140 @@
+Model run by pablo using Apollo 0.3.9 on R 4.4.3 for Windows.
+Please acknowledge the use of Apollo by citing Hess & Palma (2019)
+  DOI 10.1016/j.jocm.2019.100170
+  www.ApolloChoiceModelling.com
+
+Model name                                  : eq3_profiled
+Model description                           : eq3_profiled
+Model run at                                : 2026-10-16 09:33:38.319433
+Estimation method                           : bgw
+Estimation diagnosis                        : Relative function convergence (favorable)
+Optimisation diagnosis                      : Maximum found
+     hessian properties                     : Negative definite
+     maximum eigenvalue                     : -407.391834
+     reciprocal of condition number         : 0.00239856
+Number of individuals                       : 712
+Number of rows in database                  : 712
+Number of modelled outcomes                 : 0
+
+Number of cores used                        :  1 
+Model without mixing
+
+LL(start)                                   : 0
+LL at equal shares, LL(0)                   : NA
+LL at observed shares, LL(C)                : NA
+LL(final)                                   : -8085.01
+Rho-squared vs equal shares                  :  Not applicable 
+Adj.Rho-squared vs equal shares              :  Not applicable 
+Rho-squared vs observed shares               :  Not applicable 
+Adj.Rho-squared vs observed shares           :  Not applicable 
+AIC                                         :  16178.02 
+BIC                                         :  -Inf 
+
+Estimated parameters                        : 4
+Time taken (hh:mm:ss)                       :  00:00:2.5 
+     pre-estimation                         :  00:00:0.8 
+     estimation                             :  00:00:1 
+     post-estimation                        :  00:00:0.7 
+Iterations                                  :  15  
+
+Unconstrained optimisation.
+
+Estimates:
+           Estimate        s.e.   t.rat.(0)    Rob.s.e. Rob.t.rat.(0)
+Theta       1.00000          NA          NA          NA            NA
+Phi         0.31385    0.018422      17.037    0.023241       13.5042
+thw        -0.05324    0.045654      -1.166    0.070924       -0.7507
+theta_1     0.73200    0.004275     171.225    0.004818      151.9198
+phi_1       0.15821    0.009686      16.333    0.013443       11.7688
+
+
+Classical covariance matrix:
+                Phi         thw     theta_1       phi_1
+Phi      3.3935e-04 -7.6021e-04  -4.280e-06  1.6595e-04
+thw     -7.6021e-04    0.002084   6.843e-06 -4.1786e-04
+theta_1  -4.280e-06   6.843e-06   1.828e-05  -4.982e-06
+phi_1    1.6595e-04 -4.1786e-04  -4.982e-06   9.382e-05
+
+Robust covariance matrix:
+                Phi         thw     theta_1       phi_1
+Phi      5.4013e-04   -0.001553  -1.421e-05  2.9689e-04
+thw       -0.001553    0.005030   2.890e-05 -9.0042e-04
+theta_1  -1.421e-05   2.890e-05   2.322e-05  -1.267e-05
+phi_1    2.9689e-04 -9.0042e-04  -1.267e-05  1.8072e-04
+
+Classical correlation matrix:
+                Phi         thw     theta_1       phi_1
+Phi         1.00000    -0.90392    -0.05435      0.9300
+thw        -0.90392     1.00000     0.03506     -0.9449
+theta_1    -0.05435     0.03506     1.00000     -0.1203
+phi_1       0.93001    -0.94493    -0.12032      1.0000
+
+Robust correlation matrix:
+                Phi         thw     theta_1       phi_1
+Phi          1.0000    -0.94206    -0.12687      0.9502
+thw         -0.9421     1.00000     0.08458     -0.9444
+theta_1     -0.1269     0.08458     1.00000     -0.1956
+phi_1        0.9502    -0.94437    -0.19561      1.0000
+
+Settings and functions used in model definition:
+
+apollo_control
+--------------
+                       Value         
+modelName              "eq3_profiled"
+modelDescr             "eq3_profiled"
+indivID                "PeID"        
+outputDirectory        "./"          
+debug                  "FALSE"       
+nCores                 "1"           
+workInLogs             "FALSE"       
+seed                   "13"          
+mixing                 "FALSE"       
+HB                     "FALSE"       
+noValidation           "FALSE"       
+noDiagnostics          "FALSE"       
+calculateLLC           "TRUE"        
+analyticHessian        "FALSE"       
+dropLoopExpansion      "FALSE"       
+dropRedefCheck         "FALSE"       
+memorySaver            "FALSE"       
+panelData              "FALSE"       
+analyticGrad           "TRUE"        
+analyticGrad_manualSet "FALSE"       
+overridePanel          "FALSE"       
+preventOverridePanel   "FALSE"       
+noModification         "FALSE"       
+
+Hessian routines attempted
+--------------------------
+numerical second derivative of LL (using numDeriv)
+
+
+apollo_probabilities
+----------------------
+function (apollo_beta, apollo_inputs, functionality = "estimate") 
+{
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+    P <- list()
+    s <- list(work_times = "Tw", work_elasticities = list(Theta = Theta, 
+        Phi = Phi, thw = thw), Tc = Tc, Ec = EcI, w = w, tau = 168)
+    if (case != "eq1") {
+        s$free_times <- "Tf1"
+        s$free_goods <- "Ef1"
+        s$goods_cost <- list(Ef1 = 1)
+        s$times_elasticities <- list(theta_1 = theta_1)
+        s$goods_elasticities <- list(phi_1 = phi_1)
+    }
+    if (case %in% c("eq3_sig", "eq3_full")) 
+        s$sig <- list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3)
+    if (case == "eq3_full") 
+        s$rho <- list(rho_12 = rho_12, rho_13 = rho_13, rho_23 = rho_23)
+    if (case == "eq3_cholesky") 
+        s$cholesky <- list(chk11 = chk11, chk21 = chk21, chk22 = chk22, 
+            chk31 = chk31, chk32 = chk32, chk33 = chk33)
+    P[["model"]] <- mtuem_likelihood(s, functionality)
+    P <- apollo_prepareProb(P, apollo_inputs, functionality)
+    return(P)
+}
+<bytecode: 0x0000020abe861e40>

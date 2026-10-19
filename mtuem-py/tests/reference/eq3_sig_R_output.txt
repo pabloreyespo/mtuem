@@ -1,0 +1,187 @@
+Model run by pablo using Apollo 0.3.9 on R 4.4.3 for Windows.
+Please acknowledge the use of Apollo by citing Hess & Palma (2019)
+  DOI 10.1016/j.jocm.2019.100170
+  www.ApolloChoiceModelling.com
+
+Model name                                  : eq3_sig
+Model description                           : eq3_sig
+Model run at                                : 2026-10-16 09:33:38.172583
+Estimation method                           : bgw
+Estimation diagnosis                        : Relative function convergence (favorable)
+Optimisation diagnosis                      : Maximum found
+     hessian properties                     : Negative definite
+     maximum eigenvalue                     : -0.746098
+     reciprocal of condition number         : 6.53292e-06
+Number of individuals                       : 712
+Number of rows in database                  : 712
+Number of modelled outcomes                 : 0
+
+Number of cores used                        :  1 
+Model without mixing
+
+LL(start)                                   : 0
+LL at equal shares, LL(0)                   : NA
+LL at observed shares, LL(C)                : NA
+LL(final)                                   : -8436.45
+Rho-squared vs equal shares                  :  Not applicable 
+Adj.Rho-squared vs equal shares              :  Not applicable 
+Rho-squared vs observed shares               :  Not applicable 
+Adj.Rho-squared vs observed shares           :  Not applicable 
+AIC                                         :  16886.89 
+BIC                                         :  -Inf 
+
+Estimated parameters                        : 7
+Time taken (hh:mm:ss)                       :  00:00:3.31 
+     pre-estimation                         :  00:00:0.96 
+     estimation                             :  00:00:1.46 
+     post-estimation                        :  00:00:0.89 
+Iterations                                  :  35  
+
+Unconstrained optimisation.
+
+Estimates:
+           Estimate        s.e.   t.rat.(0)    Rob.s.e. Rob.t.rat.(0)
+Theta       1.00000          NA          NA          NA            NA
+Phi         0.32581    0.015320      21.267    0.021446        15.193
+thw        -0.06632    0.034933      -1.898    0.063877        -1.038
+theta_1     0.72791    0.007853      92.698    0.004850       150.076
+phi_1       0.16403    0.007742      21.188    0.012639        12.979
+sig_1       6.67363    0.182971      36.474    0.202638        32.934
+sig_2       7.11590    0.188742      37.702    0.216986        32.794
+sig_3      41.74670    1.157576      36.064    1.963876        21.257
+
+
+Classical covariance matrix:
+                Phi         thw     theta_1       phi_1       sig_1       sig_2
+Phi      2.3470e-04 -4.5180e-04   3.117e-05   9.813e-05  5.8221e-04  1.0305e-04
+thw     -4.5180e-04    0.001220   1.424e-05 -2.4757e-04   -0.001636 -2.8103e-04
+theta_1   3.117e-05   1.424e-05   6.166e-05   6.088e-07  -3.188e-05  -3.809e-06
+phi_1     9.813e-05 -2.4757e-04   6.088e-07   5.993e-05  3.2972e-04   5.692e-05
+sig_1    5.8221e-04   -0.001636  -3.188e-05  3.2972e-04    0.033478  3.7722e-04
+sig_2    1.0305e-04 -2.8103e-04  -3.809e-06   5.692e-05  3.7722e-04    0.035624
+sig_3     -0.004247    0.011886  2.2182e-04   -0.002397   -0.015993   -0.002740
+              sig_3
+Phi       -0.004247
+thw        0.011886
+theta_1  2.2182e-04
+phi_1     -0.002397
+sig_1     -0.015993
+sig_2     -0.002740
+sig_3      1.339982
+
+Robust covariance matrix:
+                Phi         thw     theta_1       phi_1       sig_1       sig_2
+Phi      4.5991e-04   -0.001270  -3.036e-05  2.5010e-04  3.6439e-04  1.0479e-04
+thw       -0.001270    0.004080   8.508e-05 -7.5558e-04 -2.5817e-04  4.1801e-04
+theta_1  -3.036e-05   8.508e-05   2.353e-05  -2.191e-05  -8.209e-05 -1.1702e-04
+phi_1    2.5010e-04 -7.5558e-04  -2.191e-05  1.5973e-04  1.1227e-04  -4.698e-06
+sig_1    3.6439e-04 -2.5817e-04  -8.209e-05  1.1227e-04     0.04106     0.02464
+sig_2    1.0479e-04  4.1801e-04 -1.1702e-04  -4.698e-06     0.02464     0.04708
+sig_3     -0.006719    0.030506  3.6196e-04   -0.003828     0.04972     0.11555
+              sig_3
+Phi       -0.006719
+thw        0.030506
+theta_1  3.6196e-04
+phi_1     -0.003828
+sig_1      0.049722
+sig_2      0.115554
+sig_3      3.856810
+
+Classical correlation matrix:
+                Phi         thw     theta_1       phi_1       sig_1       sig_2
+Phi         1.00000    -0.84422    0.259095     0.82739     0.20770    0.035637
+thw        -0.84422     1.00000    0.051897    -0.91544    -0.25603   -0.042624
+theta_1     0.25909     0.05190    1.000000     0.01001    -0.02219   -0.002570
+phi_1       0.82739    -0.91544    0.010014     1.00000     0.23277    0.038954
+sig_1       0.20770    -0.25603   -0.022187     0.23277     1.00000    0.010923
+sig_2       0.03564    -0.04262   -0.002570     0.03895     0.01092    1.000000
+sig_3      -0.23946     0.29393    0.024403    -0.26743    -0.07551   -0.012539
+              sig_3
+Phi        -0.23946
+thw         0.29393
+theta_1     0.02440
+phi_1      -0.26743
+sig_1      -0.07551
+sig_2      -0.01254
+sig_3       1.00000
+
+Robust correlation matrix:
+                Phi         thw     theta_1       phi_1       sig_1       sig_2
+Phi         1.00000    -0.92712    -0.29189    0.922743     0.08385    0.022518
+thw        -0.92712     1.00000     0.27462   -0.935919    -0.01994    0.030158
+theta_1    -0.29189     0.27462     1.00000   -0.357442    -0.08353   -0.111190
+phi_1       0.92274    -0.93592    -0.35744    1.000000     0.04384   -0.001713
+sig_1       0.08385    -0.01994    -0.08353    0.043836     1.00000    0.560345
+sig_2       0.02252     0.03016    -0.11119   -0.001713     0.56035    1.000000
+sig_3      -0.15952     0.24318     0.03800   -0.154235     0.12494    0.271168
+              sig_3
+Phi        -0.15952
+thw         0.24318
+theta_1     0.03800
+phi_1      -0.15424
+sig_1       0.12494
+sig_2       0.27117
+sig_3       1.00000
+
+Settings and functions used in model definition:
+
+apollo_control
+--------------
+                       Value    
+modelName              "eq3_sig"
+modelDescr             "eq3_sig"
+indivID                "PeID"   
+outputDirectory        "./"     
+debug                  "FALSE"  
+nCores                 "1"      
+workInLogs             "FALSE"  
+seed                   "13"     
+mixing                 "FALSE"  
+HB                     "FALSE"  
+noValidation           "FALSE"  
+noDiagnostics          "FALSE"  
+calculateLLC           "TRUE"   
+analyticHessian        "FALSE"  
+dropLoopExpansion      "FALSE"  
+dropRedefCheck         "FALSE"  
+memorySaver            "FALSE"  
+panelData              "FALSE"  
+analyticGrad           "TRUE"   
+analyticGrad_manualSet "FALSE"  
+overridePanel          "FALSE"  
+preventOverridePanel   "FALSE"  
+noModification         "FALSE"  
+
+Hessian routines attempted
+--------------------------
+numerical second derivative of LL (using numDeriv)
+
+
+apollo_probabilities
+----------------------
+function (apollo_beta, apollo_inputs, functionality = "estimate") 
+{
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+    P <- list()
+    s <- list(work_times = "Tw", work_elasticities = list(Theta = Theta, 
+        Phi = Phi, thw = thw), Tc = Tc, Ec = EcI, w = w, tau = 168)
+    if (case != "eq1") {
+        s$free_times <- "Tf1"
+        s$free_goods <- "Ef1"
+        s$goods_cost <- list(Ef1 = 1)
+        s$times_elasticities <- list(theta_1 = theta_1)
+        s$goods_elasticities <- list(phi_1 = phi_1)
+    }
+    if (case %in% c("eq3_sig", "eq3_full")) 
+        s$sig <- list(sig_1 = sig_1, sig_2 = sig_2, sig_3 = sig_3)
+    if (case == "eq3_full") 
+        s$rho <- list(rho_12 = rho_12, rho_13 = rho_13, rho_23 = rho_23)
+    if (case == "eq3_cholesky") 
+        s$cholesky <- list(chk11 = chk11, chk21 = chk21, chk22 = chk22, 
+            chk31 = chk31, chk32 = chk32, chk33 = chk33)
+    P[["model"]] <- mtuem_likelihood(s, functionality)
+    P <- apollo_prepareProb(P, apollo_inputs, functionality)
+    return(P)
+}
+<bytecode: 0x000001fa56875af8>

@@ -1,0 +1,35 @@
+[project]
+name = "mtuem"
+version = "0.1.0"
+description = "Estimate Microeconomic Time-Use-Expenditure Models (Python port of the R package mtuem)"
+readme = "README.md"
+authors = [
+    { name = "Pablo Reyes Polanco", email = "pareyes1999@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.5.4",
+    "pandas>=3.0.6",
+    "pyarrow>=26.0.0",
+    "scipy>=1.18.1",
+]
+
+[project.optional-dependencies]
+jax = [
+    "jax>=0.11.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pyreadr>=0.5.7",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
