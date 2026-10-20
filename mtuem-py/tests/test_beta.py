@@ -87,3 +87,31 @@ def test_locked_parameter_cannot_be_freed():
     with pytest.raises(ValueError, match="identification"):
         b.fix("gamma", 0.8)
     assert b.fixed_names == ["gamma"]
+
+
+def test_from_dict_fixed_accepts_a_single_name():
+    b = Beta.from_dict({"Theta_1": 0.5, "Theta_2": 0.6, "gamma": 0.3}, fixed="Theta")
+    assert b.fixed_names == ["Theta_1", "Theta_2"]
+
+
+@pytest.mark.parametrize("field", ["value", "lower", "upper"])
+def test_param_rejects_nan(field):
+    kwargs = {"value": 0.0} | {field: float("nan")}
+    with pytest.raises(ValueError, match="NaN"):
+        Param(**kwargs)
+
+
+def test_beta_rejects_nan_start_and_bounds():
+    with pytest.raises(ValueError, match="NaN"):
+        Beta.from_dict({"a": float("nan")})
+    b = Beta.from_dict({"a": 0.0})
+    with pytest.raises(ValueError, match="NaN"):
+        b.lower("a", float("nan"))
+    with pytest.raises(ValueError, match="NaN"):
+        b.set(a=float("nan"))
+    assert b.bounds()["a"] == (None, None) and b.values()["a"] == 0.0
+
+
+def test_param_allows_infinite_bounds():
+    p = Param(value=0.0, lower=float("-inf"), upper=float("inf"))
+    assert p.lower == float("-inf") and p.upper == float("inf")

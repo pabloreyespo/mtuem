@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+import math
 import re
 from collections.abc import Iterable, Mapping
 
@@ -19,6 +20,10 @@ class Param(_Strict):
 
     @model_validator(mode="after")
     def _check_bounds(self) -> Param:
+        for field in ("value", "lower", "upper"):
+            x = getattr(self, field)
+            if x is not None and math.isnan(x):
+                raise ValueError(f"{field} must be a number, not NaN")
         if self.lower is not None and self.value <= self.lower:
             raise ValueError(f"value {self.value} must be above lower bound {self.lower}")
         if self.upper is not None and self.value >= self.upper:
@@ -31,9 +36,9 @@ class Beta(_Strict):
     locked: dict[str, str] = {}
 
     @classmethod
-    def from_dict(cls, values: Mapping[str, float], fixed: Iterable[str] = ()) -> Beta:
+    def from_dict(cls, values: Mapping[str, float], fixed: str | Iterable[str] = ()) -> Beta:
         beta = cls(params={k: Param(value=float(v)) for k, v in values.items()})
-        beta.fix(list(fixed))
+        beta.fix([fixed] if isinstance(fixed, str) else list(fixed))
         return beta
 
     def _resolve(self, name: str) -> list[str]:
