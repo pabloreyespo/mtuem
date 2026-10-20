@@ -137,13 +137,14 @@ settings = mtuem.EstimationSettings(
 (automatic differentiation) and the likelihood is compiled. With `backend="numpy"` they are
 numerical, as in Apollo (a port of `numDeriv`), which reproduces the standard errors of the R
 runs most closely. A likelihood form without a JAX version falls back to NumPy with a
-`mtuem.FallbackWarning`. JIT compilation takes one to three seconds, so on small models both
+`mtuem.FallbackWarning`. JAX compiles the likelihood on first use, so on small models both
 backends take about as long; on larger latent class models JAX is much faster.
 
 **Bounds.** `beta.lower("Phi", 1e-10)` and `beta.upper("rho12", 1)` bound parameters (base
 names apply to every class). The optimizer handles them with an adaptive barrier, as Apollo
 does with inequality constraints, and finishes with an active-set step, so optima on a bound
-are found; the EM steps respect them too.
+are found; the EM steps respect them too. The report lists the bounds and marks those active
+at the estimate.
 
 **EM and multistart.** `method="em"` needs class likelihoods (a latent class model, not
 `covariance="profiled"`). `MultiStart` draws `n` starting points uniformly within the start

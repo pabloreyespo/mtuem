@@ -13,8 +13,12 @@ errors, posteriors, values of time, saving) keeps working.
 
 Run it from mtuem-py with ``uv run python examples/activity_participation.py``: it fits the
 2015 model at penalization 5 on the data of the article's fixture, as the R script does (EM
-from the start values, then BFGS), and prints the estimation report. EM takes about 17
-iterations and most of the run time; BFGS then needs a few iterations.
+from the start values, then BFGS), and prints the estimation report.
+
+``likelihood_floor`` is there only to reproduce the R model: in Python the classes are mixed
+with logsumexp on log-likelihoods, so the mixture does not underflow without it. A saved result
+of this model loads with ``mtuem.load(path, model_class=ActivityParticipationMTUEM)``, or
+without ``model_class=`` once this module has been imported.
 Tests import it as a module (``tests/test_activity_participation.py`` adds examples/ to
 ``sys.path``).
 """
