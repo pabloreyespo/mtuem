@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 import math
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -26,7 +27,8 @@ def load(
 
     Without ``data`` the estimates, report, files and delta method are available; values of
     time and predictions need the estimation data. ``model_class`` replaces the model class
-    stored in the file, for subclasses whose module cannot be imported here. ``model`` is a
+    stored in the file. Only classes of mtuem or of an already imported module are resolved
+    from the file, so a subclass from a module not yet imported needs it. ``model`` is a
     model instance to attach instead of the one in the file: required to get predictions and
     values of time from a ``CustomModel`` result, whose model is not saved.
     """
@@ -85,8 +87,12 @@ def _model_file(path: Path) -> Path:
 
 
 def _import_class(spec: str, path: Path) -> type:
+    # Importing a module runs its code, so a saved file only names classes from mtuem or from
+    # modules the user has already imported.
     module_name, _, qualname = spec.partition(":")
     try:
+        if module_name not in sys.modules and module_name.partition(".")[0] != "mtuem":
+            raise ImportError(f"module {module_name} is not imported")
         obj = importlib.import_module(module_name)
         for part in qualname.split("."):
             obj = getattr(obj, part)

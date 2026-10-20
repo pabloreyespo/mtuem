@@ -368,6 +368,23 @@ def test_load_unimportable_class_raises_with_hint(saved, tmp_path):
     assert loaded.model == declarative("eq1")
 
 
+def test_load_does_not_import_a_module_named_in_the_file(saved, tmp_path, monkeypatch):
+    import importlib
+    import sys
+
+    imported = []
+    real_import = importlib.import_module
+    monkeypatch.setattr(importlib, "import_module", lambda name, *a: imported.append(name) or real_import(name, *a))
+    data = json.loads(saved["model"].read_text(encoding="utf-8"))
+    data["model_class"] = "mtuem_untrusted_module:Payload"
+    path = tmp_path / "eq1_model.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ImportError, match="model_class="):
+        mtuem.load(path)
+    assert "mtuem_untrusted_module" not in imported and "mtuem_untrusted_module" not in sys.modules
+    assert mtuem.load(saved["model"]).model == declarative("eq1")
+
+
 def test_load_rejects_a_model_that_does_not_match_the_estimates(saved, tmp_path):
     data = json.loads(saved["model"].read_text(encoding="utf-8"))
     data["model"]["free_times"] = ["Tf1"]

@@ -563,6 +563,12 @@ def test_load_user_subclass_with_model_class(tmp_path):
     pd.testing.assert_frame_equal(loaded.posterior(), result.posterior())
 
 
+def test_load_resolves_a_subclass_whose_module_is_imported(tmp_path):
+    model = Penalty.model_validate(hobbies().model_dump() | {"penalization": 0.1})
+    path = result_at(model, model.beta().values()).save(tmp_path)["model"]
+    assert type(mtuem.load(path).model) is Penalty
+
+
 def test_normalization_groups_are_per_class():
     groups = latent_class("lc_shared").normalization_groups()
     assert groups["work_elasticities"] == ["Theta_1", "Phi_1", "thw_1", "Theta_2", "Phi_2", "thw_2"]
