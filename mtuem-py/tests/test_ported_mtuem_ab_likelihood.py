@@ -105,9 +105,9 @@ def test_alpha_beta_handles_the_engine_bookkeeping_functionalities():
     assert_allclose(mtuem.likelihood.alpha_beta(fx.mtuem_settings, "validate", inp), np.ones(13))
     assert np.all(np.isnan(mtuem.likelihood.alpha_beta(fx.mtuem_settings, "zero_LL", inp)))
     assert mtuem.likelihood.alpha_beta(named, "preprocess", inp)["componentName"] == "ab_component"
-    assert mtuem.likelihood.alpha_beta(fx.mtuem_settings, "gradient", inp) == {"like": None, "grad": None}
-    with pytest.raises(ValueError, match="Invalid value of argument"):
-        mtuem.likelihood.alpha_beta(fx.mtuem_settings, "nonsense", inp)
+    for functionality in ("gradient", "report", "nonsense"):
+        with pytest.raises(ValueError, match="Invalid value of argument"):
+            mtuem.likelihood.alpha_beta(fx.mtuem_settings, functionality, inp)
 
 
 def test_alpha_beta_prediction_closes_both_budgets_and_reports_values_of_time():
@@ -121,13 +121,10 @@ def test_alpha_beta_prediction_closes_both_budgets_and_reports_values_of_time():
     assert_allclose(pred["VoL"], fx.w + pred["VTAW"], rtol=1e-9)
 
 
-def test_alpha_beta_output_matches_estimate_and_report_prints_the_values_of_time(capsys):
+def test_alpha_beta_output_matches_estimate():
     fx = ab_fixture(n=20, seed=58)
     settings = dict(fx.mtuem_settings, sig=[2, 2])
 
     out = mtuem.likelihood.alpha_beta(settings, "output", fx.inputs)
     est = mtuem.likelihood.alpha_beta(settings, "estimate", fx.inputs)
     assert_allclose(out, est)
-
-    mtuem.likelihood.alpha_beta(settings, "report", fx.inputs)
-    assert "VTAW" in capsys.readouterr().out

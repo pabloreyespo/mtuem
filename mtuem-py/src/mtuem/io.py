@@ -135,7 +135,6 @@ def _estimate(saved: dict, beta: Beta, control: Control) -> engine.Estimate:
         control=control,
         maximum=maximum,
         LLStart=_float(saved["loglik_start"]),
-        LL0={name: math.nan for name in diag["ll_components"]},
         LLout={name: _float(v) for name, v in diag["ll_components"].items()},
         se=_series(saved["se"]),
         robse=_series(saved["robse"]),

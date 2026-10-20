@@ -146,14 +146,13 @@ def test_prediction_returns_per_class_allocations_and_posterior_weights():
     assert_allclose(pred[["post_class1", "post_class2"]].sum(axis=1), np.ones(100), rtol=1e-12)
 
 
-def test_output_matches_estimate_and_report_prints_per_class_values_of_time(capsys):
+def test_output_matches_estimate_and_report_is_not_a_functionality():
     fx = lc_fixture(n=80, seed=78)
     f = mtuem.lc_profiled.lc_profiled
 
     assert_allclose(f(fx.lc_settings, "output", fx.inputs), f(fx.lc_settings, "estimate", fx.inputs))
-    capsys.readouterr()
-    f(fx.lc_settings, "report", fx.inputs)
-    assert "Class 2 VoL" in capsys.readouterr().out
+    with pytest.raises(ValueError, match="Invalid value of argument"):
+        f(fx.lc_settings, "report", fx.inputs)
 
 
 def test_em_settings_control_the_fixed_point_and_change_the_answer_when_truncated():

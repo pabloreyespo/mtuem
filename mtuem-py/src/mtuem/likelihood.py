@@ -218,13 +218,8 @@ def theta_phi(settings: Mapping, functionality: str = "estimate", inputs=None):
         err = residuals(s, inputs)
         return _likelihood_from_errors(err, s, not (flag_times or flag_goods), M, works_in_logs(inputs))
 
-    if functionality in ("output", "report"):
-        ans = theta_phi(settings, "estimate", inputs)
-        if functionality == "report":
-            tw_opt = get_tw_thph(we, tau, Tc, Ec, w)
-            vot = get_values_of_time_thph(tw_opt, we, Tc, Ec, w).mean(axis=0)
-            print(f"VoL: {vot[0]:g} \nVTAW: {vot[1]:g} ")
-        return ans
+    if functionality == "output":
+        return theta_phi(settings, "estimate", inputs)
 
     if functionality == "prediction":
         tw_opt = get_tw_thph(we, tau, Tc, Ec, w)
@@ -243,8 +238,6 @@ def theta_phi(settings: Mapping, functionality: str = "estimate", inputs=None):
             opt["X"] = np.asarray(w) * tw_opt.ravel() - np.asarray(Ec)
         return _allocation_frame(opt, get_values_of_time_thph(tw_opt, we, Tc, Ec, w))
 
-    if functionality == "gradient":
-        return {"like": None, "grad": None}
     raise ValueError("Invalid value of argument 'functionality'")
 
 
@@ -295,13 +288,8 @@ def alpha_beta(settings: Mapping, functionality: str = "estimate", inputs=None):
             }
         return _likelihood_from_errors(err, s, not (flag_times or flag_goods), M, works_in_logs(inputs))
 
-    if functionality in ("output", "report"):
-        ans = alpha_beta(settings, "estimate", inputs)
-        if functionality == "report":
-            tw_opt = get_tw_albe(we, tau, Tc, Ec, w)
-            vot = get_values_of_time_albe(tw_opt, we, Tc, Ec, w).mean(axis=0)
-            print(f"VoL: {vot[0]:g} \nVTAW: {vot[1]:g} ")
-        return ans
+    if functionality == "output":
+        return alpha_beta(settings, "estimate", inputs)
 
     if functionality == "prediction":
         tw_opt = get_tw_albe(we, tau, Tc, Ec, w)
@@ -320,8 +308,6 @@ def alpha_beta(settings: Mapping, functionality: str = "estimate", inputs=None):
             opt["X"] = np.asarray(w) * tw_opt.ravel() - np.asarray(Ec)
         return _allocation_frame(opt, get_values_of_time_albe(tw_opt, we, Tc, Ec, w))
 
-    if functionality == "gradient":
-        return {"like": None, "grad": None}
     raise ValueError("Invalid value of argument 'functionality'")
 
 
@@ -391,12 +377,8 @@ def additive_quadratic(settings: Mapping, functionality: str = "estimate", input
         err = _observed(inputs, eq_names) - opt
         return _likelihood_from_errors(err, s, M == 1, M, works_in_logs(inputs))
 
-    if functionality in ("output", "report"):
-        ans = additive_quadratic(settings, "estimate", inputs)
-        if functionality == "report":
-            vot = get_values_of_time_additive_quadratic(Sth, Sph, B, H, tw_opt, tau, Tc, Ec, w).mean(axis=0)
-            print(f"VoL: {vot[0]:g} \nVTAW: {vot[1]:g} ")
-        return ans
+    if functionality == "output":
+        return additive_quadratic(settings, "estimate", inputs)
 
     if functionality == "prediction":
         opt = {work_times[0]: tw_opt}
@@ -415,8 +397,6 @@ def additive_quadratic(settings: Mapping, functionality: str = "estimate", input
         vot = get_values_of_time_additive_quadratic(Sth, Sph, B, H, tw_opt, tau, Tc, Ec, w)
         return _allocation_frame(opt, vot)
 
-    if functionality == "gradient":
-        return {"like": None, "grad": None}
     raise ValueError("Invalid value of argument 'functionality'")
 
 

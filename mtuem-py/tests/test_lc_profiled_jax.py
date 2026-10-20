@@ -223,7 +223,7 @@ def test_lc_profiled_jax_degenerate_points_give_minus_infinity_with_finite_gradi
         assert np.all(np.isfinite(np.asarray(jax.hessian(total)(phi))))
 
 
-def test_lc_profiled_jax_answers_the_other_functionalities(models, capsys):
+def test_lc_profiled_jax_answers_the_other_functionalities(models):
     ref = load_ref()
     _, pf_np, inputs_np, _, inputs_jax = models
     s = _settings(models, ref["beta_test"])
@@ -238,9 +238,8 @@ def test_lc_profiled_jax_answers_the_other_functionalities(models, capsys):
     for functionality in ("output", "conditionals"):
         got = np.asarray(lj.lc_profiled(s, functionality, inputs_jax))
         np.testing.assert_allclose(got, pf_np(ref["beta_test"], inputs_np, "estimate")["model"], rtol=1e-10)
-    capsys.readouterr()
-    lj.lc_profiled(s, "report", inputs_jax)
-    assert "Class 2 VoL" in capsys.readouterr().out
+    with pytest.raises(ValueError, match="Invalid value of argument"):
+        lj.lc_profiled(s, "report", inputs_jax)
     assert len(np.asarray(lj.lc_profiled(s, "estimate", inputs_jax))) == N
 
 

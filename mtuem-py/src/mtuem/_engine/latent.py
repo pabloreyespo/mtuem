@@ -86,8 +86,8 @@ def lc(lc_settings: Mapping, inputs: Inputs, functionality: str = "estimate"):
             df[f"prob_class{s}"] = np.broadcast_to(np.asarray(pi, dtype=float), (n,))
             frames.append(df)
         return pd.concat(frames, axis=1)
-    if functionality == "gradient":
-        return {"like": None, "grad": None}
+    if functionality not in ("estimate", "conditionals", "raw", "components", "output"):
+        raise ValueError("Invalid value of argument 'functionality'")
     # Mixture in logs: log sum_s exp(log pi_s + sum_rows log L_s), one value per individual.
     terms = [_first_row(lp, inputs) + _loglik_per_indiv(p, inputs)
              for p, lp in zip(in_class, _log_class_probs(class_prob))]

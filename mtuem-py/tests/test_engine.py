@@ -113,6 +113,9 @@ def test_lc_bookkeeping_functionalities():
     assert np.all(engine.lc(s, inputs, "validate") == 0)  # log 1: the engine always works in logs
     assert np.all(np.isnan(engine.lc(s, inputs, "zero_LL")))
     assert engine.lc(s, inputs, "preprocess")["componentName"] == "model"
+    for removed in ("gradient", "report"):
+        with pytest.raises(ValueError, match="Invalid value of argument"):
+            engine.lc(s, inputs, removed)
     with pytest.raises(ValueError):
         engine.lc({"inClassProb": [np.ones(3)], "classProb": [np.ones(3)] * 2}, inputs)
 

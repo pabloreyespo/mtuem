@@ -144,14 +144,15 @@ def test_additive_quadratic_handles_the_engine_bookkeeping_functionalities():
         f(fx.mtuem_settings, "nonsense", inp)
 
 
-def test_additive_quadratic_output_matches_estimate_and_report_prints_the_values_of_time(capsys):
+def test_additive_quadratic_output_matches_estimate_and_rejects_report_and_gradient():
     fx = aq_fixture(n=20, seed=69)
     settings = dict(fx.mtuem_settings, omitted_times="Tf2", omitted_goods="Ef2", sig=[1, 1, 1])
     f = mtuem.likelihood.additive_quadratic
 
     assert_allclose(f(settings, "output", fx.inputs), f(settings, "estimate", fx.inputs))
-    f(settings, "report", fx.inputs)
-    assert "VoL" in capsys.readouterr().out
+    for functionality in ("report", "gradient"):
+        with pytest.raises(ValueError, match="Invalid value of argument"):
+            f(settings, functionality, fx.inputs)
 
 
 def test_optimal_tw_false_builds_the_other_equations_from_observed_work_time():

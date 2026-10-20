@@ -157,14 +157,13 @@ def test_conditionals_raw_and_output_return_the_same_likelihood_as_estimate():
         assert_allclose(mtuem.likelihood.theta_phi(settings, f, fx.inputs), L_est)
 
 
-def test_report_prints_the_average_values_of_time_and_still_returns_the_likelihood(capsys):
+def test_report_and_gradient_are_not_functionalities():
     fx = mtuem_fixture_thph(n=15, seed=42)
     settings = dict(fx.mtuem_settings, sig=[2, 2, 2])
 
-    L = mtuem.likelihood.theta_phi(settings, "report", fx.inputs)
-
-    assert "VoL" in capsys.readouterr().out
-    assert_allclose(L, mtuem.likelihood.theta_phi(settings, "estimate", fx.inputs))
+    for functionality in ("report", "gradient"):
+        with pytest.raises(ValueError, match="Invalid value of argument"):
+            mtuem.likelihood.theta_phi(settings, functionality, fx.inputs)
 
 
 def test_prediction_returns_the_optimal_allocations_and_closes_both_budgets():
@@ -198,12 +197,3 @@ def test_prediction_agrees_with_the_residual_computation_used_for_estimation():
 
     eqs = ["Tw", "Tf1", "Tf2"]
     assert_allclose(pred[eqs].to_numpy(), fx.database[eqs].to_numpy() - err, atol=1e-10)
-
-
-def test_the_gradient_functionality_is_a_documented_stub():
-    fx = mtuem_fixture_thph(n=10, seed=46)
-
-    g = mtuem.likelihood.theta_phi(fx.mtuem_settings, "gradient", fx.inputs)
-
-    # Gradients are not implemented, so the estimator must fall back to numeric derivatives.
-    assert g == {"like": None, "grad": None}

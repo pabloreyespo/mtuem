@@ -140,16 +140,8 @@ def lc_profiled(lc_settings: Mapping, functionality: str = "estimate", inputs=No
         _stash(core)
         return core["logP"] if logs else core["P"]
 
-    if functionality in ("output", "report"):
-        ans = lc_profiled(lc_settings, "estimate", inputs)
-        if functionality == "report":
-            from .utils import get_tw_thph, get_values_of_time_thph
-
-            for s, cs in enumerate(class_settings, start=1):
-                tw = get_tw_thph(cs["work_elasticities"], cs["tau"], cs["Tc"], cs["Ec"], cs["w"])
-                vot = get_values_of_time_thph(tw, cs["work_elasticities"], cs["Tc"], cs["Ec"], cs["w"]).mean(axis=0)
-                print(f"Class {s} VoL: {vot[0]:g} \nClass {s} VTAW: {vot[1]:g} ")
-        return ans
+    if functionality == "output":
+        return lc_profiled(lc_settings, "estimate", inputs)
 
     if functionality == "prediction":
         core = _profile_core(class_settings, classProb, inputs, em, works_in_logs(inputs))

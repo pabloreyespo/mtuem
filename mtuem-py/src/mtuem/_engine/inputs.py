@@ -31,7 +31,6 @@ class Inputs:
         self.fixed = list(fixed)
         self.control = control
         self.lc_pars = lc_pars
-        self.obs_matrix = None
         self._columns = {}
         for col in self.database.columns:
             s = self.database[col]

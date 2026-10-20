@@ -26,8 +26,6 @@ class Estimate:
     control: Control
     maximum: float
     LLStart: float
-    LL0: dict = field(default_factory=dict)
-    LLC: float = float("nan")
     LLout: dict = field(default_factory=dict)
     se: pd.Series | None = None
     robse: pd.Series | None = None
@@ -58,9 +56,6 @@ class Estimate:
     bounds: dict[str, tuple[float | None, float | None]] = field(default_factory=dict)
     indLevelLL: np.ndarray | None = None
     scores: np.ndarray | None = None
-
-    def __getitem__(self, key: str):
-        return getattr(self, key)
 
 
 def resolve_hessian(hessian: str | None, inputs: Inputs) -> str:
@@ -201,7 +196,6 @@ def _finalise(
         control=inputs.control,
         maximum=maximum,
         LLStart=ll_start,
-        LL0={name: float("nan") for name in lls},
         LLout=lls,
         se=se,
         robse=robse,

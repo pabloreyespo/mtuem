@@ -41,7 +41,7 @@ __all__ = [
     "theta_phi",
 ]
 
-ESTIMATE_LIKE = ("estimate", "conditionals", "raw", "components", "output", "report")
+ESTIMATE_LIKE = ("estimate", "conditionals", "raw", "components", "output")
 
 PORTED: frozenset[str] = frozenset({"theta_phi", "alpha_beta", "additive_quadratic", "lc_profiled"})
 
@@ -531,15 +531,15 @@ def lc_profiled(lc_settings: Mapping, functionality: str = "estimate", inputs=No
     Takes the same settings: ``class_settings`` (one Theta-Phi settings dict per class, without
     an error structure), ``classProb`` (from ``class_alloc``) and optionally ``em_settings``
     (``tol`` 1e-10, ``maxIterations`` 50, ``minWeight`` 2 * M). The result is already the class
-    mixture, so do not pass it through ``lc``. ``preprocess``, ``prediction`` and ``report``
-    are answered by the numpy code. An evaluation outside a JAX transformation also stores the
+    mixture, so do not pass it through ``lc``. ``preprocess`` and ``prediction`` are answered by
+    the numpy code. An evaluation outside a JAX transformation also stores the
     covariances for ``mtuem.lc_profiled.get_profiled_sigma``.
     """
     from . import lc_profiled as numpy_profiled
 
     em = {"tol": 1e-10, "maxIterations": 50, "minWeight": None}
     em.update(lc_settings.get("em_settings") or {})
-    if functionality in ("preprocess", "prediction", "report"):
+    if functionality in ("preprocess", "prediction"):
         return numpy_profiled.lc_profiled(_profiled_numpy_settings(lc_settings), functionality, inputs)
     out = _other_functionality(None, lc_settings, functionality, inputs, ())
     if out is not None:
