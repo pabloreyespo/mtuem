@@ -99,6 +99,7 @@ def test_the_identical_class_start_is_an_isolated_point_in_both_backends(models)
             assert ll_np.sum() > ref["ll_start"] + 30
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("point", ["beta_test", "halfway"])
 def test_lc_profiled_jax_gradient_matches_central_differences(point, models):
     ref = load_ref()
@@ -116,6 +117,7 @@ def test_lc_profiled_jax_gradient_matches_central_differences(point, models):
     np.testing.assert_allclose(g_exact, g_num, rtol=1e-5, atol=1e-6)
 
 
+@pytest.mark.slow
 def test_lc_profiled_jax_scores_match_numerical_scores(models):
     # The covariance depends on every row, so each individual's score includes the response
     # of the profiled covariance to the parameters, not only the direct effect.
