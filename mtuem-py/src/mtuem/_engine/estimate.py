@@ -54,6 +54,8 @@ class Estimate:
     timePost: float = 0.0
     timeTaken: float = 0.0
     classShares: pd.Series | None = None
+    # (lower, upper) of the free parameters with a finite bound, None for no bound.
+    bounds: dict[str, tuple[float | None, float | None]] = field(default_factory=dict)
     indLevelLL: np.ndarray | None = None
     scores: np.ndarray | None = None
 
@@ -163,8 +165,16 @@ def _finalise(
     hessian: str,
     start_time: datetime,
     H: np.ndarray | None = None,
+    bounds: Mapping[str, tuple[float | None, float | None]] | None = None,
 ) -> Estimate:
     free = loglike.free
+    applied = {}
+    for n in free:
+        lo, hi = (bounds or {}).get(n, (None, None))
+        lo = None if lo is None or lo == -math.inf else float(lo)
+        hi = None if hi is None or hi == math.inf else float(hi)
+        if lo is not None or hi is not None:
+            applied[n] = (lo, hi)
     estimate = loglike.base.copy()
     estimate[free] = opt_x
     cov = _covariances(loglike, opt_x, hessian, H)
@@ -216,6 +226,7 @@ def _finalise(
         timePre=t_pre,
         timeEst=t_est,
         classShares=shares,
+        bounds=applied,
         indLevelLL=loglike.per_indiv(opt_x),
         scores=cov["scores"],
     )
@@ -323,6 +334,7 @@ def estimate(
         hessian,
         start_time,
         H,
+        bounds,
     )
 
 

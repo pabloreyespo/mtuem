@@ -161,4 +161,5 @@ def _estimate(saved: dict, beta: Beta, control: Control) -> engine.Estimate:
         timePost=diag["time_post"],
         timeTaken=diag["time_taken"],
         classShares=None if diag["class_shares"] is None else _series(diag["class_shares"]),
+        bounds={k: tuple(v) for k, v in diag.get("bounds", {}).items()},
     )

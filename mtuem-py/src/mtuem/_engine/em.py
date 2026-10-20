@@ -157,4 +157,5 @@ def lc_em(
         t_em,
         resolve_hessian(None, inputs) if post_em == 1 else "none",
         start_time,
+        bounds=bounds,
     )

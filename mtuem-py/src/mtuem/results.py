@@ -402,6 +402,7 @@ class Result:
                 "hessian_eigenvalues": _eigenvalues(eig),
                 "ll_components": {k: _num(v) for k, v in est.LLout.items()},
                 "class_shares": None if est.classShares is None else _series(est.classShares),
+                "bounds": {k: list(v) for k, v in est.bounds.items()},
                 "start_time": est.startTime.isoformat(),
                 "time_pre": est.timePre,
                 "time_estimation": est.timeEst,

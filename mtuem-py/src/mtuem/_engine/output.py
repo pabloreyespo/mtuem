@@ -94,6 +94,26 @@ def _signif(x: float, digits: int) -> float:
     return round(x, digits - int(math.floor(math.log10(abs(x)))) - 1)
 
 
+def _bounds_line(est: Estimate) -> str:
+    """The optimisation line: the bounds of the free parameters and which bind at the estimate.
+
+    A bound is active when the estimate lies within 1e-8 (relative) of it; the bounded optimiser
+    keeps a parameter held at a bound 1e-12 (relative) inside it.
+    """
+    if not est.bounds:
+        return "Unconstrained optimisation."
+    parts = []
+    for name, (lo, hi) in est.bounds.items():
+        x = float(est.estimate[name])
+        terms, active = [], False
+        for bound, sign in ((lo, ">"), (hi, "<")):
+            if bound is not None:
+                terms.append(f"{sign} {bound:g}")
+                active |= abs(x - bound) <= 1e-8 * max(1.0, abs(bound))
+        parts.append(f"{name} {' and '.join(terms)}" + (" (active at the estimate)" if active else ""))
+    return "Bounded optimisation: " + ", ".join(parts) + "."
+
+
 def output_text(est: Estimate, print_covar: bool = False, print_corr: bool = False) -> str:
     """The text report of an estimation."""
     buf = io.StringIO()
@@ -164,7 +184,7 @@ def output_text(est: Estimate, print_covar: bool = False, print_corr: bool = Fal
     w(f"     post-estimation                        :  {_hms(est.timePost)} \n")
     tmp = "" if est.successfulEstimation else f"({est.message})"
     w(f"Iterations                                  :  {est.nIter} {tmp} \n\n")
-    w("Unconstrained optimisation.\n\n")
+    w(_bounds_line(est) + "\n\n")
     w("Estimates:\n")
     w(print_matrix(_estimates_table(est)) + "\n\n")
     if est.classShares is not None:

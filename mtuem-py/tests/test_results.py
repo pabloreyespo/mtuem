@@ -51,6 +51,20 @@ def test_fit_returns_a_result(fitted):
     assert fitted.bic == pytest.approx(-2 * fitted.loglik + 2 * np.log(fitted.n_obs))
 
 
+def test_report_names_the_bounds_and_the_active_ones(tmp_path, fitted):
+    # eq1_bounded: the lower bound of thw binds at the maximum, the upper bound of Phi does not.
+    model = declarative("eq1_bounded")
+    beta = model.beta().set(Phi=1.0, thw=0.5).lower("thw", 0.312128219369042).upper("Phi", 10.0)
+    result = model.fit(database(), beta, Control(model_name="eq1_bounded", indiv_id="PeID", output_dir=tmp_path), NUMPY)
+    line = "Bounded optimisation: Phi < 10, thw > 0.312128 (active at the estimate).\n"
+    assert line in result.summary_text()
+    assert "Unconstrained optimisation." not in result.summary_text()
+    loaded = mtuem.load(result.save()["model"])
+    assert loaded.summary_text(True, True) == result.summary_text(True, True)
+    assert "Unconstrained optimisation.\n" in fitted.summary_text()
+    assert "Bounded" not in fitted.summary_text()
+
+
 def test_fit_keeps_the_start_beta_and_configuration(fitted):
     assert isinstance(fitted.beta, Beta)
     assert fitted.beta.values() == {"Theta": 1, "Phi": 1, "thw": 0}
