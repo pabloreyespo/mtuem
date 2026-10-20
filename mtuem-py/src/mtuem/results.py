@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from . import _engine as engine
-from ._engine.latent import _first_row
+from ._engine.latent import class_shares as _class_shares
 from ._engine.output import __version__, _estimates_table
 from .beta import Beta
 from .config import Control, EstimationSettings
@@ -323,15 +323,10 @@ class Result:
 
     def class_shares(self) -> pd.Series:
         """Mean class allocation probabilities at the estimates (``class_1 .. class_S``)."""
-        n_classes = self._require_classes("class_shares")
+        self._require_classes("class_shares")
         shares = self._estimate.classShares
         if shares is None:
-            inputs = self._require_data("class_shares")
-            pis = inputs.attach(self.estimates.to_dict()).pi_values
-            shares = pd.Series(
-                [float(np.mean(_first_row(p, inputs))) for p in pis],
-                index=[f"class_{s}" for s in range(1, n_classes + 1)],
-            )
+            shares = _class_shares(self.estimates.to_dict(), self._require_data("class_shares"))
         return shares.copy()
 
     # ------------------------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import pandas as pd
 
 from ..config import Control
 from .inputs import Inputs
-from .latent import ProbFn, _first_row, _loglik_per_indiv
+from .latent import ProbFn, _loglik_per_indiv, class_shares
 from .loglike import _LogLike, _model_component
 from .optimize import _maximise, maximise_bounded
 
@@ -182,12 +182,7 @@ def _finalise(
     maximum = loglike.total(opt_x)
     k = len(free)
     lls = _component_lls(estimate.to_dict(), loglike.prob_fn, inputs)
-    shares = None
-    if inputs.lc_pars is not None:
-        pis = inputs.attach(estimate.to_dict()).pi_values
-        shares = pd.Series(
-            [float(np.mean(_first_row(p, inputs))) for p in pis], index=[f"class_{s + 1}" for s in range(len(pis))]
-        )
+    shares = None if inputs.lc_pars is None else class_shares(estimate.to_dict(), inputs)
     eig = cov["eig"]
     est = Estimate(
         estimate=estimate,

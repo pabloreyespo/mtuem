@@ -54,6 +54,14 @@ def _first_row(x: np.ndarray, inputs: Inputs) -> np.ndarray:
     return x[inputs.first_rows] if inputs.panel else np.asarray(x)
 
 
+def class_shares(beta: Mapping[str, float], inputs: Inputs) -> pd.Series:
+    """Mean class allocation probabilities over individuals at ``beta`` (``class_1 .. class_S``)."""
+    pis = inputs.attach(dict(beta)).pi_values
+    return pd.Series(
+        [float(np.mean(_first_row(p, inputs))) for p in pis], index=[f"class_{s + 1}" for s in range(len(pis))]
+    )
+
+
 def _class_components(in_class: Any) -> list:
     if isinstance(in_class, Mapping):
         return [v for k, v in in_class.items() if k != "model"]
