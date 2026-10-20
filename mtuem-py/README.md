@@ -174,6 +174,10 @@ covariances. Run them from `mtuem-py` with `uv run python examples/maed_1eq.py`.
 the default JAX backend, so their standard errors differ slightly from runs with numerical
 (numDeriv) derivatives, such as the R ones.
 
+`examples/activity_participation.py` shows how to customize a latent class model: it subclasses
+`LatentClassMTUEM` and overrides `class_loglik` with the participation penalty of the article on
+latent classes of activity participation, and fits the article's 2015 model.
+
 ## Datasets
 
 `mtuem.maed()` and `mtuem.load_dataset(name)` for `maed`, `enut.i`, `enut.i.raw`, `enut.ii`,
