@@ -229,7 +229,7 @@ def run_multistart(model, beta: Beta, control: Control, settings: EstimationSett
         print(f" Done. {sum(usable)} candidates available")
 
     starts: list[Result | None] = [None] * ms.n
-    best, best_ll = None, -np.inf
+    best, best_ll, last_err = None, -np.inf, None
     for i in [i for i in range(ms.n) if usable[i]]:
         start = draws.iloc[i].to_dict()
         start_beta = beta.model_copy(deep=True).set(**{n: start[n] for n in beta.free_names})
@@ -244,6 +244,7 @@ def run_multistart(model, beta: Beta, control: Control, settings: EstimationSett
                     start = em.estimate.to_dict()
                 est, notes = estimate_once(start, beta, prob_fn, inputs, settings, silent=True)
         except _FAILURES as err:
+            last_err = err
             if verbose:
                 print(f"Candidate {i + 1}: failed ({err})")
             continue
@@ -262,9 +263,10 @@ def run_multistart(model, beta: Beta, control: Control, settings: EstimationSett
         err = RuntimeError(
             f"no multistart candidate converged to a maximum ({ms.n} candidates, {sum(usable)} with a finite "
             f"starting log-likelihood, {failed} skipped or failed); the attempts are in .attempts"
+            + (f"; last failure: {type(last_err).__name__}: {last_err}" if last_err is not None else "")
         )
         err.attempts = starts
-        raise err
+        raise err from last_err
     chosen = starts[best]
     notes = chosen.notes + [f"Best of {ms.n} multistart candidates: candidate {best + 1}"]
     return Result(model, chosen.beta, control, settings, chosen._estimate, inputs, prob_fn, starts=starts, notes=notes)

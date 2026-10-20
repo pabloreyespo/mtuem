@@ -59,6 +59,14 @@ def _check_data(data: pd.DataFrame, cols: list[str], control: Control | None) ->
 def _fit(model, data: pd.DataFrame, beta: Beta, control: Control, settings: EstimationSettings | None) -> Result:
     """Fit ``model``: check ``beta`` and ``data``, build the inputs once, then run the multistart
     when ``settings.multistart`` is set, else one estimation by ``settings.method``."""
+    for name, value, cls, expected in (
+        ("data", data, pd.DataFrame, "pandas DataFrame"),
+        ("beta", beta, Beta, "mtuem.Beta"),
+        ("control", control, Control, "mtuem.Control"),
+        ("settings", settings, (EstimationSettings, type(None)), "mtuem.EstimationSettings or None"),
+    ):
+        if not isinstance(value, cls):
+            raise TypeError(f"{name} must be a {expected}, not {type(value).__name__}")
     settings = EstimationSettings() if settings is None else settings
     model._check_beta(beta)
     model._validate_data(data, control)

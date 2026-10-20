@@ -232,6 +232,8 @@ def test_multistart_all_fail_raises_with_attempts(monkeypatch):
     with pytest.raises(RuntimeError, match="no multistart candidate") as info:
         model.fit(subset(120), model.beta(), CONTROL, multistart(n=3, **NARROW))
     assert info.value.attempts == [None, None, None]
+    assert "scripted failure" in str(info.value)
+    assert isinstance(info.value.__cause__, FloatingPointError)
 
 
 def test_multistart_with_non_saddle_needs_a_hessian():

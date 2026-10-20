@@ -339,6 +339,18 @@ def test_fit_rejects_nan_column():
         eq3().fit(data, eq3().beta(), CONTROL)
 
 
+@pytest.mark.parametrize(
+    "arg, expected",
+    [("data", "DataFrame"), ("beta", "Beta"), ("control", "Control"), ("settings", "EstimationSettings")],
+)
+def test_fit_rejects_arguments_of_the_wrong_type(arg, expected):
+    model = eq3()
+    args = {"data": database(), "beta": model.beta(), "control": CONTROL, "settings": None}
+    args[arg] = {"not": "the right type"}
+    with pytest.raises(TypeError, match=f"{arg} must be .*{expected}"):
+        model.fit(**args)
+
+
 def test_fit_rejects_missing_column():
     data = database().drop(columns=["Ef1", "EcI"])
     with pytest.raises(ValueError, match=r"^the data lack the columns: Ef1, EcI$"):
