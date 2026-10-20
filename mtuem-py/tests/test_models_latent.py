@@ -211,6 +211,64 @@ def test_compiled_lc_returns_lc_pars_and_class_components():
     assert len(inputs.attach(load_ref("lc_cholesky")["estimate"]).pi_values) == 2
 
 
+def three_classes() -> tuple[LatentClassMTUEM, dict]:
+    """lc_cholesky with a third class, and a point where the three classes differ."""
+    model = LatentClassMTUEM.model_validate(latent_class("lc_cholesky").model_dump() | {"n_classes": 3})
+    values = load_ref("lc_cholesky")["estimate"] | {
+        "Theta_3": 1, "Phi_3": 0.32, "thw_3": 0.05, "th1_3": 0.74, "ph1_3": 0.17, "chk11_3": 6.0,
+        "chk21_3": -5.0, "chk22_3": 4.5, "chk31_3": 7.0, "chk32_3": -18.0, "chk33_3": 30.0,
+        "asc_3": -0.4, "x_female_3": 0.6, "x_older45_3": 0.3,
+    }
+    return model, values
+
+
+@pytest.mark.parametrize("backend", ["numpy", "jax"])
+def test_three_class_loglik_matches_a_hand_built_mixture(backend):
+    from mtuem import likelihood_jax
+
+    model, values = three_classes()
+    prob_fn, inputs = compiled(model, backend)
+    lib = likelihood_jax if backend == "jax" else mtuem.likelihood
+    classes = (1, 2, 3)
+
+    def lc_pars(b, inputs):
+        V = {f"class_{s}": getattr(b, f"asc_{s}") + b.female * getattr(b, f"x_female_{s}")
+             + b.older45 * getattr(b, f"x_older45_{s}") for s in classes}
+        return {"pi_values": lib.class_alloc({"utilities": V})}
+
+    def probabilities(params, inputs, functionality="estimate"):
+        b = inputs.attach(params)
+        P = {}
+        for s in classes:
+            p = {n: getattr(b, f"{n}_{s}") for n in ["Theta", "Phi", "thw", "th1", "ph1", *CHK]}
+            P[f"class_{s}"] = lib.theta_phi({
+                "work_times": ["Tw"], "free_times": ["Tf1"], "free_goods": ["Ef1"], "goods_cost": {"Ef1": 1},
+                "work_elasticities": {"Theta": p["Theta"], "Phi": p["Phi"], "thw": p["thw"]},
+                "times_elasticities": {"th1": p["th1"]}, "goods_elasticities": {"ph1": p["ph1"]},
+                "Tc": b.Tc, "Ec": b.EcI, "w": b.w, "tau": 168, "cholesky": [p[k] for k in CHK],
+            }, functionality, inputs)
+        P["model"] = lib.lc({"inClassProb": P, "classProb": b.pi_values}, inputs, functionality)
+        return P
+
+    beta = model.beta()
+    hand = engine.make_inputs(database(), beta.values(), beta.fixed_names, CONTROL, lc_pars,
+                              autodiff=backend == "jax")
+    assert len(hand.attach(values).pi_values) == 3
+    assert total_ll(prob_fn, inputs, values) == pytest.approx(total_ll(probabilities, hand, values), rel=1e-10)
+
+
+def test_three_class_fit_returns_three_class_shares():
+    model, values = three_classes()
+    beta = model.beta().set(**{k: v for k, v in values.items() if k not in model.beta().fixed_names})
+    settings = EstimationSettings(backend="jax", max_iterations=5, hessian="none", verbose=False)
+    result = model.fit(database(), beta, CONTROL, settings)
+    shares = result.class_shares()
+    assert list(shares.index) == ["class_1", "class_2", "class_3"]
+    assert shares.sum() == pytest.approx(1, rel=1e-12)
+    assert (shares > 0).all()
+    assert result.loglik >= result.loglik_start
+
+
 def test_absent_activity_drops_its_equation():
     # Class 1 of the hobbies model is the three equation model without Tf2.
     model = hobbies()
