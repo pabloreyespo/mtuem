@@ -181,6 +181,8 @@ compared like the others.
 | 2022-bigcities | 4 | `hobbies_cholesky` with `conce`, `valpo` allocation (`penalization/conce_valpo/`) |
 | 2022-rest | 5 (builder's call, see below) | `hobbies_rest`, four classes, rest Tf5 as free time |
 
+Note: 2022-rest was dropped as a target by Pablo on 2026-10-20 ("don't check against 2022-rest anything"); its fixtures, tests and R script branch were removed. The text of this spec is left as written.
+
 These are slow tests (marked, run on demand). The R fits took 10 to 15 minutes (2015, 2015-new,
 2022-bigcities), 37 minutes (2022) and 244 minutes (2022-rest, 4 classes, 82 free parameters), so
 the suite may take hours; that is accepted. If a refit lands on a different optimum than R, the

@@ -1,7 +1,7 @@
 # Reference fixtures for the activity participation article (latent class Cholesky hobbies model).
 # Run from the root of the article repository (mtuem-lc-activity-participation), which is only read:
 #   Rscript <mtuem-py>/tests/reference/make_article_reference.R <run> <penalization> [<output folder>]
-# <run> is 2015, 2015-new, 2022, 2022-bigcities (conce_valpo location set) or 2022-rest. The output
+# <run> is 2015, 2015-new, 2022, 2022-bigcities (conce_valpo location set). The output
 # folder defaults to tests/reference/article next to this script. It writes <run>_p<k>.parquet (the
 # model database restricted to the columns the likelihood uses plus the id, in R's row order) and
 # <run>_p<k>.json (model definition, start values, R estimates read from the article's saved fits)
@@ -19,7 +19,6 @@ if (!file.exists("R/models/hobbies_cholesky.R")) stop("Run from the root of the 
 
 set.seed(42)
 study_year <- run
-rest_model <- identical(study_year, "2022-rest")
 # R/config/project_setup.R without ensure_project_directories(), which would create folders in the
 # article repository.
 for (expression in parse("R/config/project_setup.R")) {
@@ -31,11 +30,10 @@ source("R/data/enut_data.R")
 source("R/data/hobbies_data.R")
 source("R/models/initial_values.R")
 source("R/models/hobbies_cholesky.R")
-if (rest_model) source("R/models/hobbies_rest.R")
 source("R/models/penalization_grid.R")
 apollo_initialise()
 
-prepared_data <- prepare_hobbies_data(config = if (rest_model) hobbies_rest_config() else hobbies_config())
+prepared_data <- prepare_hobbies_data(config = hobbies_config())
 database <- prepared_data$database
 nClass <- prepared_data$n_classes
 socioecon <- prepared_data$socioeconomic_variables
@@ -48,7 +46,7 @@ if (identical(run, "2022-bigcities")) {
   especificas <- c("asc", paste0("x_", socioecon))
   model_directory <- file.path(dirname(project_paths$penalization_models), paste(location, collapse = "_"))
 }
-if (rest_model) initialise_hobbies_rest() else initialise_hobbies_cholesky()
+initialise_hobbies_cholesky()
 
 model_name <- paste0("corner_hobbies_p", level)
 path <- function(suffix) file.path(model_directory, paste0(model_name, suffix))

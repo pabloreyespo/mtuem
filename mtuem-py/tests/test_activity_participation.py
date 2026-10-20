@@ -25,7 +25,7 @@ sys.path.insert(0, str(EXAMPLES))
 
 import activity_participation as ap  # noqa: E402
 
-RUNS = ["2015_p5", "2015-new_p5", "2022_p5", "2022-bigcities_p4", "2022-rest_p5"]
+RUNS = ["2015_p5", "2015-new_p5", "2022_p5", "2022-bigcities_p4"]
 BACKENDS = ["numpy", "jax"]
 
 
@@ -66,17 +66,23 @@ def unpenalized(model) -> LatentClassMTUEM:
 # The penalty and the floor
 # ----------------------------------------------------------------------------------------------
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_penalty_matches_r_formula(backend):
+@pytest.mark.parametrize("mixes", [None, [[True, False, False], [True, True, True]]], ids=["article", "two_absent"])
+def test_penalty_matches_r_formula(backend, mixes):
     # R: P_s = density_s * exp(-penalization * rowSums(hours of the absent activities)); in logs
-    # the class log-likelihood loses penalization times those hours, row by row.
-    ref = fixture("2022-rest_p5")
-    data = pd.read_parquet(ARTICLE / "2022-rest_p5.parquet")
-    model = model_of(ref)
+    # the class log-likelihood loses penalization times those hours, row by row. The second case
+    # puts two absent activities in one class, which the article fixtures no longer exercise.
+    ref = fixture("2015_p5")
+    data = pd.read_parquet(ARTICLE / "2015_p5.parquet")
+    if mixes is None:
+        model = model_of(ref)
+        mixes = [[mix[t] for t in ref["free_times"]] for mix in ref["act_mix"]]
+    else:
+        model = model_of(ref, participation=mixes)
     values = ref["r_estimate"]
     P = classes_at(model, data, backend, values)
     B = classes_at(unpenalized(model), data, backend, values)
-    for s, mix in enumerate(ref["act_mix"], start=1):
-        absent = [t for t, takes_part in mix.items() if not takes_part]
+    for s, mix in enumerate(mixes, start=1):
+        absent = [t for t, takes_part in zip(ref["free_times"], mix) if not takes_part]
         hours = data[absent].sum(axis=1).to_numpy(float) if absent else np.zeros(len(data))
         assert model.absent_times(s) == absent
         np.testing.assert_allclose(P[f"class_{s}"], B[f"class_{s}"] - ref["penalization"] * hours, rtol=1e-12)
@@ -120,8 +126,8 @@ def test_article_beta_matches_r_start_values(run):
 
 
 def test_article_beta_keeps_the_locks():
-    beta = ap.article_beta(model_of(fixture("2022-rest_p5")))
-    assert {"th2_1", "th4_1", "chk55_1", "th2_2", "chk53_2", "th4_3"} <= set(beta.locked)
+    beta = ap.article_beta(model_of(fixture("2015_p5")))
+    assert {"th2_1", "chk31_1", "chk32_1", "chk33_1", "chk43_1"} == set(beta.locked)
     with pytest.raises(ValueError, match="locked"):
         beta.free("th2_1")
 

@@ -30,7 +30,7 @@ sys.path.insert(0, str(EXAMPLES))
 
 import activity_participation as ap  # noqa: E402
 
-RUNS = ["2015_p5", "2015-new_p5", "2022-bigcities_p4", "2022_p5", "2022-rest_p5"]
+RUNS = ["2015_p5", "2015-new_p5", "2022-bigcities_p4", "2022_p5"]
 SE_RTOL = {"numpy": 2e-3, "jax": 5e-3}
 EST_RTOL = EST_ATOL = 1e-4
 COLUMNS = [
