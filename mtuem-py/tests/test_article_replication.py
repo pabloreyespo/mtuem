@@ -7,13 +7,14 @@ and robust standard errors are compared with ``r_polished_*``. The article's own
 before the optimum (Apollo's bfgs stops once an iteration gains about 1e-3), so
 tests/reference/make_article_polish.R restarted each of them from its estimate with a tight
 stopping rule. The published values (``r_estimate``, ``r_se``) are only reported: the summary
-gives the largest distance of the Python estimates from them in published standard errors. The
-fits take hours, so the tests are slow (``--runslow``); run one at a time with
+gives the largest distance of the Python estimates from them in published standard errors. A fit
+takes 0.3 to 4 minutes per target, so the tests are slow (``--runslow``); run one at a time with
 ``-k "2015_p5 and jax"``.
 
-Every fit appends a row to output/replication/summary.csv and saves its result in
-output/replication/<run>_<backend>/ before any assertion, so an interrupted session keeps the
-fits already done.
+Every fit saves its result in output/replication/<run>_<backend>/ and writes its summary row to
+output/replication/summary/<run>_<backend>.csv before any comparison, so an interrupted session
+keeps the fits already done. Each fit owns its summary file, so reruns overwrite it and nothing is
+renamed or appended to a shared file; ``read_summary`` concatenates them.
 """
 
 import csv
@@ -21,6 +22,7 @@ import json
 import re
 import sys
 import time
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -63,19 +65,22 @@ def normalize_cholesky_signs(values: pd.Series) -> pd.Series:
     return out
 
 
-def append_summary(row: dict) -> None:
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    path = OUTPUT / "summary.csv"
-    if path.exists():
-        with path.open(encoding="utf-8") as f:
-            if next(csv.reader(f), None) != COLUMNS:
-                path.replace(path.with_name("summary_old_columns.csv"))
-    new = not path.exists()
-    with path.open("a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=COLUMNS)
-        if new:
+def write_summary(row: dict) -> None:
+    """One file per fit, overwritten on each run. A bookkeeping failure only warns."""
+    path = OUTPUT / "summary" / f"{row['target']}_{row['backend']}.csv"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=COLUMNS)
             writer.writeheader()
-        writer.writerow(row)
+            writer.writerow(row)
+    except OSError as exc:
+        warnings.warn(f"could not write the summary row to {path}: {exc!r}", stacklevel=2)
+
+
+def read_summary() -> pd.DataFrame:
+    files = sorted((OUTPUT / "summary").glob("*.csv"))
+    return pd.concat([pd.read_csv(f) for f in files], ignore_index=True) if files else pd.DataFrame(columns=COLUMNS)
 
 
 def compare(result: mtuem.Result, ref: dict) -> pd.DataFrame:
@@ -104,19 +109,17 @@ def compare(result: mtuem.Result, ref: dict) -> pd.DataFrame:
     return table
 
 
-def summary_row(run: str, backend: str, result: mtuem.Result, ref: dict, table: pd.DataFrame) -> dict:
+def summary_stats(table: pd.DataFrame) -> dict:
     return {
-        "target": run, "backend": backend, "ll_python": f"{result.loglik:.6f}",
-        "ll_r_polished": f"{ref['r_polished_loglik']:.6f}", "ll_r_published": f"{ref['r_loglik']:.6f}",
         "max_abs_estimate_diff_free": f"{table['diff'].max():.3e}",
         "max_rel_se_diff": f"{table['rel_se'].max():.3e}", "max_rel_robse_diff": f"{table['rel_robse'].max():.3e}",
         "max_se_units_vs_published": f"{table['se_units_published'].max():.3f}",
-        "converged": result.converged,
     }
 
 
 def check(table: pd.DataFrame, backend: str, report: str) -> None:
     """The replication tolerances against the polished R optimum."""
+    assert len(table) > 0, "no free parameters to compare"
     np.testing.assert_allclose(table["py"], table["r"], rtol=EST_RTOL, atol=EST_ATOL, err_msg=report)
     np.testing.assert_allclose(table["py_se"], table["r_se"], rtol=SE_RTOL[backend], err_msg=report)
     np.testing.assert_allclose(table["py_robse"], table["r_robse"], rtol=SE_RTOL[backend], err_msg=report)
@@ -139,13 +142,22 @@ def test_article_replication(run, backend):
     result = model.fit(data, beta, control, settings)
     minutes = (time.perf_counter() - start) / 60
 
-    table = compare(result, ref)
     notes = list(result.notes)
     try:
         result.save(folder)
     except Exception as exc:  # the comparison still gets recorded
         notes.append(f"save failed: {exc!r}")
-    append_summary(summary_row(run, backend, result, ref, table) | {"notes": "; ".join(notes), "minutes": f"{minutes:.1f}"})
+    row = {
+        "target": run, "backend": backend, "ll_python": f"{result.loglik:.6f}",
+        "ll_r_polished": f"{ref['r_polished_loglik']:.6f}", "ll_r_published": f"{ref['r_loglik']:.6f}",
+        "converged": result.converged, "minutes": f"{minutes:.1f}",
+    }
+    try:
+        table = compare(result, ref)
+    except Exception as exc:
+        write_summary(row | {"notes": "; ".join([*notes, f"compare failed: {exc!r}"])})
+        raise
+    write_summary(row | summary_stats(table) | {"notes": "; ".join(notes)})
 
     worst = table.sort_values("diff", ascending=False).head(10)
     report = (
@@ -154,6 +166,7 @@ def test_article_replication(run, backend):
         f"ten largest estimate differences:\n{worst[['py', 'r', 'diff']].to_string()}"
     )
     assert result.converged, report
+    assert result.loglik == pytest.approx(ref["r_polished_loglik"], abs=1e-3), report
     check(table, backend, report)
 
 
@@ -171,3 +184,17 @@ def test_cholesky_sign_normalisation_keeps_the_covariance():
     for s in (1, 2):
         np.testing.assert_allclose(sigma(out, s), sigma(values, s), rtol=1e-15)
     pd.testing.assert_series_equal(out[["chk11_2", "chk21_2", "chk22_2"]], values[["chk11_2", "chk21_2", "chk22_2"]])
+
+
+def test_cholesky_sign_normalisation_flips_off_diagonal_terms_of_the_column():
+    values = pd.Series({"chk11_1": 2.0, "chk21_1": 0.5, "chk31_1": -0.4, "chk22_1": -1.5, "chk32_1": 0.8,
+                        "chk33_1": 1.1})
+    out = normalize_cholesky_signs(values)
+
+    def sigma(v):
+        L = np.array([[v["chk11_1"], 0, 0], [v["chk21_1"], v["chk22_1"], 0], [v["chk31_1"], v["chk32_1"], v["chk33_1"]]])
+        return L @ L.T
+
+    assert out["chk22_1"] == 1.5 and out["chk32_1"] == -0.8
+    assert out[["chk11_1", "chk21_1", "chk31_1", "chk33_1"]].equals(values[["chk11_1", "chk21_1", "chk31_1", "chk33_1"]])
+    np.testing.assert_allclose(sigma(out), sigma(values), rtol=1e-15)
